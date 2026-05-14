@@ -1,0 +1,35 @@
+[
+  {
+    "id": "camp_launch_offer",
+    "name": "First Mission Launch Offer",
+    "placement": "landing_hero",
+    "mediaUrl": "/seed-avatars/banner-launch.svg",
+    "headline": "First mission free. No ghost, no catch.",
+    "subtext": "Recruiters guarantee a response in 24, 48, or 72 hours — or your application bumps to the top of the queue.",
+    "targetUrl": "/login",
+    "status": "live",
+    "createdAt": "2026-05-01T10:00:00Z"
+  },
+  {
+    "id": "camp_llm_bootcamp",
+    "name": "LLM Grounding Bootcamp Push",
+    "placement": "dashboard_top",
+    "mediaUrl": "/seed-avatars/banner-llm.svg",
+    "headline": "Close the LLM Grounding gap → unlock 3 new missions.",
+    "subtext": "₹4,999. 3 weeks. One live design review with Sensei Vikram.",
+    "targetUrl": "/bootcamp/bc_llmgrounding",
+    "status": "live",
+    "createdAt": "2026-05-05T10:00:00Z"
+  },
+  {
+    "id": "camp_recruiter_beta",
+    "name": "Recruiter Beta Pilot",
+    "placement": "bootcamp_inline",
+    "mediaUrl": "/seed-avatars/banner-recruiter.svg",
+    "headline": "Are you a recruiter? Post 3 jobs for free during beta.",
+    "subtext": "Pre-screened, pre-assessed, SLA-bound applicants. No more 800-resume piles.",
+    "targetUrl": "/recruiter/login",
+    "status": "draft",
+    "createdAt": "2026-05-08T10:00:00Z"
+  }
+]

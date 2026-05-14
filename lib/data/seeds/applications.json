@@ -1,0 +1,125 @@
+[
+  {
+    "id": "app_alice_quanta",
+    "jobId": "job_quanta_pyengr",
+    "studentId": "usr_alice",
+    "stage": "under_review",
+    "matchPct": 92,
+    "assessment": {
+      "prompt": "Our retrieval layer returns the right document 81% of the time but cites the wrong paragraph 22% of those. Outline how you would diagnose, fix, and ship an improvement — and how you would prove the fix in production without an offline eval set you trust.",
+      "response": "First, I'd separate the two failures: doc-level recall and span-level attribution. For diagnosis I'd sample 300 prod traces where the retrieved doc was right but the cited span was wrong, and hand-label the span-boundary error mode (early cut, late cut, wrong subsection). Then I'd compare chunking strategies on those 300 cases — fixed-size, semantic, parent-child — and pick the smallest change that moves the needle.\n\nTo prove the fix in prod without trusted offline evals, I'd ship behind a shadow flag: route 5% of traffic through the new chunker, log both old and new citations side-by-side, and grade them with an LLM-judge gated by a citation-overlap heuristic. I'd watch a 7-day shadow window for span-overlap delta and user thumbs-down rate before flipping.",
+      "submittedAt": "2026-05-10T11:00:00Z",
+      "grade": {
+        "score": 88,
+        "notes": "Strong separation of failure modes; thoughtful shadow rollout. Could push harder on what would make her *abandon* the new chunker. Net: advance.",
+        "verdict": "advance",
+        "depthSignal": 92
+      }
+    },
+    "createdAt": "2026-05-10T10:30:00Z",
+    "slaDeadline": "2026-05-11T10:30:00Z"
+  },
+  {
+    "id": "app_alice_stark",
+    "jobId": "job_stark_ai_po",
+    "studentId": "usr_alice",
+    "stage": "new_matches",
+    "matchPct": 78,
+    "createdAt": "2026-05-11T09:00:00Z",
+    "slaDeadline": "2026-05-13T09:00:00Z"
+  },
+  {
+    "id": "app_bharat_lumen",
+    "jobId": "job_lumen_frontend",
+    "studentId": "usr_bharat",
+    "stage": "interview",
+    "matchPct": 94,
+    "assessment": {
+      "prompt": "We have a patient-facing app where 41% of users are on sub-3G connections. Walk us through the three highest-leverage interventions you would prioritize in the first 60 days, with the trade-offs you would explicitly accept.",
+      "response": "Day 1–14: brutal RUM audit. Real users, real networks, real percentile work. I expect TTI and INP to dominate, not LCP. The first intervention is route-level code splitting plus a service-worker shell — accept the cache-staleness pain.\n\nDay 15–40: ship a server-side rendered patient list with islands of interactivity. Drop the client-side waterfall. Accept the SSR cost on our edge.\n\nDay 41–60: image budget. Move clinical photos to AVIF + width hints, kill the carousel auto-play. Accept losing 'wow factor' on the marketing surface in exchange for 2.4s faster TTI on the workflows that matter.",
+      "submittedAt": "2026-05-04T14:00:00Z",
+      "grade": {
+        "score": 91,
+        "notes": "Excellent prioritization, named the trade-offs explicitly. Interview him.",
+        "verdict": "advance",
+        "depthSignal": 95
+      }
+    },
+    "createdAt": "2026-05-04T13:30:00Z",
+    "slaDeadline": "2026-05-07T13:30:00Z",
+    "interviewScheduledAt": "2026-05-14T10:00:00Z",
+    "outcomeNotes": "Onsite scheduled with VP Eng. Strong panel fit signal."
+  },
+  {
+    "id": "app_devraj_stark",
+    "jobId": "job_stark_platform",
+    "studentId": "usr_devraj",
+    "stage": "offer",
+    "matchPct": 96,
+    "assessment": {
+      "prompt": "Our settlement service occasionally double-debits at exactly midnight IST during DST-adjacent edge cases. Sketch a fix that is correct, ship-able in a week, and provably regression-tested.",
+      "response": "Root cause is almost certainly a non-idempotent retry crossing the wall-clock boundary. The fix: store the settlement key as `${account_id}:${utc_ledger_day}` rather than IST date. One week is enough.\n\nProof: I'd add a property-based test that fuzzes wall clock around midnight IST across DST-adjacent days (we don't have DST in India, but the upstream rail does). Then a backfill audit job that scans 90 days for duplicate-key candidates under the new schema. CI gate: zero duplicates on the audit job before merge.",
+      "submittedAt": "2026-05-08T16:00:00Z",
+      "grade": {
+        "score": 94,
+        "notes": "Diagnosed root cause inside 2 sentences. Property-based regression hits exactly the right risk. Make the offer.",
+        "verdict": "advance",
+        "depthSignal": 97
+      }
+    },
+    "createdAt": "2026-05-08T15:30:00Z",
+    "slaDeadline": "2026-05-09T15:30:00Z",
+    "interviewScheduledAt": "2026-05-10T09:00:00Z",
+    "outcomeNotes": "Offer extended at ₹62 LPA. Awaiting his counter."
+  },
+  {
+    "id": "app_esha_quanta",
+    "jobId": "job_quanta_ds",
+    "studentId": "usr_esha",
+    "stage": "under_review",
+    "matchPct": 81,
+    "assessment": {
+      "prompt": "You inherit a recommender that beats baselines on offline NDCG but loses to baselines on online CTR. Describe a 14-day diagnostic plan and the first experiment you would run.",
+      "response": "Classic offline-online gap. The fastest hypothesis to disprove is exposure bias in the training data — offline NDCG is computed on what you historically showed, online CTR is on what you newly show. I'd run a counterfactual eval on logged data with IPS weighting and see if NDCG holds up.\n\nFirst experiment day 8: ship a small interleaving test that swaps in ranker B for 5% of slots within the existing ranking. That isolates the ranker from the candidate-generation pipeline. Decision rule at day 14: if interleaved CTR is flat or negative, the problem is upstream.",
+      "submittedAt": "2026-05-10T17:00:00Z",
+      "grade": {
+        "score": 79,
+        "notes": "Sound diagnosis. Could go deeper on what 'flat or negative' threshold she'd actually accept. Borderline advance.",
+        "verdict": "borderline",
+        "depthSignal": 74
+      }
+    },
+    "createdAt": "2026-05-10T16:30:00Z",
+    "slaDeadline": "2026-05-12T16:30:00Z"
+  },
+  {
+    "id": "app_chitra_lumen",
+    "jobId": "job_lumen_pm",
+    "studentId": "usr_chitra",
+    "stage": "new_matches",
+    "matchPct": 87,
+    "createdAt": "2026-05-11T18:00:00Z",
+    "slaDeadline": "2026-05-14T18:00:00Z"
+  },
+  {
+    "id": "app_bharat_quanta",
+    "jobId": "job_quanta_pyengr",
+    "studentId": "usr_bharat",
+    "stage": "rejected",
+    "matchPct": 52,
+    "assessment": {
+      "prompt": "Our retrieval layer returns the right document 81% of the time but cites the wrong paragraph 22% of those. Outline how you would diagnose, fix, and ship an improvement — and how you would prove the fix in production without an offline eval set you trust.",
+      "response": "I would try larger chunks first, then experiment with different embedding models and see which scores higher on retrieval. To prove the fix I would A/B test it and look at click rate.",
+      "submittedAt": "2026-04-29T12:00:00Z",
+      "grade": {
+        "score": 41,
+        "notes": "Reach-for-knobs answer; doesn't separate doc-level vs span-level error, no proof discipline. Politely reject + suggest the LLM Grounding bootcamp.",
+        "verdict": "reject",
+        "depthSignal": 35
+      }
+    },
+    "createdAt": "2026-04-29T11:30:00Z",
+    "slaDeadline": "2026-04-30T11:30:00Z",
+    "outcomeNotes": "Rejected with feedback. Suggested LLM Grounding bootcamp."
+  }
+]

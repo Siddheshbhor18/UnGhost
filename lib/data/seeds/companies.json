@@ -1,0 +1,34 @@
+[
+  {
+    "id": "co_stark",
+    "name": "Stark Industries",
+    "logoUrl": "/seed-avatars/co-stark.svg",
+    "domain": "stark.test",
+    "description": "We build the suit, the AI, and the future of clean energy. Mostly the suit.",
+    "recruiterIds": ["usr_hr_stark"]
+  },
+  {
+    "id": "co_quanta",
+    "name": "Quanta Labs",
+    "logoUrl": "/seed-avatars/co-quanta.svg",
+    "domain": "quanta.test",
+    "description": "Retrieval-augmented infrastructure for the next billion users.",
+    "recruiterIds": ["usr_hr_quanta"]
+  },
+  {
+    "id": "co_lumen",
+    "name": "Lumen Health",
+    "logoUrl": "/seed-avatars/co-lumen.svg",
+    "domain": "lumen.test",
+    "description": "Digital-first chronic care across Tier-2 India.",
+    "recruiterIds": ["usr_hr_lumen"]
+  },
+  {
+    "id": "co_tara",
+    "name": "Tara Fintech",
+    "logoUrl": "/seed-avatars/co-tara.svg",
+    "domain": "tara.test",
+    "description": "Mutual fund investing for first-time investors via UPI.",
+    "recruiterIds": []
+  }
+]
