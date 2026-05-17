@@ -92,6 +92,18 @@ export const authOptions: AuthOptions = {
           );
         }
 
+        // Phone-verification gate. We check for an explicit `false` so legacy
+        // / seed users (where the field is undefined) keep working without a
+        // grandfather migration. Newly created users via /api/auth/signup get
+        // the field set to `false` and must clear /verify-phone first.
+        if (user.phoneVerified === false) {
+          throw new Error(
+            "PHONE_UNVERIFIED · Verify your phone number to sign in. Check the OTP we sent during signup.",
+          );
+        }
+        // Email-verification is informational, not blocking — UI surfaces a
+        // banner after sign-in so the user can click the link any time.
+
         return {
           id: user.id,
           name: user.name,

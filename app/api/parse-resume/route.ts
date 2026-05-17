@@ -4,6 +4,13 @@ import { authOptions } from "@/server/auth";
 import { getAI } from "@/server/integrations/ai";
 import { updateStudentProfile } from "@/server/store";
 import type { StudentProfile } from "@/shared/types";
+import { requireSameOrigin } from "@/server/lib/csrf";
+import { withApiErrorTracking } from "@/server/lib/api-error";
+import {
+  rateLimit,
+  rateLimitResponse,
+  identifierFromRequest,
+} from "@/server/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -45,7 +52,29 @@ async function extractText(file: File): Promise<string> {
   return `Resume file: ${file.name}`;
 }
 
-export async function POST(req: Request) {
+async function handler(req: Request) {
+  // CSRF — origin must match. Lets the landing-widget preview through (same
+  // origin) while rejecting external scrapers.
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
+
+  // Two-tier rate limit: authed users get a generous budget keyed on user id,
+  // anonymous callers (landing widget) get a tight IP budget so a botnet can't
+  // burn through Claude tokens.
+  const session = await getServerSession(authOptions).catch(() => null);
+  const userId = session?.user?.id;
+  const rl = userId
+    ? await rateLimit("ai.parse-resume.user", `u:${userId}`, {
+        limit: 20,
+        windowSec: 60,
+      })
+    : await rateLimit(
+        "ai.parse-resume.anon",
+        identifierFromRequest(req),
+        { limit: 3, windowSec: 60 },
+      );
+  if (!rl.allowed) return rateLimitResponse(rl);
+
   const contentType = req.headers.get("content-type") ?? "";
 
   // ── Mode A: multipart (real file upload) ─────────────────────────
@@ -67,7 +96,6 @@ export async function POST(req: Request) {
 
     // Persist to authenticated student's profile if asked
     if (persistFlag === "1") {
-      const session = await getServerSession(authOptions);
       if (session?.user?.id && session.user.role === "student") {
         const patch: Partial<StudentProfile> = {
           alias: parsed.alias,
@@ -104,3 +132,5 @@ export async function POST(req: Request) {
   const parsed = await getAI().parseResume(rawText);
   return NextResponse.json({ parsed });
 }
+
+export const POST = withApiErrorTracking(handler);

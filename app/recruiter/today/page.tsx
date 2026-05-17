@@ -68,10 +68,19 @@ export default async function RecruiterToday() {
     const sla = slaCountdown(a.slaDeadline);
     return sla.expired;
   }).length;
-  // Ghosting rate: derive from breach/total ratio over our window. Real impl uses
-  // pre-computed company.ghostingRate.last90Days from PRD.
-  const totalApps = apps.length;
-  const ghostingRate = totalApps > 0 ? (slaBreached / totalApps) * 100 : 1.2;
+  // Ghosting rate: count applications this recruiter has handled in the last
+  // 90 days, then take the fraction that were marked SLA-breached. This is
+  // the same number we surface on the public company page so the recruiter
+  // sees what their candidates see.
+  const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+  const window = apps.filter(
+    (a) => Date.now() - new Date(a.createdAt).getTime() <= NINETY_DAYS_MS,
+  );
+  const windowBreached = window.filter(
+    (a) => a.slaBreachedAt || a.slaRefundIssued,
+  ).length;
+  const ghostingRate =
+    window.length > 0 ? (windowBreached / window.length) * 100 : 0;
 
   // ── Action Feed: critical = SLA at risk; new = fresh top tiers; coming up = interviews ──
   const slaAtRiskApps = apps

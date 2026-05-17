@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 export default function GlobalError({
   error,
@@ -10,7 +11,15 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[unGhost] Critical layout error:", error);
+    // Root-layout failures bypass every other error boundary, so this is the
+    // single point where the most critical exceptions surface. Always ship.
+    Sentry.captureException(error, {
+      tags: { source: "app/global-error.tsx", digest: error.digest ?? "none" },
+      level: "fatal",
+    });
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[unGhost] Critical layout error:", error);
+    }
   }, [error]);
 
   return (

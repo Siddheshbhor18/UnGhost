@@ -384,49 +384,49 @@ export default async function LandingPage() {
       <section className="mx-auto max-w-content px-4 py-20">
         <SectionHeader
           eyebrow="Pricing"
-          title="Free to start. Pay only if you outgrow the free tier."
-          subtitle="Recruiters: free forever. Students: 5 applications/month free."
+          title="Try 2 free. Upgrade once. Hire forever."
+          subtitle="Recruiters: free forever. Students: 3 subscription tiers."
         />
         <div className="grid md:grid-cols-3 gap-5 mt-10">
           <PriceCard
             tier="Free"
             price="₹0"
-            sub="forever"
+            sub="trial"
             features={[
-              "5 applications per month",
-              "15 AI Coach messages/day",
-              "Browse all bootcamps",
+              "2 applications (lifetime trial)",
+              "Browse all bootcamps + jobs",
               "Refunds on recruiter ghost",
+              "Upgrade anytime",
             ]}
-            cta="Get started"
+            cta="Start free"
             href="/signup"
           />
           <PriceCard
-            tier="Hunt"
-            price="₹299"
+            tier="Pro"
+            price="₹999"
             sub="per month"
             features={[
-              "Unlimited applications",
-              "Unlimited AI Coach",
-              "Saved search alerts",
-              "Priority match boost",
+              "5 applications / month",
+              "AI Coach (30-day rolling)",
+              "Q&A with recruiters",
+              "Cancel anytime",
             ]}
-            cta="Go Hunt"
-            href="/signup"
+            cta="Go Pro"
+            href="/upgrade?to=pro"
             highlight
           />
           <PriceCard
-            tier="Stretch"
-            price="₹599"
-            sub="per month"
+            tier="Premium"
+            price="₹4,999"
+            sub="one-time · lifetime"
             features={[
-              "Everything in Hunt",
-              "1 free bootcamp/month",
-              "Top-10 leaderboard featuring",
-              "Custom coach persona",
+              "Unlimited applications",
+              "AI Coach + Q&A forever",
+              "Every bootcamp included",
+              "Priority refund queue",
             ]}
-            cta="Go Stretch"
-            href="/signup"
+            cta="Go Premium"
+            href="/upgrade?to=premium"
           />
         </div>
         <p className="text-center text-body-xs text-neutral-500 mt-6">

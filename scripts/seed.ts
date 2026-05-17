@@ -49,6 +49,25 @@ async function hashSeedPasswords(
 }
 
 async function main() {
+  // Hard guard — this script wipes every collection. If we're pointed at a
+  // production DB by accident (NODE_ENV=production or MONGODB_URI mentions
+  // a known prod host), refuse to run unless explicitly overridden with
+  // SEED_ALLOW_PROD=true. Refusing loudly beats silent data loss.
+  const isProd = process.env.NODE_ENV === "production";
+  const uri = process.env.MONGODB_URI ?? "";
+  const smellsLikeProd =
+    /mongodb\+srv:\/\/.*@.*\.mongodb\.net/.test(uri) &&
+    !/staging|dev|test/i.test(uri);
+  if ((isProd || smellsLikeProd) && process.env.SEED_ALLOW_PROD !== "true") {
+    console.error(
+      "[seed] refusing to run — NODE_ENV=production or MONGODB_URI looks like prod.",
+    );
+    console.error(
+      "[seed] If you really mean it, re-run with SEED_ALLOW_PROD=true.",
+    );
+    process.exit(1);
+  }
+
   await connectMongo();
   console.log("[seed] connected to", mongoose.connection.host);
 

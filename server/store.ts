@@ -20,6 +20,7 @@ import {
   MessageThreadModel,
   NotInterestedModel,
   NotificationModel,
+  ProcessedTxnModel,
   SavedJobModel,
   SponsorshipModel,
   SupportTicketModel,
@@ -97,6 +98,104 @@ export async function upsertUser(u: User): Promise<User> {
 }
 
 /**
+ * Create a user from the public signup form. Enforces email + phone
+ * uniqueness (case-insensitive email, normalised phone), assigns a unique
+ * id, defaults plan to "free", marks both verification flags false.
+ *
+ * Returns either the freshly-created user, or a structured conflict so the
+ * route can surface a friendly 409. Never throws on validation — only on
+ * actual DB errors.
+ */
+export interface CreateUserInput {
+  email: string;
+  phone: string;
+  passwordHash: string;
+  name: string;
+  role: "student" | "recruiter";
+  profileAlias?: string;
+}
+
+export type CreateUserResult =
+  | { ok: true; user: User }
+  | { ok: false; reason: "email_taken" | "phone_taken" };
+
+export async function createUserWithCredentials(
+  input: CreateUserInput,
+): Promise<CreateUserResult> {
+  await db();
+  const emailLower = input.email.trim().toLowerCase();
+  const phone = input.phone.trim();
+
+  // Case-insensitive email dedupe. The ix_users_email_ci index also enforces
+  // this at the DB level, so two racing requests can't both succeed.
+  const emailHit = await UserModel.findOne({
+    email: { $regex: `^${escapeRegex(emailLower)}$`, $options: "i" },
+  }).lean();
+  if (emailHit) return { ok: false, reason: "email_taken" };
+
+  if (phone) {
+    const phoneHit = await UserModel.findOne({
+      "profile.contactPhone": phone,
+    }).lean();
+    if (phoneHit) return { ok: false, reason: "phone_taken" };
+  }
+
+  const now = new Date().toISOString();
+  const id =
+    input.role === "student"
+      ? `usr_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      : `rec_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
+  const profile =
+    input.role === "student"
+      ? {
+          alias: input.profileAlias ?? input.name.toLowerCase().replace(/\s+/g, "."),
+          contactEmail: emailLower,
+          contactPhone: phone,
+          trajectory: "actively_hunting",
+          skills: [],
+          verifiedSkills: [],
+          enrolledBootcamps: [],
+          history: [],
+          joinedAt: now,
+          lastActiveAt: now,
+        }
+      : undefined;
+
+  const payload: any = {
+    _id: id,
+    email: emailLower,
+    passwordHash: input.passwordHash,
+    role: input.role,
+    name: input.name,
+    profile,
+    plan: "free",
+    planType: "free",
+    emailVerified: false,
+    phoneVerified: false,
+    status: "active",
+    createdAt: now,
+  };
+
+  try {
+    await UserModel.create(payload);
+  } catch (err) {
+    // Duplicate-key race — the unique index caught what our pre-check missed.
+    if ((err as any)?.code === 11000) {
+      const dupField = (err as any)?.keyPattern ?? {};
+      if (dupField["profile.contactPhone"]) {
+        return { ok: false, reason: "phone_taken" };
+      }
+      return { ok: false, reason: "email_taken" };
+    }
+    throw err;
+  }
+
+  const created = (await UserModel.findById(id).lean()) as unknown as User;
+  return { ok: true, user: unwrap(created) as User };
+}
+
+/**
  * Rotate a user's password hash. Used by the auth layer when a legacy
  * plaintext seed row is upgraded on first login, and by future password
  * reset / change flows.
@@ -107,6 +206,196 @@ export async function setUserPasswordHash(
 ): Promise<void> {
   await db();
   await UserModel.updateOne({ _id: userId }, { $set: { passwordHash } });
+}
+
+/** Flip emailVerified to true. Idempotent — safe to call on already-verified users. */
+export async function markEmailVerified(userId: string): Promise<void> {
+  await db();
+  const now = new Date().toISOString();
+  await UserModel.updateOne(
+    { _id: userId },
+    { $set: { emailVerified: true, emailVerifiedAt: now } },
+  );
+}
+
+/** Flip phoneVerified to true. Idempotent. */
+export async function markPhoneVerified(userId: string): Promise<void> {
+  await db();
+  const now = new Date().toISOString();
+  await UserModel.updateOne(
+    { _id: userId },
+    { $set: { phoneVerified: true, phoneVerifiedAt: now } },
+  );
+}
+
+/**
+ * Activate or extend a student's subscription plan.
+ *
+ * For `pro` (monthly), the expiry is bumped to +30 days from now (or from
+ * the existing expiry if still in the future — additive renewals).
+ * For `premium` (lifetime), no expiry is set.
+ * For `free`, all plan fields are cleared.
+ */
+export async function activateUserPlan(
+  userId: string,
+  plan: "free" | "pro" | "premium",
+  txnId?: string,
+): Promise<void> {
+  await db();
+  const now = new Date();
+  if (plan === "free") {
+    await UserModel.updateOne(
+      { _id: userId },
+      {
+        $set: { plan: "free", planType: "free" },
+        $unset: { planExpiresAt: "", planActivatedAt: "", lastBillingTxnId: "" },
+      },
+    );
+    return;
+  }
+  if (plan === "premium") {
+    await UserModel.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          plan: "premium",
+          planType: "lifetime",
+          planActivatedAt: now.toISOString(),
+          lastBillingTxnId: txnId,
+        },
+        $unset: { planExpiresAt: "" },
+      },
+    );
+    return;
+  }
+  // pro — additive monthly extension
+  const existing = (await UserModel.findById(userId).lean()) as
+    | { planExpiresAt?: string }
+    | null;
+  const baseTime =
+    existing?.planExpiresAt && new Date(existing.planExpiresAt).getTime() > now.getTime()
+      ? new Date(existing.planExpiresAt).getTime()
+      : now.getTime();
+  const expiresAt = new Date(baseTime + 30 * 24 * 60 * 60 * 1000).toISOString();
+  await UserModel.updateOne(
+    { _id: userId },
+    {
+      $set: {
+        plan: "pro",
+        planType: "monthly",
+        planActivatedAt: now.toISOString(),
+        planExpiresAt: expiresAt,
+        lastBillingTxnId: txnId,
+      },
+    },
+  );
+}
+
+/**
+ * Mark a Pro plan's renewal as cancelled. Plan keeps working until expiry —
+ * the daily sweep does the actual downgrade.
+ */
+export async function cancelUserPlanRenewal(userId: string): Promise<void> {
+  await db();
+  await UserModel.updateOne(
+    { _id: userId },
+    { $set: { planRenewalCancelled: true } },
+  );
+}
+
+/**
+ * Daily expiry sweep — downgrade Pro users whose `planExpiresAt` has passed
+ * to Free. Used by /api/cron/subscription-sweep. Returns the list of users
+ * who got demoted so the cron can notify them.
+ */
+export async function sweepExpiredPlans(): Promise<{
+  demoted: string[];
+}> {
+  await db();
+  const now = new Date().toISOString();
+  const expired = await UserModel.find({
+    plan: "pro",
+    planExpiresAt: { $lt: now },
+  })
+    .select("_id")
+    .lean();
+  const ids = expired.map((u) => String((u as unknown as { _id: string })._id));
+  if (ids.length === 0) return { demoted: [] };
+  await UserModel.updateMany(
+    { _id: { $in: ids } },
+    {
+      $set: { plan: "free", planType: "free" },
+      $unset: { planExpiresAt: "", planActivatedAt: "" },
+    },
+  );
+  return { demoted: ids };
+}
+
+/** All active admin user ids. Used for fan-out notifications (bootcamp review, escalations). */
+export async function listAdminUserIds(): Promise<string[]> {
+  await db();
+  const docs = await UserModel.find({ role: "admin", status: { $ne: "soft_deleted" } })
+    .select("_id")
+    .lean();
+  return docs.map((u) => String((u as unknown as { _id: string })._id));
+}
+
+/** Users whose Pro plan expires inside the next `withinHours` window — used for warning emails. */
+export async function listUsersExpiringSoon(
+  withinHours: number,
+): Promise<User[]> {
+  await db();
+  const now = Date.now();
+  const horizon = new Date(now + withinHours * 3600_000).toISOString();
+  const docs = await UserModel.find({
+    plan: "pro",
+    planExpiresAt: { $gte: new Date(now).toISOString(), $lt: horizon },
+  }).lean();
+  return unwrapAll(docs as unknown as User[]);
+}
+
+/**
+ * Idempotently mark a payment transaction as processed.
+ *
+ * Returns `{ firstTime: true }` if this call inserted the record — meaning
+ * the caller IS the unique processor and should run side effects (activate
+ * plan, notify, audit). Returns `{ firstTime: false }` if another path
+ * already processed it — caller should short-circuit.
+ *
+ * Two concurrent callers race on `_id: txnId` and Mongo's unique constraint
+ * guarantees only one wins.
+ */
+export async function recordProcessedTxn(input: {
+  txnId: string;
+  provider: "phonepe" | "mock";
+  orderId: string;
+  userId: string;
+  plan: "pro" | "premium" | "sponsorship";
+  amountPaise: number;
+  status: "success" | "failed" | "pending";
+  via: "callback" | "webhook";
+}): Promise<{ firstTime: boolean }> {
+  await db();
+  const now = new Date().toISOString();
+  try {
+    await ProcessedTxnModel.create({
+      _id: input.txnId,
+      provider: input.provider,
+      orderId: input.orderId,
+      userId: input.userId,
+      plan: input.plan,
+      amountPaise: input.amountPaise,
+      status: input.status,
+      processedAt: now,
+      via: input.via,
+    });
+    return { firstTime: true };
+  } catch (err) {
+    if ((err as any)?.code === 11000) {
+      return { firstTime: false };
+    }
+    throw err;
+  }
 }
 
 function escapeRegex(s: string) {
@@ -513,22 +802,29 @@ export async function createSponsorship(input: {
   bootcampId: string;
   jobId?: string;
   pricePaid: number;
+  /**
+   * If true (default), sponsorship begins in `payment_pending` and stays there
+   * until the PhonePe callback / webhook flips it to `offered`. Set false only
+   * for legacy/test paths that need an immediately-active sponsorship.
+   */
+  pendingPayment?: boolean;
+  /** Override for the generated sponsorship id (lets callers anchor it to a payment order). */
+  forcedId?: string;
 }): Promise<Sponsorship> {
   await db();
   const now = new Date();
   const expires = new Date(now.getTime() + SPONSORSHIP_EXPIRY_DAYS * 86400_000);
   const sp: Sponsorship = {
-    id: genId("spon"),
+    id: input.forcedId ?? genId("spon"),
     recruiterId: input.recruiterId,
     companyName: input.companyName,
     studentId: input.studentId,
     bootcampId: input.bootcampId,
     jobId: input.jobId,
     pricePaid: input.pricePaid,
-    status: "offered",
+    status: input.pendingPayment === false ? "offered" : "payment_pending",
     offeredAt: now.toISOString(),
     expiresAt: expires.toISOString(),
-    paymentRef: `MOCK_PHONEPE_${Date.now().toString(36).toUpperCase()}`,
   };
   await SponsorshipModel.create({ _id: sp.id, ...sp });
   return sp;

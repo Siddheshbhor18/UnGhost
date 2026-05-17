@@ -51,6 +51,17 @@ export function CoachPanel({ studentFirstName }: { studentFirstName: string }) {
         }),
       });
       const data = await res.json();
+      if (res.status === 402) {
+        setMessages([
+          ...next,
+          {
+            role: "assistant",
+            text:
+              "AI Coach is included with Pro (₹999/mo) and Premium (₹4,999 lifetime). [Upgrade →](/upgrade)",
+          },
+        ]);
+        return;
+      }
       const replyText =
         typeof data === "string"
           ? data

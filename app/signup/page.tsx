@@ -80,21 +80,58 @@ function SignupInner() {
     if (!canSubmit) return;
     setBusy(true);
     setErr(null);
-    // Phase 1: stub auto-login as demo user matching role.
-    // Real impl: POST /api/auth/signup → OTP → onboarding.
-    const demoEmail = role === "recruiter" ? "hr@stark.test" : "alice@demo.test";
-    const res = await signIn("credentials", {
-      email: demoEmail,
-      password: "demo",
-      redirect: false,
-    });
-    setBusy(false);
-    if (res?.error) {
-      setErr("Signup is in demo mode — sign in with a demo account instead.");
-      return;
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone: `${country}${phone}`,
+          password,
+          role,
+          acceptTos,
+          acceptService,
+          acceptMarketing,
+        }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        userId?: string;
+        error?: string;
+        message?: string;
+        demoOtp?: string;
+      };
+
+      if (!res.ok || !data.ok || !data.userId) {
+        if (res.status === 429) {
+          setErr("Too many signup attempts. Try again in a minute.");
+        } else if (data.error === "email_taken" || data.error === "phone_taken") {
+          setErr(data.message ?? "An account already uses these credentials.");
+        } else if (data.error === "weak_password") {
+          setErr(data.message ?? "Pick a stronger password.");
+        } else {
+          setErr(data.message ?? data.error ?? "Signup failed. Try again.");
+        }
+        return;
+      }
+
+      // Persist the pending userId + role so /verify-phone can pick up where
+      // we left off. demoOtp (mock SMS adapter only) is stashed alongside so
+      // the next page can auto-fill the field in dev.
+      sessionStorage.setItem("pendingUserId", data.userId);
+      sessionStorage.setItem("pendingRole", role);
+      sessionStorage.setItem("pendingPhone", `${country}${phone}`);
+      sessionStorage.setItem("pendingEmail", email);
+      if (data.demoOtp) sessionStorage.setItem("pendingDemoOtp", data.demoOtp);
+
+      router.push("/verify-phone");
+      router.refresh();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
     }
-    router.push(role === "recruiter" ? "/recruiter/command" : "/onboarding");
-    router.refresh();
   }
 
   return (

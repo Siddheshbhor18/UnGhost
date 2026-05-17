@@ -126,10 +126,16 @@ export interface CompanyProfile {
 export type SupportTicketStatus = "open" | "in_progress" | "resolved" | "closed";
 export type SupportTicketCategory =
   | "billing"
+  | "payment"
   | "account"
   | "abuse"
+  | "application"
+  | "bootcamp"
+  | "recruiter_dispute"
   | "bug"
+  | "bug_report"
   | "feature_request"
+  | "press"
   | "other";
 
 export interface SupportTicket {
@@ -159,6 +165,53 @@ export interface EmailTemplate {
 
 export type UserStatus = "active" | "suspended" | "banned" | "soft_deleted";
 
+// ── Subscription plans (student-only) ─────────────────────────────────────
+// FREE       → ₹0 · 2 lifetime applications · no AI Coach · no Q&A · no bootcamps
+// PRO        → ₹999/month · 5 apps per 30-day window · AI Coach · Q&A
+// PREMIUM    → ₹4999 one-time lifetime · unlimited apps · AI Coach · Q&A · all bootcamps free
+export type SubscriptionPlan = "free" | "pro" | "premium";
+
+export interface PlanLimits {
+  /** "trial" = lifetime cap, "monthly" = rolling-30d cap, "unlimited" = no cap. */
+  applicationCap:
+    | { kind: "trial"; count: number }
+    | { kind: "monthly"; count: number }
+    | { kind: "unlimited" };
+  aiCoach: boolean;
+  questionAndAnswer: boolean;
+  bootcampsIncluded: boolean;
+}
+
+export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
+  free: {
+    applicationCap: { kind: "trial", count: 2 },
+    aiCoach: false,
+    questionAndAnswer: false,
+    bootcampsIncluded: false,
+  },
+  pro: {
+    applicationCap: { kind: "monthly", count: 5 },
+    aiCoach: true,
+    questionAndAnswer: true,
+    bootcampsIncluded: false,
+  },
+  premium: {
+    applicationCap: { kind: "unlimited" },
+    aiCoach: true,
+    questionAndAnswer: true,
+    bootcampsIncluded: true,
+  },
+};
+
+export const PLAN_PRICING: Record<
+  SubscriptionPlan,
+  { label: string; amountINR: number; cadence: "free" | "monthly" | "lifetime" }
+> = {
+  free:    { label: "Free",    amountINR: 0,    cadence: "free" },
+  pro:     { label: "Pro",     amountINR: 999,  cadence: "monthly" },
+  premium: { label: "Premium", amountINR: 4999, cadence: "lifetime" },
+};
+
 export interface User {
   id: string;
   email: string;
@@ -182,6 +235,26 @@ export interface User {
   coachPersona?: CoachPersona;
   /** Rolling memory for the AI Coach (cross-session). */
   aiCoachMemory?: AICoachMemory;
+  // ── Subscription ───────────────────────────────────────────────────────
+  /** Active subscription plan. Defaults to "free". Recruiters/admins ignore. */
+  plan?: SubscriptionPlan;
+  /** Pricing cadence — "monthly" for pro, "lifetime" for premium. */
+  planType?: "monthly" | "lifetime" | "free";
+  /** ISO timestamp the current plan started. */
+  planActivatedAt?: string;
+  /** ISO timestamp the current plan expires. Null for premium (lifetime) + free. */
+  planExpiresAt?: string;
+  /** Last payment provider txn id (PhonePe). Used to dedupe callbacks. */
+  lastBillingTxnId?: string;
+  /** True after the user clicked Cancel on their Pro renewal. */
+  planRenewalCancelled?: boolean;
+  /** True once email-ownership has been proven via verify-email token. */
+  emailVerified?: boolean;
+  emailVerifiedAt?: string;
+  /** True once phone-ownership has been proven via OTP. */
+  phoneVerified?: boolean;
+  phoneVerifiedAt?: string;
+  createdAt?: string;
 }
 
 export interface Job {
@@ -283,6 +356,7 @@ export interface Bootcamp {
 }
 
 export type SponsorshipStatus =
+  | "payment_pending"
   | "offered"
   | "accepted"
   | "declined"
@@ -304,8 +378,8 @@ export interface Sponsorship {
   declinedAt?: string;
   expiresAt: string;         // 30 days after offer per PRD
   completedAt?: string;
-  /** Mock-PhonePe transaction reference; real impl from webhook */
-  paymentRef: string;
+  /** PhonePe transaction reference. Absent while status === "payment_pending". */
+  paymentRef?: string;
 }
 
 export interface SavedJob {
@@ -395,7 +469,7 @@ export interface AuditLog {
   actorRole: Role;
   /** Canonical action name: "user.suspend", "bootcamp.approve", etc. */
   action: string;
-  targetType: "user" | "bootcamp" | "job" | "application" | "company" | "message" | "system";
+  targetType: "user" | "bootcamp" | "job" | "application" | "company" | "message" | "system" | "sponsorship";
   targetId: string;
   summary: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -453,6 +527,7 @@ export type NotificationKind =
   | "message_received"
   | "bootcamp_complete"
   | "skill_verified"
+  | "plan_activated"
   | "system";
 
 export type NotificationPriority = "low" | "normal" | "high" | "critical";

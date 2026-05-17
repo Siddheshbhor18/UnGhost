@@ -27,6 +27,7 @@ const KIND_ICON: Record<NotificationKind, string> = {
   message_received: "💬",
   bootcamp_complete: "🎓",
   skill_verified: "✓",
+  plan_activated: "💎",
   system: "🛎️",
 };
 

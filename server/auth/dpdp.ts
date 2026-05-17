@@ -133,12 +133,51 @@ export async function softDeleteUser(userId: string, reason?: string): Promise<v
       $unset: { passwordHash: "" },
     },
   );
-  // Schedule hard delete by writing a TTL key in Redis (the SLA-sweep job
-  // can pick up these keys when it lands; for now the key is documentary).
+
+  // Auto-cancel any active sponsorship the deleted user is on either side of.
+  // Recruiters shouldn't have to wait for the 30-day purge to free the seat;
+  // sponsored students shouldn't see "Deleted user" as a pending offer.
+  await SponsorshipModel.updateMany(
+    {
+      status: { $in: ["payment_pending", "offered"] },
+      $or: [{ studentId: userId }, { recruiterId: userId }],
+    },
+    { $set: { status: "declined", declinedAt: now } },
+  );
+
+  // Schedule hard delete by writing a TTL key in Redis. The subscription
+  // sweep cron checks this on each run and calls hardDeleteUser once the
+  // purgeAt timestamp has passed.
   await redis()
     .set(`dpdp:purge:${userId}`, purgeAt, { ex: 60 * 60 * 24 * 31 })
     .catch(() => {});
   logger.info({ userId, reason, purgeAt }, "dpdp.soft-delete");
+}
+
+/**
+ * Find every soft-deleted user past their 30-day grace and hard-delete them.
+ * Called by the daily /api/cron/subscription-sweep route. Returns the list
+ * of ids that were purged so the caller can log a summary.
+ */
+export async function sweepHardDeletes(): Promise<string[]> {
+  const cutoff = new Date(
+    Date.now() - 1000 * 60 * 60 * 24 * 30,
+  ).toISOString();
+  const due = await UserModel.find({
+    status: "soft_deleted",
+    suspendedAt: { $lt: cutoff },
+  })
+    .select("_id")
+    .lean();
+  const ids = due.map(
+    (u) => String((u as unknown as { _id: string })._id),
+  );
+  for (const id of ids) {
+    await hardDeleteUser(id).catch((err) => {
+      logger.error({ err, userId: id }, "dpdp.hard-delete-failed");
+    });
+  }
+  return ids;
 }
 
 /**

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Calendar, Check, Lock, PlayCircle, Send, Star, Users } from "lucide-react";
+import { ArrowLeft, Calendar, Check, Lock, PlayCircle, Send, Sparkles, Star, Users } from "lucide-react";
 import {
   BlobField,
   GlassBadge,
@@ -13,20 +13,45 @@ import {
   GlassNavbar,
   GlassTextarea,
 } from "@/components/glass";
-import { PhonePeDrawer } from "@/components/shared/PhonePeDrawer";
 import type { Bootcamp } from "@/shared/types";
 import clsx from "clsx";
 
 export default function BootcampPage() {
   const params = useParams<{ id: string }>();
   const { data: session } = useSession();
+  const router = useRouter();
   const [bc, setBc] = useState<Bootcamp | null>(null);
   const [enrolled, setEnrolled] = useState(false);
-  const [drawer, setDrawer] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrolError, setEnrolError] = useState<string | null>(null);
   const [activeVideo, setActiveVideo] = useState(0);
   const [verifyText, setVerifyText] = useState("");
   const [verifyResult, setVerifyResult] = useState<{ passed: boolean; message: string; skill?: string } | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
+
+  async function enrolNow() {
+    if (!bc) return;
+    setEnrolError(null);
+    setEnrolling(true);
+    try {
+      const res = await fetch(`/api/bootcamps/${bc.id}/enrol`, { method: "POST" });
+      const data = await res.json();
+      if (res.status === 402) {
+        // Premium-only — bounce to upgrade page with bootcamp context.
+        router.push(`/upgrade?to=premium`);
+        return;
+      }
+      if (!res.ok) {
+        setEnrolError(data.error ?? "Enrol failed. Try again.");
+        return;
+      }
+      setEnrolled(true);
+    } catch (err) {
+      setEnrolError((err as Error).message);
+    } finally {
+      setEnrolling(false);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/bootcamps")
@@ -113,12 +138,23 @@ export default function BootcampPage() {
               </div>
             ) : (
               <div className="text-right">
-                <p className="font-display font-extrabold text-3xl text-brand-ink mb-2">
-                  ₹{bc.priceINR.toLocaleString("en-IN")}
+                <p className="text-xs uppercase tracking-widest text-brand-muted mb-1">
+                  Included with
                 </p>
-                <GlassButton variant="brand" size="lg" onClick={() => setDrawer(true)}>
-                  Enroll · PhonePe
+                <p className="font-display font-extrabold text-2xl text-brand-ink mb-2 inline-flex items-center gap-2">
+                  <Sparkles size={18} className="text-violet-600" /> Premium
+                </p>
+                <GlassButton
+                  variant="brand"
+                  size="lg"
+                  onClick={enrolNow}
+                  disabled={enrolling}
+                >
+                  {enrolling ? "Working…" : "Enroll now"}
                 </GlassButton>
+                {enrolError ? (
+                  <p className="text-xs text-red-600 mt-2">{enrolError}</p>
+                ) : null}
               </div>
             )}
           </div>
@@ -271,14 +307,6 @@ export default function BootcampPage() {
         </div>
       </div>
 
-      <PhonePeDrawer
-        open={drawer}
-        bootcampId={bc.id}
-        bootcampTitle={bc.title}
-        amount={bc.priceINR}
-        onClose={() => setDrawer(false)}
-        onSuccess={() => setEnrolled(true)}
-      />
     </main>
   );
 }

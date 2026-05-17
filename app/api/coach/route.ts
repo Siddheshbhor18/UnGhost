@@ -9,6 +9,7 @@ import {
   rateLimitResponse,
   identifierFromRequest,
 } from "@/server/lib/rate-limit";
+import { effectivePlan, planAllowsCoach } from "@/server/lib/quota";
 import { getAI } from "@/server/integrations/ai";
 import {
   appendCoachMessage,
@@ -64,6 +65,19 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  }
+  // Subscription gate — Free plan cannot use the coach.
+  const userForGate = await getUserById(session.user.id);
+  if (userForGate && !planAllowsCoach(userForGate)) {
+    return NextResponse.json(
+      {
+        error: "upgrade_required",
+        plan: effectivePlan(userForGate),
+        message: "AI Coach is included with Pro and Premium plans.",
+        upgradeUrl: "/upgrade",
+      },
+      { status: 402 },
+    );
   }
   // 15 chat turns / minute / user — matches PRD free-tier budget.
   const rl = await rateLimit("coach", identifierFromRequest(req, session.user.id), {

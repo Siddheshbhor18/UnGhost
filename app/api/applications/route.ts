@@ -12,6 +12,7 @@ import {
   APPLY_THRESHOLD,
   computeCompleteness,
 } from "@/server/lib/profile-completeness";
+import { checkApplyQuota, effectivePlan } from "@/server/lib/quota";
 import { getAI } from "@/server/integrations/ai";
 
 export const runtime = "nodejs";
@@ -47,6 +48,26 @@ export async function POST(req: Request) {
         missing: completeness.missing,
       },
       { status: 403 },
+    );
+  }
+
+  // Subscription gate — enforce per-plan application quota.
+  const quota = await checkApplyQuota(user);
+  if (!quota.allowed) {
+    return NextResponse.json(
+      {
+        error: "quota_exceeded",
+        plan: effectivePlan(user),
+        reason: quota.reason,
+        cap: quota.cap,
+        remaining: quota.remaining,
+        windowKind: quota.windowKind,
+        message:
+          quota.reason === "trial_exhausted"
+            ? `You've used all ${quota.cap} free applications. Upgrade to Pro for 5/month or Premium for unlimited.`
+            : `You've used all ${quota.cap} Pro applications this month. Upgrade to Premium for unlimited, or wait for the window to refresh.`,
+      },
+      { status: 402 },
     );
   }
   const ai = getAI();

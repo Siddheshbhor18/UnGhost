@@ -50,7 +50,24 @@ function LoginInner() {
     const res = await signIn("credentials", { email, password, redirect: false });
     setBusy(false);
     if (res?.error) {
-      setErr("Wrong credentials. Try the demo email above with password 'demo'.");
+      // NextAuth surfaces our `throw new Error("...")` text in res.error.
+      // We tag phone-verification refusals with a `PHONE_UNVERIFIED` prefix
+      // in server/auth so we can route the user to /verify-phone instead of
+      // showing a generic wrong-credentials message.
+      if (res.error.includes("PHONE_UNVERIFIED")) {
+        setErr("Your phone isn't verified yet. Finish signup at /verify-phone.");
+        return;
+      }
+      if (
+        res.error.toLowerCase().includes("suspended") ||
+        res.error.toLowerCase().includes("banned") ||
+        res.error.toLowerCase().includes("grace")
+      ) {
+        // Pass through the human-readable suspension/ban message verbatim.
+        setErr(res.error);
+        return;
+      }
+      setErr("Wrong credentials. Check the email + password you used at signup.");
       return;
     }
     const target = nextParam ?? ROLES.find((x) => x.id === role)!.href;

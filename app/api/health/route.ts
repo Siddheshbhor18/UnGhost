@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { connectMongo } from "@/server/db/mongo";
 import { redis, redisMode } from "@/server/db/redis";
 import { logger } from "@/server/lib/logger";
+import { listIntegrations } from "@/server/integrations/status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,6 +63,15 @@ export async function GET() {
       error: e instanceof Error ? e.message : "unknown",
     };
   }
+
+  // Adapter modes snapshot — non-failing summary so ops can see at a glance
+  // which integrations are running mocked vs live. A "mock" entry in prod is
+  // a warning sign but not an outage; the actual hard refusal lives inside
+  // each adapter (e.g. payments assertNotMockInProd).
+  result.integrations = listIntegrations().map((i) => ({
+    id: i.id,
+    mode: i.mode,
+  }));
 
   result.totalLatencyMs = Date.now() - t0;
   if (!result.ok) {

@@ -126,6 +126,23 @@ const UserSchema = withJsonTransform(
         ),
         default: undefined,
       },
+      // ── Subscription ──────────────────────────────────────────────
+      plan: { type: String, default: "free", index: true },
+      planType: { type: String, default: "free" },
+      planActivatedAt: String,
+      planExpiresAt: { type: String, index: true },
+      lastBillingTxnId: String,
+      // When true, the daily expiry cron does NOT renew Pro at planExpiresAt.
+      planRenewalCancelled: { type: Boolean, default: false },
+      // ── Verification ──────────────────────────────────────────────
+      // Both default false. /api/auth/signup flips them only after the
+      // user proves email + phone ownership. Login refuses if either is
+      // still false (with a "resend verification" path).
+      emailVerified: { type: Boolean, default: false, index: true },
+      emailVerifiedAt: String,
+      phoneVerified: { type: Boolean, default: false },
+      phoneVerifiedAt: String,
+      createdAt: String,
     },
     { versionKey: false },
   ),
@@ -654,6 +671,44 @@ const EmailTemplateSchema = withJsonTransform(
 export const EmailTemplateModel: Model<EmailTemplate> =
   (mongoose.models.EmailTemplate as Model<EmailTemplate>) ||
   mongoose.model<EmailTemplate>("EmailTemplate", EmailTemplateSchema);
+
+// ---------- ProcessedTxn (payment idempotency) ----------
+// One row per provider transaction id. We `findOneAndUpdate({_id: txnId},
+// {$setOnInsert: ...}, {upsert: true})` so two concurrent callback+webhook
+// races converge on the first inserter. If the doc already existed, we
+// skip the plan-activation work.
+export interface ProcessedTxn {
+  id: string;
+  provider: "phonepe" | "mock";
+  orderId: string;
+  userId: string;
+  plan: "pro" | "premium" | "sponsorship";
+  amountPaise: number;
+  status: "success" | "failed" | "pending";
+  processedAt: string;
+  via: "callback" | "webhook";
+}
+
+const ProcessedTxnSchema = withJsonTransform(
+  new Schema(
+    {
+      _id: { type: String, required: true },
+      provider: { type: String, required: true },
+      orderId: { type: String, required: true, index: true },
+      userId: { type: String, required: true, index: true },
+      plan: { type: String, required: true },
+      amountPaise: { type: Number, required: true },
+      status: { type: String, required: true },
+      processedAt: { type: String, required: true, index: true },
+      via: { type: String, required: true },
+    },
+    { versionKey: false },
+  ),
+);
+
+export const ProcessedTxnModel: Model<ProcessedTxn> =
+  (mongoose.models.ProcessedTxn as Model<ProcessedTxn>) ||
+  mongoose.model<ProcessedTxn>("ProcessedTxn", ProcessedTxnSchema);
 
 /**
  * Strip mongo's `_id` and shape doc back to domain object with `id`.

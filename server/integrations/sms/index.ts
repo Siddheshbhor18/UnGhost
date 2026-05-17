@@ -46,7 +46,7 @@ function genOtp(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-function normalisePhone(p: string): string {
+export function normalisePhone(p: string): string {
   return p.replace(/[^\d+]/g, "");
 }
 

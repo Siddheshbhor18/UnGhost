@@ -25,10 +25,16 @@ const STATUS_TONE: Record<SupportTicketStatus, string> = {
 
 const CATEGORY_LABEL: Record<SupportTicket["category"], string> = {
   billing: "Billing",
+  payment: "Payment",
   account: "Account",
   abuse: "Abuse",
+  application: "Application",
+  bootcamp: "Bootcamp",
+  recruiter_dispute: "Recruiter dispute",
   bug: "Bug",
+  bug_report: "Bug report",
   feature_request: "Feature",
+  press: "Press",
   other: "Other",
 };
 

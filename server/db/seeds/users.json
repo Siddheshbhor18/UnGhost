@@ -6,6 +6,10 @@
     "role": "student",
     "name": "Alice Rao",
     "avatarUrl": "/seed-avatars/alice.svg",
+    "plan": "premium",
+    "planType": "lifetime",
+    "planActivatedAt": "2026-01-12T10:14:00Z",
+    "lastBillingTxnId": "seed_alice_premium",
     "profile": {
       "alias": "alice.rao",
       "contactEmail": "alice@demo.test",

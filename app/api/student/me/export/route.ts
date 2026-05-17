@@ -8,16 +8,27 @@ import {
   listMessageThreadsForUser,
   listNotifications,
   listSponsorshipsByStudent,
+  writeAuditLog,
 } from "@/server/store";
+import { withApiErrorTracking } from "@/server/lib/api-error";
+import { withRateLimit } from "@/server/lib/with-rate-limit";
 
 export const runtime = "nodejs";
 
 /**
+ * GET /api/student/me/export
+ *
  * DPDP-style data export. Returns a JSON bundle of everything the platform
- * stores about the user. Real impl per PRD: queue a job, generate within 30
- * days, email a signed-URL link with a 30-day expiry. Phase 1 returns inline.
+ * stores about the user — direct download.
+ *
+ * Audit-logged: every export creates an `account.exported` audit row so we
+ * can prove compliance to regulators and detect abuse.
+ *
+ * Rate-limited at 5 / 24h / user. Real prod for >1MB profiles will move to
+ * Inngest + R2 + signed URL but inline is fine for launch (median profile
+ * fits in ~50KB).
  */
-export async function GET() {
+async function handler(_req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -32,17 +43,34 @@ export async function GET() {
       listMessageThreadsForUser(uid),
       listNotifications(uid, { limit: 500 }),
     ]);
+  if (!user) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  // Strip the password hash — never leaves the DB.
+  const safeUser = { ...user, passwordHash: "[redacted]" };
+
   const bundle = {
     exportedAt: new Date().toISOString(),
     dpdpVersion: "1.0",
     dataResidency: "ap-south-1 · Mumbai",
-    user,
+    user: safeUser,
     applications,
     sponsorships,
     inmails,
     threads,
     notifications,
   };
+
+  await writeAuditLog({
+    actorId: uid,
+    actorRole: (user.role as "student" | "recruiter") ?? "student",
+    action: "account.exported",
+    targetType: "user",
+    targetId: uid,
+    summary: `DPDP export · ${applications.length} apps · ${threads.length} threads`,
+  });
+
   return new NextResponse(JSON.stringify(bundle, null, 2), {
     headers: {
       "content-type": "application/json",
@@ -50,3 +78,8 @@ export async function GET() {
     },
   });
 }
+
+export const GET = withRateLimit(
+  { bucket: "dpdp.export", limit: 5, windowSec: 86400, by: "user" },
+  withApiErrorTracking(handler),
+);

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, ArrowLeft, RotateCw } from "lucide-react";
 import { BlobField, GlassBadge, GlassCard } from "@/components/glass";
 
@@ -13,8 +14,15 @@ export default function ErrorPage({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Real impl: ship to Sentry / Better Stack
-    console.error("[unGhost] App error:", error);
+    // Ship to Sentry. `digest` is Next.js's server-side hash that we already
+    // surface to the user — including it as a tag lets us pivot from the UI
+    // trace ID straight to the matching Sentry event.
+    Sentry.captureException(error, {
+      tags: { source: "app/error.tsx", digest: error.digest ?? "none" },
+    });
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[unGhost] App error:", error);
+    }
   }, [error]);
 
   return (
