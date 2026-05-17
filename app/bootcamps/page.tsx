@@ -1,50 +1,54 @@
-import Link from "next/link";
-import { Navbar } from "@/components/shared/Navbar";
-import { Badge } from "@/components/arcade/Badge";
-import { ArcadeCard } from "@/components/arcade/ArcadeCard";
-import { PixelButton } from "@/components/arcade/PixelButton";
-import { SectionHeader } from "@/components/arcade/SectionHeader";
-import { listBootcamps, getUserById } from "@/lib/data/store";
-import { Clock, Star, Users } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { GraduationCap } from "lucide-react";
+import { authOptions } from "@/server/auth";
+import { GlassNavbar } from "@/components/glass";
+import { BackdropMesh, SectionLabel } from "@/components/ui";
+import { listBootcamps, getUserById } from "@/server/store";
+import { BootcampGrid } from "@/components/student/BootcampGrid";
 
-export default function BootcampCatalog() {
-  const bcs = listBootcamps();
+export default async function BootcampCatalog() {
+  const session = await getServerSession(authOptions);
+  const bcs = await listBootcamps();
+
+  const instructorIds = Array.from(new Set(bcs.map((b) => b.instructorId)));
+  const instructorList = await Promise.all(instructorIds.map((id) => getUserById(id)));
+  const instructorIndex = Object.fromEntries(
+    instructorIds.map((id, i) => [
+      id,
+      instructorList[i] ? { name: instructorList[i]!.name } : undefined,
+    ]),
+  );
+
+  let enrolledIds: string[] = [];
+  if (session?.user?.id) {
+    const u = await getUserById(session.user.id);
+    enrolledIds = u?.profile?.enrolledBootcamps ?? [];
+  }
+
   return (
-    <main className="min-h-screen bg-bg-base bg-arcade-grid">
-      <Navbar />
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        <SectionHeader
-          eyebrow="DECK 03 / ACCELERATOR"
-          title="Bootcamps"
-          subtitle="2 recorded modules + 1 live session with the instructor. Pass the skill-verify gate, earn a verified badge that recruiters can filter on."
-          color="green"
-        />
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-          {bcs.map((b) => {
-            const instructor = getUserById(b.instructorId);
-            return (
-              <ArcadeCard key={b.id} glow="green" interactive>
-                <Badge tone="green" className="mb-2">{b.skill}</Badge>
-                <h3 className="font-pixel text-base text-neon-green mb-2">{b.title}</h3>
-                <p className="font-mono text-xs text-ink-muted mb-3 line-clamp-2">{b.description}</p>
-                <div className="flex flex-wrap gap-3 font-mono text-[10px] text-ink-muted mb-3">
-                  <span className="inline-flex items-center gap-1"><Clock size={11} /> {b.durationWeeks}w</span>
-                  <span className="inline-flex items-center gap-1"><Star size={11} className="text-neon-yellow" /> {b.rating}</span>
-                  <span className="inline-flex items-center gap-1"><Users size={11} /> {b.enrolledStudentIds.length}</span>
-                </div>
-                <p className="font-pixel text-xs text-ink-muted mb-3">
-                  by <span className="text-neon-pink">{instructor?.name}</span>
-                </p>
-                <div className="flex items-center justify-between">
-                  <p className="font-pixel text-lg text-neon-pink">₹{b.priceINR.toLocaleString("en-IN")}</p>
-                  <Link href={`/bootcamp/${b.id}`}>
-                    <PixelButton variant="green" size="sm">Enroll →</PixelButton>
-                  </Link>
-                </div>
-              </ArcadeCard>
-            );
-          })}
+    <main className="relative min-h-screen">
+      <BackdropMesh />
+      <GlassNavbar />
+
+      <div className="mx-auto max-w-content px-4 pt-8 pb-16">
+        <div className="mb-8 max-w-prose">
+          <SectionLabel tone="brand" icon={<GraduationCap size={12} />}>
+            Skill-up
+          </SectionLabel>
+          <h1 className="font-display font-extrabold text-display-xl text-neutral-950 mt-2 tracking-tighter">
+            Bootcamps that close the gap.
+          </h1>
+          <p className="text-body-md text-neutral-500 mt-3 leading-relaxed">
+            Recorded modules plus a live session with the instructor. Pass the
+            skill-verify gate, earn a verified badge recruiters can filter on.
+          </p>
         </div>
+
+        <BootcampGrid
+          bootcamps={bcs}
+          instructors={instructorIndex}
+          enrolledIds={enrolledIds}
+        />
       </div>
     </main>
   );

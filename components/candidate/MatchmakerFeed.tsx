@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CompanyProfile, Job } from "@/lib/data/types";
+import type { CompanyProfile, Job } from "@/shared/types";
 import { ArcadeCard } from "@/components/arcade/ArcadeCard";
 import { Badge } from "@/components/arcade/Badge";
 import { ScoreCounter } from "@/components/arcade/ScoreCounter";

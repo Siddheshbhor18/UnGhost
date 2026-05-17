@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { createJob, listJobs } from "@/lib/data/store";
-import type { SLAHours } from "@/lib/data/types";
+import { authOptions } from "@/server/auth";
+import { createJob, listJobs } from "@/server/store";
+import type { SLAHours } from "@/shared/types";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  return NextResponse.json(listJobs());
+  return NextResponse.json(await listJobs());
 }
 
 export async function POST(req: Request) {
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "recruiters only" }, { status: 403 });
   }
   const b = await req.json();
-  const job = createJob({
+  const job = await createJob({
     companyId: b.companyId,
     recruiterId: session.user.id,
     title: b.title,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAI } from "@/lib/ai";
+import { getAI } from "@/server/integrations/ai";
 
 export const runtime = "nodejs";
 

@@ -1,0 +1,115 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Brain, BarChart3, Megaphone, Wallet, Handshake, Star, Clock, Users, Video } from "lucide-react";
+import clsx from "clsx";
+import { GlassBadge, GlassCard } from "@/components/glass";
+import type { Bootcamp, BootcampCategory } from "@/shared/types";
+
+const CATS: { id: BootcampCategory | "all"; label: string; icon: React.ReactNode }[] = [
+  { id: "all", label: "All", icon: null },
+  { id: "ai", label: "AI / GenAI", icon: <Brain size={14} /> },
+  { id: "data_science", label: "Data Science", icon: <BarChart3 size={14} /> },
+  { id: "marketing", label: "Marketing", icon: <Megaphone size={14} /> },
+  { id: "finance", label: "Finance", icon: <Wallet size={14} /> },
+  { id: "sales", label: "Sales", icon: <Handshake size={14} /> },
+];
+
+export function BootcampGrid({
+  bootcamps,
+  instructors,
+  enrolledIds,
+  sponsoredIds = [],
+}: {
+  bootcamps: Bootcamp[];
+  instructors: Record<string, { name?: string } | undefined>;
+  enrolledIds: string[];
+  /** Bootcamps a recruiter is currently sponsoring for this student. */
+  sponsoredIds?: string[];
+}) {
+  const [cat, setCat] = useState<BootcampCategory | "all">("all");
+  const filtered = cat === "all" ? bootcamps : bootcamps.filter((b) => b.category === cat);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2">
+        {CATS.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setCat(c.id)}
+            className={clsx(
+              "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold border transition",
+              cat === c.id
+                ? "bg-brand-gradient text-white border-transparent shadow-brand-glow"
+                : "bg-white/50 text-brand-ink border-brand-ink/10 hover:bg-white/80",
+            )}
+          >
+            {c.icon}
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <GlassCard className="text-center py-10 text-brand-muted">
+          No bootcamps in this category yet.
+        </GlassCard>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((b) => {
+            const enrolled = enrolledIds.includes(b.id);
+            const liveCount = b.liveSlots.length;
+            const videoCount = b.videos.length;
+            const ins = instructors[b.instructorId];
+            return (
+              <Link key={b.id} href={`/bootcamp/${b.id}`}>
+                <GlassCard interactive className="h-full">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <GlassBadge tone="brand">{b.skill}</GlassBadge>
+                    <div className="flex flex-col items-end gap-1">
+                      {sponsoredIds.includes(b.id) && (
+                        <GlassBadge tone="warn">
+                          ★ Sponsored — free
+                        </GlassBadge>
+                      )}
+                      {enrolled && <GlassBadge tone="success">Enrolled</GlassBadge>}
+                    </div>
+                  </div>
+                  <h4 className="font-display font-bold text-base text-brand-ink mb-1.5 leading-snug">
+                    {b.title}
+                  </h4>
+                  <p className="text-sm text-brand-muted line-clamp-2 mb-4">{b.description}</p>
+
+                  <div className="flex flex-wrap gap-3 text-xs text-brand-muted mb-3">
+                    <span className="inline-flex items-center gap-1">
+                      <Clock size={11} /> {b.durationWeeks}w
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Video size={11} /> {videoCount} videos · {liveCount} live
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Star size={11} className="text-amber-500" /> {b.rating}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Users size={11} /> {b.enrolledStudentIds.length}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-brand-ink/10">
+                    <p className="text-xs text-brand-muted">
+                      by <span className="text-brand-ink font-semibold">{ins?.name ?? "—"}</span>
+                    </p>
+                    <p className="font-display font-extrabold text-brand-ink">
+                      ₹{b.priceINR.toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                </GlassCard>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

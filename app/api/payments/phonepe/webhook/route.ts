@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { enrollStudentInBootcamp } from "@/lib/data/store";
+import { authOptions } from "@/server/auth";
+import { enrollStudentInBootcamp } from "@/server/store";
 
 export const runtime = "nodejs";
 
@@ -13,6 +13,6 @@ export async function POST(req: Request) {
   if (status !== "SUCCESS") {
     return NextResponse.json({ ok: false });
   }
-  const bc = enrollStudentInBootcamp(session.user.id, bootcampId);
+  const bc = await enrollStudentInBootcamp(session.user.id, bootcampId);
   return NextResponse.json({ ok: true, bootcamp: bc });
 }

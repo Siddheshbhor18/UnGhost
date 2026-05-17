@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { SectionHeader } from "@/components/arcade/SectionHeader";
-import { ArcadeCard } from "@/components/arcade/ArcadeCard";
-import { Badge } from "@/components/arcade/Badge";
-import { PixelButton } from "@/components/arcade/PixelButton";
+import {
+  GlassBadge,
+  GlassButton,
+  GlassCard,
+  GlassInput,
+  GlassSelect,
+  GlassTextarea,
+} from "@/components/glass";
 import { Megaphone, Save, Eye } from "lucide-react";
 
 interface Campaign {
@@ -44,19 +48,21 @@ const SEED: Campaign[] = [
   },
 ];
 
+const EMPTY: Campaign = {
+  id: "",
+  name: "",
+  placement: "landing_hero",
+  mediaUrl: "",
+  headline: "",
+  subtext: "",
+  targetUrl: "",
+  status: "draft",
+  createdAt: new Date().toISOString().slice(0, 10),
+};
+
 export default function CampaignsAdmin() {
   const [list, setList] = useState<Campaign[]>(SEED);
-  const [editing, setEditing] = useState<Campaign>({
-    id: "",
-    name: "",
-    placement: "landing_hero",
-    mediaUrl: "",
-    headline: "",
-    subtext: "",
-    targetUrl: "",
-    status: "draft",
-    createdAt: new Date().toISOString().slice(0, 10),
-  });
+  const [editing, setEditing] = useState<Campaign>(EMPTY);
 
   function save() {
     if (!editing.id) {
@@ -65,121 +71,168 @@ export default function CampaignsAdmin() {
     } else {
       setList(list.map((c) => (c.id === editing.id ? editing : c)));
     }
-    setEditing({
-      id: "",
-      name: "",
-      placement: "landing_hero",
-      mediaUrl: "",
-      headline: "",
-      subtext: "",
-      targetUrl: "",
-      status: "draft",
-      createdAt: new Date().toISOString().slice(0, 10),
-    });
+    setEditing({ ...EMPTY, createdAt: new Date().toISOString().slice(0, 10) });
   }
 
   function toggleStatus(id: string) {
     setList((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: c.status === "live" ? "draft" : "live" } : c)),
+      prev.map((c) =>
+        c.id === id
+          ? { ...c, status: c.status === "live" ? "draft" : "live" }
+          : c,
+      ),
     );
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <SectionHeader
-        eyebrow="CAMPAIGNS"
-        title="Banner & Campaign Management"
-        subtitle="Push announcements to the landing, dashboard, or bootcamp surfaces."
-        color="pink"
-      />
+    <div className="p-8 space-y-6 max-w-7xl">
+      <div>
+        <GlassBadge tone="brand">Campaigns</GlassBadge>
+        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
+          Banner &amp; Campaign Management
+        </h1>
+        <p className="text-sm text-brand-muted mt-1">
+          Push announcements to the landing, dashboard, or bootcamp surfaces.
+        </p>
+      </div>
 
-      <div className="grid lg:grid-cols-2 gap-4">
-        <ArcadeCard glow="pink">
-          <p className="font-pixel text-[10px] text-neon-pink mb-4 flex items-center gap-2">
-            <Megaphone size={12} /> {editing.id ? "EDIT CAMPAIGN" : "NEW CAMPAIGN"}
+      <div className="grid lg:grid-cols-2 gap-5">
+        <GlassCard glow>
+          <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold mb-4 flex items-center gap-2">
+            <Megaphone size={14} /> {editing.id ? "Edit Campaign" : "New Campaign"}
           </p>
           <div className="space-y-3">
-            <Field label="CAMPAIGN INTERNAL NAME">
-              <input className="pixel-input w-full" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+            <Field label="Campaign internal name">
+              <GlassInput
+                value={editing.name}
+                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+              />
             </Field>
-            <Field label="BANNER PLACEMENT">
-              <select
-                className="pixel-input w-full"
+            <Field label="Banner placement">
+              <GlassSelect
                 value={editing.placement}
-                onChange={(e) => setEditing({ ...editing, placement: e.target.value as Campaign["placement"] })}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    placement: e.target.value as Campaign["placement"],
+                  })
+                }
               >
                 <option value="landing_hero">Landing Hero</option>
                 <option value="dashboard_top">Student Dashboard · Top</option>
                 <option value="bootcamp_inline">Bootcamp · Inline</option>
-              </select>
+              </GlassSelect>
             </Field>
-            <Field label="BANNER MEDIA URL">
-              <input className="pixel-input w-full" value={editing.mediaUrl} onChange={(e) => setEditing({ ...editing, mediaUrl: e.target.value })} placeholder="/banner.svg" />
+            <Field label="Banner media URL">
+              <GlassInput
+                value={editing.mediaUrl}
+                onChange={(e) =>
+                  setEditing({ ...editing, mediaUrl: e.target.value })
+                }
+                placeholder="/banner.svg"
+              />
             </Field>
-            <Field label="PRIMARY HEADLINE">
-              <input className="pixel-input w-full" value={editing.headline} onChange={(e) => setEditing({ ...editing, headline: e.target.value })} />
+            <Field label="Primary headline">
+              <GlassInput
+                value={editing.headline}
+                onChange={(e) =>
+                  setEditing({ ...editing, headline: e.target.value })
+                }
+              />
             </Field>
-            <Field label="SUBTEXT">
-              <textarea className="pixel-input w-full" value={editing.subtext} onChange={(e) => setEditing({ ...editing, subtext: e.target.value })} />
+            <Field label="Subtext">
+              <GlassTextarea
+                value={editing.subtext}
+                onChange={(e) =>
+                  setEditing({ ...editing, subtext: e.target.value })
+                }
+              />
             </Field>
-            <Field label="TARGET URL">
-              <input className="pixel-input w-full" value={editing.targetUrl} onChange={(e) => setEditing({ ...editing, targetUrl: e.target.value })} />
+            <Field label="Target URL">
+              <GlassInput
+                value={editing.targetUrl}
+                onChange={(e) =>
+                  setEditing({ ...editing, targetUrl: e.target.value })
+                }
+              />
             </Field>
-            <Field label="STATUS">
+            <Field label="Status">
               <div className="flex gap-2">
                 {(["draft", "live", "paused"] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => setEditing({ ...editing, status: s })}
-                    className={`flex-1 border-2 py-2 font-pixel text-[10px] ${
-                      editing.status === s ? "border-neon-green text-neon-green bg-neon-green/10" : "border-bg-ink text-ink-muted"
+                    className={`flex-1 rounded-xl border py-2.5 text-xs font-semibold capitalize transition ${
+                      editing.status === s
+                        ? "bg-brand-primary text-white border-brand-primary shadow-brand-glow"
+                        : "bg-white/40 border-brand-ink/10 text-brand-muted hover:border-brand-primary hover:text-brand-primary"
                     }`}
                   >
-                    {s.toUpperCase()}
+                    {s}
                   </button>
                 ))}
               </div>
             </Field>
-            <PixelButton variant="green" size="md" onClick={save} disabled={!editing.headline || !editing.name}>
-              <Save size={12} /> Save Campaign
-            </PixelButton>
+            <GlassButton
+              variant="brand"
+              size="md"
+              onClick={save}
+              disabled={!editing.headline || !editing.name}
+            >
+              <Save size={14} /> Save Campaign
+            </GlassButton>
           </div>
-        </ArcadeCard>
+        </GlassCard>
 
-        <ArcadeCard>
-          <p className="font-pixel text-[10px] text-neon-blue mb-4">▸ ALL CAMPAIGNS</p>
+        <GlassCard>
+          <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold mb-4">
+            All Campaigns
+          </p>
           <div className="space-y-3">
             {list.map((c) => (
-              <div key={c.id} className="border-2 border-bg-ink p-3 hover:border-neon-pink transition-colors">
+              <div
+                key={c.id}
+                className="bg-white/40 rounded-xl p-4 border border-brand-ink/5 hover:border-brand-primary/30 transition"
+              >
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
-                    <p className="font-pixel text-xs text-neon-pink">{c.name}</p>
-                    <p className="font-mono text-[10px] text-ink-muted">{c.placement}</p>
+                    <p className="font-display text-sm font-semibold text-brand-ink">
+                      {c.name}
+                    </p>
+                    <p className="text-xs text-brand-muted">{c.placement}</p>
                   </div>
-                  <Badge tone={c.status === "live" ? "green" : c.status === "paused" ? "yellow" : "muted"}>
-                    {c.status.toUpperCase()}
-                  </Badge>
+                  <GlassBadge
+                    tone={
+                      c.status === "live"
+                        ? "success"
+                        : c.status === "paused"
+                        ? "warn"
+                        : "neutral"
+                    }
+                  >
+                    {c.status}
+                  </GlassBadge>
                 </div>
-                <p className="font-mono text-xs text-ink-primary">{c.headline}</p>
-                <p className="font-mono text-[10px] text-ink-muted mt-1">{c.subtext}</p>
-                <div className="flex gap-2 mt-2">
+                <p className="text-sm text-brand-ink">{c.headline}</p>
+                <p className="text-xs text-brand-muted mt-1">{c.subtext}</p>
+                <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => setEditing(c)}
-                    className="text-[10px] font-pixel border border-neon-blue text-neon-blue px-2 py-1 hover:bg-neon-blue hover:text-black"
+                    className="text-xs font-semibold rounded-lg border border-brand-primary text-brand-primary px-3 py-1.5 hover:bg-brand-primary hover:text-white transition"
                   >
-                    EDIT
+                    Edit
                   </button>
                   <button
                     onClick={() => toggleStatus(c.id)}
-                    className="text-[10px] font-pixel border border-neon-green text-neon-green px-2 py-1 hover:bg-neon-green hover:text-black inline-flex items-center gap-1"
+                    className="text-xs font-semibold rounded-lg border border-emerald-500 text-emerald-600 px-3 py-1.5 hover:bg-emerald-500 hover:text-white transition inline-flex items-center gap-1"
                   >
-                    <Eye size={10} /> {c.status === "live" ? "UNPUBLISH" : "PUBLISH"}
+                    <Eye size={12} /> {c.status === "live" ? "Unpublish" : "Publish"}
                   </button>
                 </div>
               </div>
             ))}
           </div>
-        </ArcadeCard>
+        </GlassCard>
       </div>
     </div>
   );
@@ -188,7 +241,9 @@ export default function CampaignsAdmin() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="font-pixel text-[10px] text-ink-muted block mb-1">{label}</label>
+      <label className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold block mb-2">
+        {label}
+      </label>
       {children}
     </div>
   );

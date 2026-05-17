@@ -4,13 +4,18 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Navbar } from "@/components/shared/Navbar";
-import { ArcadeCard } from "@/components/arcade/ArcadeCard";
-import { Badge } from "@/components/arcade/Badge";
-import { PixelButton } from "@/components/arcade/PixelButton";
+import { ArrowLeft, Calendar, Check, Lock, PlayCircle, Send, Star, Users } from "lucide-react";
+import {
+  BlobField,
+  GlassBadge,
+  GlassButton,
+  GlassCard,
+  GlassNavbar,
+  GlassTextarea,
+} from "@/components/glass";
 import { PhonePeDrawer } from "@/components/shared/PhonePeDrawer";
-import type { Bootcamp } from "@/lib/data/types";
-import { Calendar, Check, Lock, PlayCircle, Send, Star, Users } from "lucide-react";
+import type { Bootcamp } from "@/shared/types";
+import clsx from "clsx";
 
 export default function BootcampPage() {
   const params = useParams<{ id: string }>();
@@ -47,143 +52,221 @@ export default function BootcampPage() {
 
   if (!bc)
     return (
-      <main className="min-h-screen bg-bg-base">
-        <Navbar />
-        <p className="text-center py-20 font-mono text-ink-muted">Loading…</p>
+      <main className="relative min-h-screen">
+        <BlobField />
+        <GlassNavbar />
+        <p className="text-center py-20 text-brand-muted">Loading…</p>
       </main>
     );
 
-  return (
-    <main className="min-h-screen bg-bg-base bg-arcade-grid">
-      <Navbar />
-      <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
-        <Link href="/bootcamps" className="font-mono text-xs text-neon-blue">← Bootcamp catalog</Link>
+  const v = bc.videos[activeVideo];
 
-        <ArcadeCard glow="green">
-          <div className="flex items-start justify-between flex-wrap gap-4">
-            <div>
-              <Badge tone="green" className="mb-2">{bc.skill}</Badge>
-              <h1 className="font-pixel text-2xl text-neon-green neon-text mb-2">{bc.title}</h1>
-              <p className="font-mono text-sm text-ink-muted max-w-2xl">{bc.description}</p>
-              <div className="flex gap-3 font-mono text-[11px] text-ink-muted mt-3">
-                <span><Star className="inline mr-1 text-neon-yellow" size={11} />{bc.rating}</span>
-                <span><Users className="inline mr-1" size={11} />{bc.enrolledStudentIds.length} enrolled</span>
+  return (
+    <main className="relative min-h-screen">
+      <BlobField />
+      <GlassNavbar />
+
+      <div className="mx-auto max-w-6xl px-4 pt-6 pb-16 space-y-5">
+        <Link
+          href="/bootcamps"
+          className="inline-flex items-center gap-1 text-sm text-brand-primary font-semibold hover:gap-2 transition-all"
+        >
+          <ArrowLeft size={14} /> Bootcamp catalog
+        </Link>
+
+        {/* Hero */}
+        <GlassCard variant="strong" className="p-7">
+          <div className="flex items-start justify-between flex-wrap gap-5">
+            <div className="flex-1 min-w-0">
+              <GlassBadge tone="brand" className="mb-2">{bc.skill}</GlassBadge>
+              <h1 className="font-display font-extrabold text-2xl md:text-3xl text-brand-ink">
+                {bc.title}
+              </h1>
+              <p className="text-brand-muted mt-2 max-w-2xl">{bc.description}</p>
+              <div className="flex flex-wrap gap-4 text-sm text-brand-muted mt-3">
+                <span className="inline-flex items-center gap-1">
+                  <Star className="text-amber-500" size={13} />
+                  {bc.rating}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Users size={13} />
+                  {bc.enrolledStudentIds.length} enrolled
+                </span>
                 <span>{bc.durationWeeks} weeks</span>
+                <span>{bc.videos.length} recorded · {bc.liveSlots.length} live</span>
               </div>
+              <Link
+                href={`/instructor/${bc.instructorId}`}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline mt-3"
+              >
+                View instructor profile →
+              </Link>
             </div>
             {enrolled ? (
-              <Badge tone="green"><Check size={12} /> ENROLLED</Badge>
+              <div className="flex flex-col items-end gap-2">
+                <GlassBadge tone="success">
+                  <Check size={12} /> Enrolled
+                </GlassBadge>
+                <a href={`/student/my-bootcamps/${bc.id}/learn`} className="btn-brand">
+                  Continue learning →
+                </a>
+              </div>
             ) : (
               <div className="text-right">
-                <p className="font-pixel text-2xl text-neon-pink mb-2">₹{bc.priceINR.toLocaleString("en-IN")}</p>
-                <PixelButton variant="green" size="lg" onClick={() => setDrawer(true)}>Enroll · PhonePe</PixelButton>
+                <p className="font-display font-extrabold text-3xl text-brand-ink mb-2">
+                  ₹{bc.priceINR.toLocaleString("en-IN")}
+                </p>
+                <GlassButton variant="brand" size="lg" onClick={() => setDrawer(true)}>
+                  Enroll · PhonePe
+                </GlassButton>
               </div>
             )}
           </div>
-        </ArcadeCard>
+        </GlassCard>
 
-        <div className="grid lg:grid-cols-3 gap-4">
-          {/* video player */}
-          <div className="lg:col-span-2 space-y-3">
-            <ArcadeCard>
-              <div className="relative aspect-video bg-bg-base border-2 border-bg-ink overflow-hidden flex items-center justify-center">
+        <div className="grid lg:grid-cols-3 gap-5">
+          {/* Player + verify */}
+          <div className="lg:col-span-2 space-y-4">
+            <GlassCard className="p-5">
+              <div className="relative aspect-video rounded-2xl bg-brand-gradient overflow-hidden flex items-center justify-center text-white">
                 {enrolled ? (
                   <div className="text-center">
-                    <PlayCircle className="mx-auto text-neon-green animate-pulse" size={72} />
-                    <p className="font-pixel text-xs text-neon-green mt-3">{bc.videos[activeVideo].title}</p>
-                    <p className="font-mono text-[10px] text-ink-muted mt-1">{bc.videos[activeVideo].durationMin} min · playback simulated</p>
+                    <PlayCircle className="mx-auto opacity-90" size={72} />
+                    <p className="font-display font-bold mt-3">{v.title}</p>
+                    <p className="text-xs opacity-80 mt-1">
+                      {v.durationMin} min · playback simulated
+                    </p>
                   </div>
                 ) : (
                   <div className="text-center">
-                    <Lock className="mx-auto text-neon-red" size={48} />
-                    <p className="font-pixel text-xs text-neon-red mt-3">LOCKED</p>
-                    <p className="font-mono text-[10px] text-ink-muted">Enroll to unlock</p>
+                    <Lock className="mx-auto opacity-80" size={48} />
+                    <p className="font-display font-bold mt-3">Locked</p>
+                    <p className="text-xs opacity-80">Enroll to unlock recorded modules</p>
                   </div>
                 )}
               </div>
-              <div className="mt-3 flex gap-2 flex-wrap">
-                {bc.videos.map((v, i) => (
+
+              <div className="mt-4 grid sm:grid-cols-2 gap-2">
+                {bc.videos.map((vid, i) => (
                   <button
-                    key={v.id}
+                    key={vid.id}
                     onClick={() => enrolled && setActiveVideo(i)}
-                    className={`text-left border-2 px-3 py-2 font-pixel text-[10px] ${
-                      i === activeVideo ? "border-neon-green text-neon-green" : "border-bg-ink text-ink-muted"
-                    } ${!enrolled && "opacity-40 cursor-not-allowed"}`}
+                    className={clsx(
+                      "text-left rounded-xl px-3 py-2.5 border transition",
+                      i === activeVideo
+                        ? "border-brand-primary bg-brand-primary/5"
+                        : "border-brand-ink/10 hover:border-brand-primary/40",
+                      !enrolled && "opacity-50 cursor-not-allowed",
+                    )}
                     disabled={!enrolled}
                   >
-                    MODULE 0{i + 1} · {v.title.slice(0, 28)}{v.title.length > 28 ? "…" : ""}
+                    <p className="text-[10px] uppercase font-semibold tracking-wider text-brand-muted">
+                      Module {String(i + 1).padStart(2, "0")} · {vid.durationMin} min
+                    </p>
+                    <p className="text-sm text-brand-ink font-semibold line-clamp-1 mt-0.5">
+                      {vid.title}
+                    </p>
                   </button>
                 ))}
-                <div className="border-2 px-3 py-2 font-pixel text-[10px] border-neon-pink text-neon-pink">
-                  MODULE 03 · LIVE ALIGNMENT
+                <div className="rounded-xl px-3 py-2.5 border border-brand-primary/30 bg-brand-primary/5">
+                  <p className="text-[10px] uppercase font-semibold tracking-wider text-brand-primary">
+                    Live · alignment session
+                  </p>
+                  <p className="text-sm text-brand-ink font-semibold mt-0.5">
+                    Pick a slot on the right →
+                  </p>
                 </div>
               </div>
-            </ArcadeCard>
+            </GlassCard>
 
-            {/* Skill verify gate */}
             {enrolled && (
-              <ArcadeCard glow="yellow">
-                <p className="font-pixel text-[10px] text-neon-yellow mb-2">▸ SKILL VERIFY GATE</p>
-                <p className="font-mono text-xs text-ink-muted mb-3">{bc.videos[activeVideo].verifyPrompt}</p>
-                <textarea
-                  className="pixel-input w-full min-h-[120px]"
+              <GlassCard className="p-6 border border-brand-primary/20">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary mb-2">
+                  Skill verify gate
+                </p>
+                <p className="text-sm text-brand-ink/80 mb-3">{v.verifyPrompt}</p>
+                <GlassTextarea
                   value={verifyText}
                   onChange={(e) => setVerifyText(e.target.value)}
+                  className="min-h-[140px]"
                   placeholder="Type your understanding. Concrete and specific beats long-winded."
                 />
                 <div className="mt-3 flex justify-between items-center">
-                  <p className="font-mono text-[10px] text-ink-dim">{verifyText.length} chars</p>
-                  <PixelButton variant="yellow" size="md" onClick={verify}>
-                    <Send size={12} /> Verify Comprehension
-                  </PixelButton>
+                  <p className="text-xs text-brand-muted">{verifyText.length} chars</p>
+                  <GlassButton variant="brand" size="sm" onClick={verify}>
+                    <Send size={12} /> Verify comprehension
+                  </GlassButton>
                 </div>
                 {verifyResult && (
-                  <div className={`mt-3 border-2 p-3 ${verifyResult.passed ? "border-neon-green text-neon-green" : "border-neon-red text-neon-red"}`}>
-                    <p className="font-pixel text-[10px]">{verifyResult.passed ? "▸ VERIFIED" : "▸ NOT YET"}</p>
-                    <p className="font-mono text-xs mt-1">{verifyResult.message}</p>
+                  <div
+                    className={clsx(
+                      "mt-3 rounded-xl px-3 py-2.5 text-sm",
+                      verifyResult.passed
+                        ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-700"
+                        : "bg-rose-500/10 border border-rose-500/20 text-rose-700",
+                    )}
+                  >
+                    <p className="font-semibold">
+                      {verifyResult.passed ? "Verified ✓" : "Not yet"}
+                    </p>
+                    <p className="mt-1">{verifyResult.message}</p>
                   </div>
                 )}
-              </ArcadeCard>
+              </GlassCard>
             )}
           </div>
 
-          {/* sidebar */}
-          <aside className="space-y-3">
-            <ArcadeCard glow="pink">
-              <p className="font-pixel text-[10px] text-neon-pink mb-3 flex items-center gap-2">
-                <Calendar size={12} /> LIVE ALIGNMENT
+          {/* Sidebar */}
+          <aside className="space-y-4">
+            <GlassCard className="p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary mb-2 inline-flex items-center gap-1.5">
+                <Calendar size={12} /> Live alignment
               </p>
-              <p className="font-mono text-xs text-ink-muted mb-3">Pick a slot to RSVP. Live session caps at 25 students.</p>
+              <p className="text-sm text-brand-muted mb-3">
+                Pick a slot to RSVP. Capped at 25 students.
+              </p>
               <div className="space-y-2">
                 {bc.liveSlots.map((s) => (
                   <button
                     key={s}
                     onClick={() => setSlot(s)}
                     disabled={!enrolled}
-                    className={`w-full text-left border-2 px-3 py-2 font-mono text-xs transition-colors ${
-                      slot === s ? "border-neon-pink text-neon-pink" : "border-bg-ink text-ink-muted hover:border-neon-pink hover:text-neon-pink"
-                    } ${!enrolled && "opacity-40 cursor-not-allowed"}`}
+                    className={clsx(
+                      "w-full text-left rounded-xl px-3 py-2.5 border text-sm transition",
+                      slot === s
+                        ? "border-brand-primary bg-brand-primary/5 text-brand-ink"
+                        : "border-brand-ink/10 text-brand-ink/80 hover:border-brand-primary/40",
+                      !enrolled && "opacity-50 cursor-not-allowed",
+                    )}
                   >
-                    {new Date(s).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                    {new Date(s).toLocaleString("en-IN", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
                   </button>
                 ))}
               </div>
               {slot && (
-                <PixelButton variant="pink" size="sm" block className="mt-3">
-                  RSVP for Live Session
-                </PixelButton>
+                <GlassButton variant="brand" size="sm" fullWidth className="mt-3">
+                  RSVP for live session
+                </GlassButton>
               )}
-            </ArcadeCard>
+            </GlassCard>
 
-            <ArcadeCard>
-              <p className="font-pixel text-[10px] text-neon-blue mb-2">▸ WHAT YOU UNLOCK</p>
-              <ul className="font-mono text-xs text-ink-muted space-y-1.5">
-                <li>· Verified <span className="text-neon-green">{bc.skill}</span> badge on profile</li>
+            <GlassCard className="p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary mb-2">
+                What you unlock
+              </p>
+              <ul className="text-sm text-brand-ink/80 space-y-1.5">
+                <li>
+                  · Verified <span className="text-brand-primary font-semibold">{bc.skill}</span>{" "}
+                  badge on profile
+                </li>
                 <li>· Recruiters can filter on verified-skill</li>
                 <li>· Bridges 2-3 missions you couldn&apos;t apply to before</li>
                 <li>· Lifetime access to recorded modules</li>
               </ul>
-            </ArcadeCard>
+            </GlassCard>
           </aside>
         </div>
       </div>

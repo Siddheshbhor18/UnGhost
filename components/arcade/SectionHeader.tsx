@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils/cn";
+import { cn } from "@/shared/lib/cn";
 
 interface Props {
   eyebrow?: string;

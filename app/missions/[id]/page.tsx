@@ -1,125 +1,709 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { Navbar } from "@/components/shared/Navbar";
-import { Badge } from "@/components/arcade/Badge";
-import { PixelButton } from "@/components/arcade/PixelButton";
-import { ArcadeCard } from "@/components/arcade/ArcadeCard";
-import { ScoreCounter } from "@/components/arcade/ScoreCounter";
-import { SkillDeltaTable } from "@/components/candidate/SkillDeltaTable";
+import {
+  ArrowLeft,
+  Banknote,
+  Building2,
+  CheckCircle2,
+  Clock,
+  Ghost,
+  Hash,
+  MapPin,
+  Sparkles,
+  Target,
+  Trophy,
+  XCircle,
+} from "lucide-react";
+import { authOptions } from "@/server/auth";
+import {
+  BlobField,
+  GlassBadge,
+  GlassCard,
+  GlassNavbar,
+} from "@/components/glass";
 import {
   getCompanyById,
   getJobById,
   getBootcampForSkill,
   getUserById,
-} from "@/lib/data/store";
-import { computeMatchPct, skillDelta } from "@/lib/utils/matching";
-import { Banknote, Clock, MapPin, ShieldCheck, Target } from "lucide-react";
+  listApplicationsByStudent,
+  listJobs,
+} from "@/server/store";
+import { getAI } from "@/server/integrations/ai";
+import { computeMatchPct, skillDelta } from "@/server/lib/matching";
+import {
+  APPLY_THRESHOLD,
+  computeCompleteness,
+} from "@/server/lib/profile-completeness";
 
-export default async function MissionBrief({ params }: { params: { id: string } }) {
+const FREE_APP_LIMIT = 5;
+
+function tierFor(matchPct: number): {
+  label: string;
+  badgeTone: "success" | "brand" | "warn" | "danger";
+  letter: "A" | "B" | "C" | "D";
+} {
+  if (matchPct >= 85)
+    return { label: "Strong Match", badgeTone: "success", letter: "A" };
+  if (matchPct >= 70)
+    return { label: "Good Match", badgeTone: "brand", letter: "B" };
+  if (matchPct >= 50)
+    return { label: "Stretch Match", badgeTone: "warn", letter: "C" };
+  return { label: "Long Shot", badgeTone: "danger", letter: "D" };
+}
+
+const PIPELINE_STAGES = [
+  { key: "new_matches", label: "New Match" },
+  { key: "under_review", label: "Under Review" },
+  { key: "interview", label: "Interview" },
+  { key: "offer", label: "Offer" },
+  { key: "hired", label: "Hired" },
+];
+
+export default async function MissionBrief({
+  params,
+}: {
+  params: { id: string };
+}) {
   const session = await getServerSession(authOptions);
   if (!session) redirect(`/login?next=/missions/${params.id}`);
 
-  const job = getJobById(params.id);
+  const job = await getJobById(params.id);
   if (!job) notFound();
 
-  const co = getCompanyById(job.companyId);
-  const user = getUserById(session.user.id);
+  const [co, user, allApps, allJobs] = await Promise.all([
+    getCompanyById(job.companyId),
+    getUserById(session.user.id),
+    listApplicationsByStudent(session.user.id),
+    listJobs(),
+  ]);
   const studentSkills = user?.profile?.skills ?? [];
+  const verifiedLow = new Set(
+    (user?.profile?.verifiedSkills ?? []).map((s) => s.toLowerCase()),
+  );
   const matchPct = computeMatchPct(studentSkills, job.skills);
   const delta = skillDelta(studentSkills, job.skills);
-  const rows = delta.map((d) => ({
-    ...d,
-    bootcampId: d.has ? undefined : getBootcampForSkill(d.skill)?.id,
-  }));
+  const rows = await Promise.all(
+    delta.map(async (d) => ({
+      ...d,
+      verified: verifiedLow.has(d.skill.toLowerCase()),
+      bootcampId: d.has ? undefined : (await getBootcampForSkill(d.skill))?.id,
+    })),
+  );
+
+  // AI "Why You're a Match" — pulls from mock by default
+  const whyMatch = user?.profile
+    ? await getAI().whyMatch(user.profile, job)
+    : null;
+
+  const completeness = computeCompleteness(user);
+  const canApply = completeness.pct >= APPLY_THRESHOLD;
+
+  // Quota
+  // SLA-breached apps get their slot refunded
+  const applicationsUsed = allApps.filter((a) => !a.slaRefundIssued).length;
+  const quotaTight = applicationsUsed >= FREE_APP_LIMIT - 1;
+  const quotaUsedPct = Math.min(
+    100,
+    (applicationsUsed / FREE_APP_LIMIT) * 100,
+  );
+
+  // Already applied?
+  const existingApp = allApps.find((a) => a.jobId === job.id);
+
+  // Similar missions: same role family heuristic via skill overlap
+  const similar = allJobs
+    .filter((j) => j.id !== job.id)
+    .map((j) => ({
+      job: j,
+      overlap: j.skills.filter((s) => job.skills.includes(s)).length,
+    }))
+    .filter((x) => x.overlap > 0)
+    .sort((a, b) => b.overlap - a.overlap)
+    .slice(0, 4);
+
+  const tier = tierFor(matchPct);
+  const ghostingRatePct = 1.2; // placeholder; real impl pulls company.ghostingRate
 
   return (
-    <main className="min-h-screen bg-bg-base bg-arcade-grid pb-32">
-      <Navbar />
-      <div className="mx-auto max-w-5xl px-4 py-6">
-        <Link href="/dashboard" className="font-mono text-xs text-neon-blue">← Back to Terminal</Link>
+    <main className="relative min-h-screen">
+      <BlobField />
+      <GlassNavbar />
 
-        <div className="mt-4 grid md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 space-y-4">
-            <ArcadeCard glow="pink">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Badge tone="blue" className="mb-2">{co?.name}</Badge>
-                  <h1 className="font-pixel text-2xl text-neon-pink neon-text">{job.title}</h1>
-                  <p className="font-mono text-xs text-ink-muted mt-2 flex flex-wrap gap-3">
-                    <span className="inline-flex gap-1 items-center"><MapPin size={11}/> {job.location} · {job.remote}</span>
-                    <span className="inline-flex gap-1 items-center"><Banknote size={11}/> ₹{job.salaryMin}–{job.salaryMax} LPA</span>
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="font-pixel text-[9px] text-ink-muted mb-1">YOUR MATCH</p>
-                  <ScoreCounter value={matchPct} suffix="%" color={matchPct >= 85 ? "green" : "yellow"} className="text-3xl" />
+      <div className="mx-auto max-w-7xl px-4 pt-6 pb-12">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1 text-sm text-brand-primary font-semibold mb-5 hover:gap-2 transition-all"
+        >
+          <ArrowLeft size={14} /> Back to today
+        </Link>
+
+        <div className="grid lg:grid-cols-12 gap-6">
+          {/* ── Main column ────────────────────────────────────────────── */}
+          <div className="lg:col-span-8 space-y-5">
+            {/* Header */}
+            <GlassCard variant="strong" className="!p-7">
+              <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <GlassBadge tone="neutral">
+                      <Building2 size={11} /> {co?.name}
+                    </GlassBadge>
+                    <GlassBadge
+                      tone={ghostingRatePct > 10 ? "danger" : "success"}
+                    >
+                      <Ghost size={10} /> {ghostingRatePct.toFixed(1)}% ghost
+                      rate
+                    </GlassBadge>
+                    <GlassBadge tone={tier.badgeTone}>
+                      Tier {tier.letter} · {tier.label}
+                    </GlassBadge>
+                  </div>
+                  <h1 className="font-display font-extrabold text-3xl md:text-4xl text-brand-ink leading-tight">
+                    {job.title}
+                  </h1>
                 </div>
               </div>
-            </ArcadeCard>
 
-            <ArcadeCard>
-              <p className="font-pixel text-[10px] text-neon-blue mb-3">▸ MISSION BRIEF</p>
-              <p className="font-mono text-sm text-ink-primary leading-relaxed whitespace-pre-line">
+              {/* Key facts row */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-5 pt-5 border-t border-brand-ink/5">
+                <KeyFact
+                  icon={<MapPin size={13} />}
+                  label="Location"
+                  value={`${job.location} · ${job.remote}`}
+                />
+                <KeyFact
+                  icon={<Banknote size={13} />}
+                  label="Salary"
+                  value={`₹${job.salaryMin}–${job.salaryMax}L`}
+                />
+                <KeyFact
+                  icon={<Clock size={13} />}
+                  label="SLA"
+                  value={`${job.slaHours}h`}
+                  tone={job.slaHours <= 24 ? "danger" : job.slaHours <= 48 ? "warn" : "brand"}
+                />
+                <KeyFact
+                  icon={<Hash size={13} />}
+                  label="Skills required"
+                  value={`${job.skills.length}`}
+                />
+                <KeyFact
+                  icon={<Target size={13} />}
+                  label="Your match"
+                  value={`${matchPct}%`}
+                  tone={
+                    matchPct >= 80
+                      ? "success"
+                      : matchPct >= 60
+                      ? "brand"
+                      : "warn"
+                  }
+                />
+              </div>
+            </GlassCard>
+
+            {/* Why You're a Match */}
+            {whyMatch && (
+              <GlassCard
+                glow
+                className="bg-gradient-to-br from-brand-primary/8 via-white/60 to-white/40"
+              >
+                <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold mb-3 flex items-center gap-1.5">
+                  <Sparkles size={12} /> Why you&apos;re a match
+                </p>
+                <p className="text-sm text-brand-ink leading-relaxed mb-4">
+                  {whyMatch.summary}
+                </p>
+                {(whyMatch.strengths.length > 0 ||
+                  whyMatch.risks.length > 0) && (
+                  <div className="grid md:grid-cols-2 gap-3 pt-3 border-t border-brand-ink/5">
+                    {whyMatch.strengths.length > 0 && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-emerald-600 font-semibold mb-1.5">
+                          Strengths
+                        </p>
+                        <ul className="space-y-1">
+                          {whyMatch.strengths.map((s, i) => (
+                            <li
+                              key={i}
+                              className="text-xs text-brand-ink/90 flex items-start gap-1.5"
+                            >
+                              <CheckCircle2
+                                size={12}
+                                className="text-emerald-600 mt-0.5 shrink-0"
+                              />
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {whyMatch.risks.length > 0 && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-amber-600 font-semibold mb-1.5">
+                          Watch for
+                        </p>
+                        <ul className="space-y-1">
+                          {whyMatch.risks.map((r, i) => (
+                            <li
+                              key={i}
+                              className="text-xs text-brand-ink/90 flex items-start gap-1.5"
+                            >
+                              <XCircle
+                                size={12}
+                                className="text-amber-600 mt-0.5 shrink-0"
+                              />
+                              {r}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </GlassCard>
+            )}
+
+            {/* Skill Delta Table */}
+            <GlassCard>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold">
+                  Skill delta
+                </p>
+                <p className="text-xs text-brand-muted">
+                  {rows.filter((r) => r.has).length} of {rows.length} covered
+                </p>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[10px] uppercase tracking-wider text-brand-muted border-b border-brand-ink/5">
+                    <th className="py-2 font-semibold">Required skill</th>
+                    <th className="font-semibold">Your level</th>
+                    <th className="font-semibold">Status</th>
+                    <th className="font-semibold text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-ink/5">
+                  {rows.map((r) => (
+                    <tr key={r.skill}>
+                      <td className="py-3 text-brand-ink font-medium">
+                        {r.skill}
+                      </td>
+                      <td className="text-sm text-brand-ink/85">
+                        {r.verified ? (
+                          <span className="text-emerald-600 font-semibold">
+                            Verified
+                          </span>
+                        ) : r.has ? (
+                          <span className="text-brand-ink">Listed</span>
+                        ) : (
+                          <span className="text-brand-muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        {r.verified ? (
+                          <GlassBadge tone="success">
+                            <CheckCircle2 size={10} /> Verified
+                          </GlassBadge>
+                        ) : r.has ? (
+                          <GlassBadge tone="brand">
+                            <CheckCircle2 size={10} /> Have
+                          </GlassBadge>
+                        ) : (
+                          <GlassBadge tone="warn">
+                            <XCircle size={10} /> Gap
+                          </GlassBadge>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        {!r.has && r.bootcampId ? (
+                          <Link
+                            href={`/bootcamp/${r.bootcampId}`}
+                            className="text-xs font-semibold text-brand-primary hover:underline"
+                          >
+                            Bridge with bootcamp →
+                          </Link>
+                        ) : !r.has ? (
+                          <span className="text-xs text-brand-muted">
+                            No bootcamp yet
+                          </span>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </GlassCard>
+
+            {/* The Brief */}
+            <GlassCard>
+              <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold mb-3">
+                The brief
+              </p>
+              <div className="text-sm text-brand-ink/90 leading-relaxed whitespace-pre-line">
                 {job.description}
-              </p>
-            </ArcadeCard>
+              </div>
+            </GlassCard>
 
-            <SkillDeltaTable rows={rows} />
+            {/* Pipeline timeline */}
+            <GlassCard>
+              <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold mb-4">
+                The pipeline
+              </p>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                {PIPELINE_STAGES.map((stage, i) => {
+                  const reached =
+                    existingApp &&
+                    PIPELINE_STAGES.findIndex(
+                      (s) => s.key === existingApp.stage,
+                    ) >= i;
+                  return (
+                    <div
+                      key={stage.key}
+                      className="flex items-center gap-2 shrink-0"
+                    >
+                      <div
+                        className={`px-3 py-2 rounded-xl ${
+                          reached
+                            ? "bg-brand-primary text-white shadow-brand-glow"
+                            : "bg-white/60 border border-brand-ink/10 text-brand-muted"
+                        }`}
+                      >
+                        <p className="text-xs font-semibold">{stage.label}</p>
+                        <p
+                          className={`text-[10px] ${
+                            reached ? "text-white/80" : "text-brand-muted/80"
+                          }`}
+                        >
+                          {job.slaHours}h SLA
+                        </p>
+                      </div>
+                      {i < PIPELINE_STAGES.length - 1 && (
+                        <div
+                          className={`h-px w-6 ${
+                            reached ? "bg-brand-primary/40" : "bg-brand-ink/10"
+                          }`}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-brand-muted mt-3">
+                Each stage has its own SLA. Miss any of them →{" "}
+                <span className="text-brand-primary font-semibold">
+                  application credit refunded
+                </span>{" "}
+                + recruiter ghost-rated.
+              </p>
+            </GlassCard>
 
-            <ArcadeCard glow="yellow">
-              <p className="font-pixel text-[10px] text-neon-yellow mb-2 flex items-center gap-2">
-                <Target size={12} /> THE GAUNTLET · PREVIEW
+            {/* About company */}
+            <GlassCard>
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold">
+                  About {co?.name}
+                </p>
+                <Link
+                  href={`/companies/${co?.id ?? ""}`}
+                  className="text-xs font-semibold text-brand-primary hover:underline"
+                >
+                  Company profile →
+                </Link>
+              </div>
+              <p className="text-sm text-brand-ink/85 leading-relaxed">
+                {co?.description}
               </p>
-              <blockquote className="font-mono text-sm text-ink-primary border-l-4 border-neon-yellow pl-4 italic">
-                {job.gauntletPrompt}
-              </blockquote>
-              <p className="font-mono text-[10px] text-ink-dim mt-3">
-                You&apos;ll respond in long-form. AI grades depth, evidence, and trade-offs. The recruiter sees your answer + the AI notes side-by-side.
-              </p>
-            </ArcadeCard>
+              <div className="mt-4 rounded-2xl bg-white/40 border border-brand-ink/5 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
+                    Ghosting rate (90 days)
+                  </p>
+                  <span
+                    className={`font-display font-bold text-lg ${
+                      ghostingRatePct > 10
+                        ? "text-rose-600"
+                        : ghostingRatePct > 5
+                        ? "text-amber-600"
+                        : "text-emerald-600"
+                    }`}
+                  >
+                    {ghostingRatePct.toFixed(1)}%
+                  </span>
+                </div>
+                <p className="text-xs text-brand-muted">
+                  Industry avg <span className="text-brand-ink">38%</span> · lower
+                  is better.
+                </p>
+              </div>
+            </GlassCard>
+
+            {/* Similar missions */}
+            {similar.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold mb-3">
+                  Similar missions
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {similar.map((s) => (
+                    <Link
+                      key={s.job.id}
+                      href={`/missions/${s.job.id}`}
+                      className="block rounded-2xl bg-white/50 backdrop-blur-xl border border-white/60 p-4 hover:-translate-y-0.5 hover:shadow-glass-hover transition"
+                    >
+                      <p className="font-display font-semibold text-sm text-brand-ink line-clamp-1">
+                        {s.job.title}
+                      </p>
+                      <p className="text-xs text-brand-muted mt-1">
+                        ₹{s.job.salaryMin}–{s.job.salaryMax}L · {s.job.location}
+                      </p>
+                      <p className="text-[10px] text-brand-primary mt-2 font-semibold">
+                        {s.overlap} shared skill{s.overlap === 1 ? "" : "s"}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <aside className="space-y-4">
-            <ArcadeCard glow="green">
-              <p className="font-pixel text-[10px] text-neon-green mb-3 flex items-center gap-2">
-                <ShieldCheck size={12} /> GUARANTEED INTEL
-              </p>
-              <p className="font-pixel text-2xl text-neon-green neon-text mb-1">
-                {job.slaHours}H
-              </p>
-              <p className="font-mono text-xs text-ink-muted">
-                {co?.name} commits to respond within <b className="text-neon-green">{job.slaHours} hours</b>. Miss it → recruiter ghost-rated.
-              </p>
-              <p className="font-mono text-[10px] text-ink-dim mt-3 flex items-center gap-1">
-                <Clock size={10} /> Posted {new Date(job.createdAt).toLocaleDateString("en-IN")}
-              </p>
-            </ArcadeCard>
-            <ArcadeCard>
-              <p className="font-pixel text-[10px] text-neon-blue mb-2">▸ ABOUT {co?.name?.toUpperCase()}</p>
-              <p className="font-mono text-xs text-ink-muted">{co?.description}</p>
-            </ArcadeCard>
+          {/* ── Sticky right sidebar ───────────────────────────────────── */}
+          <aside className="lg:col-span-4">
+            <div className="lg:sticky lg:top-24 space-y-4">
+              <GlassCard variant="strong" className="text-center !p-6">
+                <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold mb-1">
+                  Tier · your match
+                </p>
+                <p
+                  className={`font-display font-extrabold text-5xl mt-1 ${
+                    matchPct >= 80
+                      ? "text-emerald-600"
+                      : matchPct >= 60
+                      ? "text-brand-primary"
+                      : "text-amber-600"
+                  }`}
+                >
+                  {matchPct}
+                  <span className="text-2xl text-brand-muted">%</span>
+                </p>
+                <p className="text-sm text-brand-ink/80 mt-1 font-semibold">
+                  Tier {tier.letter} · {tier.label}
+                </p>
+
+                {existingApp ? (
+                  <div className="mt-5">
+                    <GlassBadge tone="success">
+                      <CheckCircle2 size={11} /> Already applied
+                    </GlassBadge>
+                    <p className="text-xs text-brand-muted mt-2">
+                      Current stage:{" "}
+                      <span className="font-semibold text-brand-ink">
+                        {existingApp.stage.replace("_", " ")}
+                      </span>
+                    </p>
+                    <Link
+                      href={`/student/applications/${existingApp.id}`}
+                      className="text-xs text-brand-primary font-semibold mt-2 inline-block hover:underline"
+                    >
+                      Track status →
+                    </Link>
+                  </div>
+                ) : canApply ? (
+                  <>
+                    <Link
+                      href={`/missions/${job.id}/assess`}
+                      className="btn-brand mt-5 w-full justify-center"
+                      style={{ minHeight: 56 }}
+                    >
+                      <Target size={16} /> Take Assessment to Apply →
+                    </Link>
+                    <p className="text-[11px] text-brand-muted mt-3">
+                      ~15 mins · 10 questions · 60% to pass
+                    </p>
+                  </>
+                ) : (
+                  <div className="mt-5 rounded-2xl bg-amber-500/5 border border-amber-500/30 p-4 text-left">
+                    <p className="text-[10px] uppercase tracking-wider text-amber-700 font-semibold mb-2">
+                      Profile too thin to apply
+                    </p>
+                    <div className="h-2 rounded-full bg-brand-ink/5 overflow-hidden mb-2">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-500 to-amber-400"
+                        style={{ width: `${completeness.pct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-brand-ink/85 mb-3">
+                      {completeness.pct}% of {APPLY_THRESHOLD}% required.
+                      Recruiters can&apos;t weigh thin profiles — finish your
+                      profile to unlock applications.
+                    </p>
+                    {completeness.missing.length > 0 && (
+                      <ul className="space-y-1 mb-4">
+                        {completeness.missing.slice(0, 3).map((m) => (
+                          <li
+                            key={m.key}
+                            className="text-[11px] text-brand-ink/80 flex items-start gap-1.5"
+                          >
+                            <span className="text-amber-600 mt-0.5">▸</span>
+                            {m.label}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Link
+                      href="/student/profile/edit"
+                      className="btn-brand w-full justify-center"
+                    >
+                      Complete profile →
+                    </Link>
+                  </div>
+                )}
+              </GlassCard>
+
+              {/* Quota */}
+              {!existingApp && (
+                <GlassCard className="!p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
+                      Applications used
+                    </p>
+                    <span
+                      className={`text-xs font-display font-bold ${
+                        quotaTight ? "text-rose-600" : "text-brand-ink"
+                      }`}
+                    >
+                      {applicationsUsed} of {FREE_APP_LIMIT}
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-brand-ink/5 overflow-hidden mb-2">
+                    <div
+                      className={`h-full rounded-full ${
+                        quotaTight
+                          ? "bg-rose-500"
+                          : "bg-gradient-to-r from-brand-primary to-brand-secondary"
+                      }`}
+                      style={{ width: `${quotaUsedPct}%` }}
+                    />
+                  </div>
+                  {quotaTight ? (
+                    <Link
+                      href="/pricing"
+                      className="text-xs text-rose-600 font-semibold hover:underline"
+                    >
+                      Subscribe for unlimited →
+                    </Link>
+                  ) : (
+                    <p className="text-[11px] text-brand-muted">
+                      Free tier · resets on the 1st
+                    </p>
+                  )}
+                </GlassCard>
+              )}
+
+              {/* Compatibility summary */}
+              <GlassCard className="!p-4">
+                <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold mb-3">
+                  Compatibility
+                </p>
+                <ul className="space-y-2 text-sm">
+                  <Row
+                    icon={<CheckCircle2 size={12} className="text-emerald-600" />}
+                    label="Skills covered"
+                    value={`${rows.filter((r) => r.has).length}/${rows.length}`}
+                  />
+                  <Row
+                    icon={<Sparkles size={12} className="text-amber-600" />}
+                    label="Verified badges"
+                    value={rows.filter((r) => r.verified).length}
+                  />
+                  <Row
+                    icon={<Trophy size={12} className="text-brand-primary" />}
+                    label="Past roles"
+                    value={user?.profile?.history?.length ?? 0}
+                  />
+                </ul>
+              </GlassCard>
+
+              {/* SLA promise */}
+              <GlassCard
+                glow
+                className="!p-4 bg-emerald-500/5 border-emerald-500/20"
+              >
+                <p className="text-[10px] uppercase tracking-wider text-emerald-700 font-semibold mb-2 flex items-center gap-1.5">
+                  <Clock size={11} /> SLA promise
+                </p>
+                <p className="font-display font-extrabold text-2xl text-brand-ink">
+                  {job.slaHours}
+                  <span className="text-base text-brand-muted">h</span>
+                </p>
+                <p className="text-xs text-brand-muted mt-1 leading-relaxed">
+                  {co?.name} commits to a real answer in{" "}
+                  <span className="text-emerald-700 font-semibold">
+                    {job.slaHours} hours
+                  </span>{" "}
+                  per pipeline stage. Miss it → your credit refunded.
+                </p>
+              </GlassCard>
+            </div>
           </aside>
         </div>
       </div>
-
-      {/* Sticky CTA */}
-      <div className="fixed inset-x-0 bottom-0 border-t-2 border-bg-ink bg-bg-panel/90 backdrop-blur z-30">
-        <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-3">
-          <div>
-            <p className="font-pixel text-[10px] text-neon-pink">▸ READY?</p>
-            <p className="font-mono text-xs text-ink-muted">
-              The Gauntlet is one prompt, ~10 min. No CV upload, no cover letter.
-            </p>
-          </div>
-          <Link href={`/missions/${job.id}/assess`}>
-            <PixelButton variant="pink" size="lg">
-              <Target size={14} /> Take Assessment to Apply
-            </PixelButton>
-          </Link>
-        </div>
-      </div>
     </main>
+  );
+}
+
+function KeyFact({
+  icon,
+  label,
+  value,
+  tone = "brand",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  tone?: "brand" | "success" | "warn" | "danger";
+}) {
+  const cls =
+    tone === "success"
+      ? "text-emerald-600"
+      : tone === "warn"
+      ? "text-amber-600"
+      : tone === "danger"
+      ? "text-rose-600"
+      : "text-brand-primary";
+  return (
+    <div>
+      <p
+        className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold ${cls}`}
+      >
+        {icon}
+        {label}
+      </p>
+      <p className="text-sm font-display font-bold text-brand-ink mt-1">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function Row({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <li className="flex items-center justify-between">
+      <span className="flex items-center gap-2 text-brand-ink/85">
+        {icon}
+        {label}
+      </span>
+      <span className="font-display font-bold text-brand-ink">{value}</span>
+    </li>
   );
 }

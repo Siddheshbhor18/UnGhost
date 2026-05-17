@@ -3,13 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { motion } from "framer-motion";
-import { ArcadeCard } from "@/components/arcade/ArcadeCard";
-import { PixelButton } from "@/components/arcade/PixelButton";
-import { Badge } from "@/components/arcade/Badge";
-import { LaserScan } from "@/components/arcade/LaserScan";
-import { X, Plus, ArrowRight, Shield } from "lucide-react";
-import type { ParsedResume } from "@/lib/ai";
+import { ArrowRight, Plus, Shield, Sparkles, X } from "lucide-react";
+import {
+  BlobField,
+  GlassBadge,
+  GlassButton,
+  GlassCard,
+  GlassInput,
+  GlassSelect,
+  Logo,
+} from "@/components/glass";
+import type { ParsedResume } from "@/shared/types/ai";
 
 export default function OnboardingPage() {
   const { data: session, status } = useSession();
@@ -18,7 +22,8 @@ export default function OnboardingPage() {
   const [parsed, setParsed] = useState<ParsedResume | null>(null);
   const [alias, setAlias] = useState("");
   const [contactEmail, setContactEmail] = useState("");
-  const [trajectory, setTrajectory] = useState<"actively_hunting" | "casually_exploring" | "open_to_magic">("actively_hunting");
+  const [trajectory, setTrajectory] =
+    useState<"actively_hunting" | "casually_exploring" | "open_to_magic">("actively_hunting");
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
 
@@ -29,18 +34,46 @@ export default function OnboardingPage() {
     }
     if (status !== "authenticated") return;
 
-    const pending = sessionStorage.getItem("ng_pending_resume") ?? `Name: ${session?.user?.name}\nEmail: ${session?.user?.email}`;
     (async () => {
+      // Path A: landing-page Magic Widget pre-staged a full parse — skip the API
+      try {
+        const staged = sessionStorage.getItem("unghost:staged_resume");
+        if (staged) {
+          const bundle = JSON.parse(staged) as {
+            fileName?: string;
+            parsed?: ParsedResume;
+          };
+          if (bundle.parsed) {
+            setParsed(bundle.parsed);
+            setAlias(bundle.parsed.alias);
+            setContactEmail(
+              session?.user?.email ?? bundle.parsed.contactEmail,
+            );
+            setSkills(bundle.parsed.skills);
+            setLoading(false);
+            sessionStorage.removeItem("unghost:staged_resume");
+            return;
+          }
+        }
+      } catch {
+        /* ignore corrupt staging */
+      }
+
+      // Path B: fall through to legacy rawText parse
+      const pending =
+        sessionStorage.getItem("ng_pending_resume") ??
+        `Name: ${session?.user?.name}\nEmail: ${session?.user?.email}`;
       const res = await fetch("/api/parse-resume", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ rawText: pending }),
       });
-      const data: ParsedResume = await res.json();
-      setParsed(data);
-      setAlias(data.alias);
-      setContactEmail(session?.user?.email ?? data.contactEmail);
-      setSkills(data.skills);
+      const data: { parsed: ParsedResume } = await res.json();
+      const p = data.parsed ?? (data as unknown as ParsedResume);
+      setParsed(p);
+      setAlias(p.alias);
+      setContactEmail(session?.user?.email ?? p.contactEmail);
+      setSkills(p.skills);
       setLoading(false);
       sessionStorage.removeItem("ng_pending_resume");
     })();
@@ -53,104 +86,156 @@ export default function OnboardingPage() {
     setSkillInput("");
   }
 
-  function confirm() {
+  async function confirm() {
+    // Persist the onboarding form back to the student's profile.
+    try {
+      await fetch("/api/student/profile", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          alias,
+          contactEmail,
+          trajectory,
+          skills,
+          history: parsed?.history?.map((h, i) => ({
+            id: `h_${Date.now().toString(36)}_${i}`,
+            ...h,
+          })),
+          city: parsed?.city,
+        }),
+      });
+    } catch {
+      /* even if persist fails, route forward — student can edit on profile */
+    }
     router.push("/dashboard");
   }
 
   return (
-    <main className="min-h-screen bg-bg-base bg-arcade-grid px-4 py-8">
+    <main className="relative min-h-screen px-4 py-10">
+      <BlobField />
+
       <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex items-center justify-between">
-          <Badge tone="pink">▸ FLOW 02 · PROFILE PARSER</Badge>
-          <Badge tone="green"><Shield size={10} /> AI-PARSED</Badge>
+        <div className="flex items-center justify-between mb-6">
+          <Logo size="sm" />
+          <GlassBadge tone="brand">
+            <Shield size={11} /> AI-parsed · editable
+          </GlassBadge>
         </div>
 
-        <ArcadeCard glow="pink" className="relative overflow-hidden">
-          <h1 className="font-pixel text-xl text-neon-pink neon-text mb-2">
-            {loading ? "PARSING RESUME…" : "Confirm Your Identity"}
+        <GlassCard variant="strong" className="p-7">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles size={18} className="text-brand-primary" />
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary">
+              Step 2 of 2
+            </p>
+          </div>
+          <h1 className="font-display font-extrabold text-2xl md:text-3xl text-brand-ink">
+            {loading ? "Parsing your resume…" : "Confirm your profile."}
           </h1>
-          <p className="font-mono text-xs text-ink-muted mb-6">
+          <p className="text-sm text-brand-muted mt-1 mb-6">
             {loading
-              ? "Our AI is scanning your resume. This takes ~10 seconds."
+              ? "Our AI is reading your resume. This takes about 10 seconds."
               : "Auto-extracted from your resume. Edit anything that looks off."}
           </p>
 
           {loading ? (
-            <div className="relative space-y-3 py-10">
-              <LaserScan active color="blue" />
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-              <p className="text-center font-mono text-xs text-neon-blue mt-4">
-                <span className="cursor-blink">SCANNING</span>
-              </p>
+            <div className="space-y-3 py-6">
+              <Skeleton />
+              <Skeleton />
+              <Skeleton />
+              <Skeleton />
             </div>
           ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-              className="space-y-5"
-            >
-              <Field label="PROFESSIONAL ALIAS">
-                <input className="pixel-input w-full" value={alias} onChange={(e) => setAlias(e.target.value)} />
+            <div className="space-y-5">
+              <Field label="Professional alias">
+                <GlassInput value={alias} onChange={(e) => setAlias(e.target.value)} />
               </Field>
-              <Field label="CONTACT EMAIL">
-                <input className="pixel-input w-full" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
+
+              <Field label="Contact email">
+                <GlassInput
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                />
               </Field>
-              <Field label="CURRENT TRAJECTORY">
-                <select className="pixel-input w-full" value={trajectory} onChange={(e) => setTrajectory(e.target.value as typeof trajectory)}>
-                  <option value="actively_hunting">⚡ Actively Hunting</option>
-                  <option value="casually_exploring">👀 Casually Exploring</option>
-                  <option value="open_to_magic">✨ Open to Magic</option>
-                </select>
+
+              <Field label="Current trajectory">
+                <GlassSelect
+                  value={trajectory}
+                  onChange={(e) => setTrajectory(e.target.value as typeof trajectory)}
+                >
+                  <option value="actively_hunting">⚡ Actively hunting</option>
+                  <option value="casually_exploring">👀 Casually exploring</option>
+                  <option value="open_to_magic">✨ Open to magic</option>
+                </GlassSelect>
               </Field>
-              <Field label="CORE COMPETENCIES">
-                <div className="flex flex-wrap gap-2 mb-2">
+
+              <Field label="Core skills">
+                <div className="flex flex-wrap gap-1.5 mb-2">
                   {skills.map((s) => (
-                    <span key={s} className="inline-flex items-center gap-1 border border-neon-blue text-neon-blue px-2 py-1 font-mono text-xs">
+                    <span
+                      key={s}
+                      className="inline-flex items-center gap-1 bg-brand-primary/10 text-brand-primary text-xs font-semibold px-2.5 py-1 rounded-full"
+                    >
                       {s}
-                      <button onClick={() => setSkills(skills.filter((k) => k !== s))} className="hover:text-neon-red">
+                      <button
+                        type="button"
+                        onClick={() => setSkills(skills.filter((k) => k !== s))}
+                        className="hover:text-rose-600"
+                      >
                         <X size={12} />
                       </button>
                     </span>
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input
-                    className="pixel-input flex-1"
-                    placeholder="Add a skill"
+                  <GlassInput
+                    placeholder="Add a skill (e.g. SQL)"
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addSkill();
+                      }
+                    }}
                   />
-                  <PixelButton variant="blue" size="md" type="button" onClick={addSkill}>
+                  <GlassButton type="button" variant="glass" onClick={addSkill}>
                     <Plus size={12} /> Add
-                  </PixelButton>
+                  </GlassButton>
                 </div>
               </Field>
 
-              <Field label="HISTORY TERMINAL">
-                <div className="space-y-3">
-                  {(parsed?.history ?? []).map((h, i) => (
-                    <div key={i} className="border-2 border-bg-ink bg-bg-base p-3">
-                      <p className="font-pixel text-xs text-neon-green">{h.title} · {h.company}</p>
-                      <p className="font-mono text-[10px] text-ink-muted">{h.startDate} → {h.endDate}</p>
-                      <p className="font-mono text-xs text-ink-primary mt-2 leading-relaxed">{h.impact}</p>
-                    </div>
-                  ))}
-                </div>
-              </Field>
+              {parsed?.history && parsed.history.length > 0 && (
+                <Field label="History detected">
+                  <div className="space-y-2">
+                    {parsed.history.map((h, i) => (
+                      <div
+                        key={i}
+                        className="rounded-xl bg-white/40 border border-white/60 p-3"
+                      >
+                        <p className="font-display font-bold text-sm text-brand-ink">
+                          {h.title} · {h.company}
+                        </p>
+                        <p className="text-[11px] text-brand-muted">
+                          {h.startDate} → {h.endDate}
+                        </p>
+                        <p className="text-sm text-brand-ink/80 mt-1.5 leading-relaxed">
+                          {h.impact}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </Field>
+              )}
 
-              <div className="border-t-2 border-bg-ink pt-4">
-                <PixelButton variant="green" size="lg" block onClick={confirm}>
-                  Confirm & Enter Terminal <ArrowRight size={14} />
-                </PixelButton>
+              <div className="pt-3 border-t border-brand-ink/10">
+                <GlassButton variant="brand" fullWidth size="lg" onClick={confirm}>
+                  Enter dashboard <ArrowRight size={14} />
+                </GlassButton>
               </div>
-            </motion.div>
+            </div>
           )}
-        </ArcadeCard>
+        </GlassCard>
       </div>
     </main>
   );
@@ -159,14 +244,14 @@ export default function OnboardingPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="font-pixel text-[10px] text-ink-muted block mb-2">{label}</label>
+      <label className="block text-xs font-semibold uppercase tracking-wider text-brand-muted mb-1.5">
+        {label}
+      </label>
       {children}
     </div>
   );
 }
 
-function SkeletonRow() {
-  return (
-    <div className="h-10 bg-bg-ink/40 animate-pulse" />
-  );
+function Skeleton() {
+  return <div className="h-11 rounded-xl bg-brand-ink/5 animate-pulse" />;
 }

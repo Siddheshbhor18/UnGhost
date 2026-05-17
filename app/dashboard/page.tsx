@@ -1,85 +1,227 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { Navbar } from "@/components/shared/Navbar";
-import { MissionTimeline } from "@/components/candidate/MissionTimeline";
-import { MatchmakerFeed } from "@/components/candidate/MatchmakerFeed";
-import { AICoachPanel } from "@/components/candidate/AICoachPanel";
-import { Badge } from "@/components/arcade/Badge";
+import { Briefcase, GraduationCap } from "lucide-react";
+import { authOptions } from "@/server/auth";
+import {
+  GlassNavbar,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/glass";
+import { BackdropMesh } from "@/components/ui";
 import {
   listApplicationsByStudent,
   listCompanies,
   listJobs,
+  listBootcamps,
   getUserById,
-  listLiveCampaigns,
-} from "@/lib/data/store";
-import { computeMatchPct } from "@/lib/utils/matching";
+  listSponsorshipsByStudent,
+  listInMailsByStudent,
+  listNotInterestedJobIds,
+  listSavedJobs,
+  maybeRunSlaSweep,
+} from "@/server/store";
+import { computeMatchPct } from "@/server/lib/matching";
+import { computeCompleteness } from "@/server/lib/profile-completeness";
+import { ResumeDrop } from "@/components/student/ResumeDrop";
+import { JobFeed } from "@/components/student/JobFeed";
+import { BootcampGrid } from "@/components/student/BootcampGrid";
+import { DailyBriefing } from "@/components/student/DailyBriefing";
+import { StatBar } from "@/components/student/StatBar";
+import { ActiveMissions } from "@/components/student/ActiveMissions";
+import { CoachPanel } from "@/components/student/CoachPanel";
+import { SponsorshipInbox } from "@/components/student/SponsorshipInbox";
+import { InMailInbox } from "@/components/student/InMailInbox";
+
+const MATCH_THRESHOLD = 60;
+const FREE_APP_LIMIT = 5;
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login?next=/dashboard");
-  if (session.user.role !== "student") redirect(session.user.role === "recruiter" ? "/recruiter/command" : "/admin/metrics");
-
-  const user = getUserById(session.user.id);
-  const apps = listApplicationsByStudent(session.user.id);
-  const jobs = listJobs();
-  const companies = listCompanies();
-  const banner = listLiveCampaigns("dashboard_top")[0];
-
-  const jobIndex: Record<string, (typeof jobs)[number]> = {};
-  jobs.forEach((j) => (jobIndex[j.id] = j));
-  const coIndex: Record<string, (typeof companies)[number]> = {};
-  companies.forEach((c) => (coIndex[c.id] = c));
-
-  const matchByJob: Record<string, number> = {};
-  for (const j of jobs) {
-    matchByJob[j.id] = computeMatchPct(user?.profile?.skills ?? [], j.skills);
+  if (session.user.role !== "student") {
+    redirect(
+      session.user.role === "recruiter" ? "/recruiter/command" : "/admin/metrics",
+    );
   }
-  const ranked = [...jobs].sort((a, b) => (matchByJob[b.id] ?? 0) - (matchByJob[a.id] ?? 0));
+
+  // Cheap, throttled SLA sweep — fires breach/warning notifications inline so
+  // the student lands on the dashboard with fresh state. Throttled to 60s to
+  // avoid hammering. Real prod: swap for Inngest cron via /api/cron/sla-sweep.
+  await maybeRunSlaSweep();
+
+  const [
+    user,
+    apps,
+    allJobs,
+    companies,
+    bcs,
+    sponsorships,
+    inmails,
+    notInterestedIds,
+    savedJobs,
+  ] = await Promise.all([
+    getUserById(session.user.id),
+    listApplicationsByStudent(session.user.id),
+    listJobs(),
+    listCompanies(),
+    listBootcamps(),
+    listSponsorshipsByStudent(session.user.id),
+    listInMailsByStudent(session.user.id),
+    listNotInterestedJobIds(session.user.id),
+    listSavedJobs(session.user.id),
+  ]);
+  // Filter out jobs the student dismissed from the feed
+  const dismissed = new Set(notInterestedIds);
+  const jobs = allJobs.filter((j) => !dismissed.has(j.id));
+  const savedJobIds = savedJobs.map((s) => s.jobId);
+  const bootcampIdx = Object.fromEntries(bcs.map((b) => [b.id, b]));
+
+  const studentSkills = user?.profile?.skills ?? [];
+  const enrolledBcs = user?.profile?.enrolledBootcamps ?? [];
+
+  const jobsWithMatch = jobs.map((j) => ({
+    ...j,
+    matchPct: computeMatchPct(studentSkills, j.skills),
+  }));
+  const matched = jobsWithMatch
+    .filter((j) => j.matchPct >= MATCH_THRESHOLD)
+    .sort((a, b) => b.matchPct - a.matchPct);
+  const stretch = jobsWithMatch
+    .filter((j) => j.matchPct < MATCH_THRESHOLD)
+    .sort((a, b) => b.matchPct - a.matchPct);
+
+  const coIndex = Object.fromEntries(companies.map((c) => [c.id, c]));
+  const jobIndex = Object.fromEntries(jobs.map((j) => [j.id, j]));
+  const instructorIds = Array.from(new Set(bcs.map((b) => b.instructorId)));
+  const instructorList = await Promise.all(
+    instructorIds.map((id) => getUserById(id)),
+  );
+  const instructorIndex = Object.fromEntries(
+    instructorIds.map((id, i) => [
+      id,
+      instructorList[i] ? { name: instructorList[i]!.name } : undefined,
+    ]),
+  );
+
+  // KPI numbers
+  const activeAppsCount = apps.filter(
+    (a) => !["hired", "rejected"].includes(a.stage),
+  ).length;
+  // PRD: SLA breach refunds the slot; withdrawn apps don't refund. We count
+  // every app the student *currently owns* a slot for — i.e. everything except
+  // SLA-breached and "refunded" rejections.
+  const applicationsUsed = apps.filter((a) => !a.slaRefundIssued).length;
+  const avgMatch = jobsWithMatch.length
+    ? Math.round(
+        jobsWithMatch.reduce((s, j) => s + j.matchPct, 0) / jobsWithMatch.length,
+      )
+    : 0;
+  const profileCompleteness = computeCompleteness(user).pct;
+
+  // Daily Briefing inputs
+  const newMatches = matched.filter((m) => m.matchPct >= 85).length;
+  const pendingAssessments = apps.filter(
+    (a) => a.stage === "new_matches" && !a.assessment,
+  ).length;
+  const firstName = user?.profile?.alias ?? user?.name?.split(" ")[0] ?? "there";
 
   return (
-    <main className="min-h-screen bg-bg-base bg-arcade-grid">
-      <Navbar />
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+    <main className="relative min-h-screen">
+      <BackdropMesh />
+      <GlassNavbar />
+
+      <div className="mx-auto max-w-content-wide px-4 pt-6 pb-16">
+        {/* Header */}
+        <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
           <div>
-            <Badge tone="pink">▸ THE TERMINAL</Badge>
-            <h1 className="font-pixel text-xl text-neon-pink neon-text mt-2">
-              Hey {user?.profile?.alias ?? user?.name}.
+            <h1 className="font-display font-extrabold text-display-lg text-neutral-950 tracking-tighter">
+              Today
             </h1>
-            <p className="font-mono text-xs text-ink-muted">
-              {apps.length} active mission{apps.length === 1 ? "" : "s"} ·{" "}
-              {user?.profile?.verifiedSkills.length ?? 0} verified skill{user?.profile?.verifiedSkills.length === 1 ? "" : "s"}
+            <p className="text-body-sm text-neutral-500 mt-1">
+              {new Date().toLocaleDateString("en-IN", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
             </p>
           </div>
-          {banner && (
-            <div className="pixel-card border-neon-pink p-3 max-w-md">
-              <p className="font-pixel text-[10px] text-neon-pink">▸ {banner.headline}</p>
-              <p className="font-mono text-[10px] text-ink-muted">{banner.subtext}</p>
-            </div>
-          )}
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-4">
-          {/* LEFT — Active Missions */}
-          <aside className="lg:col-span-3">
-            <h2 className="font-pixel text-xs text-neon-blue mb-3">▸ ACTIVE MISSIONS</h2>
-            <MissionTimeline applications={apps} jobs={jobIndex} />
-          </aside>
+        {/* Daily Briefing */}
+        <DailyBriefing
+          studentName={firstName}
+          newMatches={newMatches}
+          pendingAssessments={pendingAssessments}
+          upcomingBootcamp={null}
+          profileCompleteness={profileCompleteness}
+        />
 
-          {/* CENTER — Matchmaker Feed */}
-          <section className="lg:col-span-6">
-            <h2 className="font-pixel text-xs text-neon-green mb-3">▸ MATCHMAKER FEED · RANKED</h2>
-            <MatchmakerFeed jobs={ranked} companies={coIndex} matchByJob={matchByJob} />
-          </section>
+        {/* High-priority inboxes above KPIs */}
+        <InMailInbox initial={inmails} />
+        <SponsorshipInbox initial={sponsorships} bootcamps={bootcampIdx} />
 
-          {/* RIGHT — AI Coach */}
-          <aside className="lg:col-span-3">
-            <h2 className="font-pixel text-xs text-neon-green mb-3">▸ AI COACH</h2>
-            <AICoachPanel />
-          </aside>
+        {/* 4-KPI Stat Bar */}
+        <StatBar
+          applicationsUsed={applicationsUsed}
+          applicationsLimit={FREE_APP_LIMIT}
+          activeApps={activeAppsCount}
+          profileCompleteness={profileCompleteness}
+          avgMatch={avgMatch}
+        />
+
+        {/* 3-Column Body */}
+        <div className="grid lg:grid-cols-12 gap-6">
+          {/* Left rail: Active Missions */}
+          <div className="lg:col-span-3 order-2 lg:order-1">
+            <ActiveMissions apps={apps} jobs={jobIndex} companies={coIndex} />
+          </div>
+
+          {/* Center: Jobs / Bootcamps tabs */}
+          <div className="lg:col-span-6 order-1 lg:order-2">
+            <Tabs defaultValue="jobs">
+              <TabsList className="mb-5">
+                <TabsTrigger value="jobs" icon={<Briefcase size={14} />}>
+                  Matched Jobs
+                </TabsTrigger>
+                <TabsTrigger value="bootcamps" icon={<GraduationCap size={14} />}>
+                  Bootcamps
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="jobs">
+                <div className="mb-5">
+                  <ResumeDrop initialSkills={studentSkills} />
+                </div>
+                <JobFeed
+                  matched={matched}
+                  stretch={stretch}
+                  companies={coIndex}
+                  savedIds={savedJobIds}
+                />
+              </TabsContent>
+
+              <TabsContent value="bootcamps">
+                <BootcampGrid
+                  bootcamps={bcs}
+                  instructors={instructorIndex}
+                  enrolledIds={enrolledBcs}
+                  sponsoredIds={sponsorships
+                    .filter((s) => s.status === "offered")
+                    .map((s) => s.bootcampId)}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Right rail: AI Coach */}
+          <div className="lg:col-span-3 order-3">
+            <CoachPanel studentFirstName={firstName} />
+          </div>
         </div>
       </div>
     </main>
   );
 }
+

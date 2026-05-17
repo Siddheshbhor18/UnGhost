@@ -3,12 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Navbar } from "@/components/shared/Navbar";
-import { ArcadeCard } from "@/components/arcade/ArcadeCard";
-import { PixelButton } from "@/components/arcade/PixelButton";
-import { Badge } from "@/components/arcade/Badge";
-import { LaserScan } from "@/components/arcade/LaserScan";
-import { RocketLaunch } from "@/components/arcade/RocketLaunch";
+import {
+  BlobField,
+  GlassBadge,
+  GlassButton,
+  GlassCard,
+  GlassInput,
+  GlassNavbar,
+  GlassSelect,
+  GlassTextarea,
+} from "@/components/glass";
 import { Sparkles, Plus, X, Rocket } from "lucide-react";
 
 export default function DeployMission() {
@@ -55,7 +59,6 @@ export default function DeployMission() {
 
   async function deploy() {
     setLaunching(true);
-    // Look up the recruiter's companyId from session (in real flow). For demo, infer from email domain.
     const email = session?.user?.email ?? "";
     const map: Record<string, string> = {
       "stark.test": "co_stark",
@@ -79,90 +82,126 @@ export default function DeployMission() {
         salaryMax,
       }),
     });
-    await new Promise((r) => setTimeout(r, 1100));
+    await new Promise((r) => setTimeout(r, 900));
     router.push("/recruiter/command");
   }
 
   return (
-    <main className="min-h-screen bg-bg-base bg-arcade-grid">
-      <Navbar />
-      <RocketLaunch active={launching} />
-      <div className="mx-auto max-w-4xl px-4 py-6">
-        <Badge tone="blue">▸ DEPLOY MISSION · ZERO-SETUP</Badge>
-        <h1 className="font-pixel text-2xl text-neon-blue neon-text mt-2 mb-1">Mission Deployment</h1>
-        <p className="font-mono text-xs text-ink-muted mb-6">
-          Paste a JD, hit Parse with AI, edit, deploy. We handle the rest.
+    <main className="min-h-screen relative">
+      <BlobField />
+      <GlassNavbar />
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <GlassBadge tone="brand">
+          <Rocket size={12} /> Deploy Mission · Zero-setup
+        </GlassBadge>
+        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3 mb-1">
+          Mission Deployment
+        </h1>
+        <p className="text-sm text-brand-muted mb-8">
+          Paste a JD, hit Parse with AI, edit anything, then deploy. We handle the rest —
+          gauntlet generation, candidate scoring, anti-ghost SLA.
         </p>
 
         {/* Brief paste */}
-        <ArcadeCard glow="blue" className="mb-4 relative overflow-hidden">
-          <p className="font-pixel text-[10px] text-neon-blue mb-2">▸ THE BRIEF · PASTE UNSTRUCTURED JD</p>
-          {parsing && (
-            <div className="absolute inset-x-0 top-12 h-12 overflow-hidden">
-              <LaserScan active color="green" />
-            </div>
-          )}
-          <textarea
+        <GlassCard className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold">
+              The Brief — Paste Unstructured JD
+            </p>
+            {parsing && (
+              <span className="text-xs text-brand-primary animate-pulse">parsing…</span>
+            )}
+          </div>
+          <GlassTextarea
             value={jdText}
             onChange={(e) => setJdText(e.target.value)}
-            className="pixel-input w-full min-h-[140px] text-sm"
+            className="min-h-[140px]"
             placeholder="Paste the raw JD here — title, must-have skills, what success looks like. We'll extract the rest."
           />
           <div className="mt-3 flex justify-end">
-            <PixelButton variant="green" size="md" onClick={parse} disabled={parsing || !jdText.trim()}>
-              <Sparkles size={14} /> {parsing ? "PARSING…" : "Parse with AI"}
-            </PixelButton>
+            <GlassButton
+              variant="brand"
+              size="md"
+              onClick={parse}
+              disabled={parsing || !jdText.trim()}
+            >
+              <Sparkles size={14} /> {parsing ? "Parsing…" : "Parse with AI"}
+            </GlassButton>
           </div>
-        </ArcadeCard>
+        </GlassCard>
 
-        <ArcadeCard className="mb-4 space-y-4">
-          <Row label="MISSION TITLE">
-            <input className="pixel-input w-full" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Senior Python Engineer" />
+        <GlassCard className="mb-5 space-y-5">
+          <Row label="Mission Title">
+            <GlassInput
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Senior Python Engineer"
+            />
           </Row>
-          <Row label="NON-NEGOTIABLE SUPERPOWERS">
+
+          <Row label="Non-Negotiable Superpowers">
             <div className="flex flex-wrap gap-2 mb-2">
               {skills.map((s) => (
-                <span key={s} className="inline-flex items-center gap-1 border border-neon-pink text-neon-pink px-2 py-1 font-mono text-xs">
+                <span
+                  key={s}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 text-xs font-semibold"
+                >
                   {s}
-                  <button onClick={() => setSkills(skills.filter((k) => k !== s))} className="hover:text-neon-red">
+                  <button
+                    onClick={() => setSkills(skills.filter((k) => k !== s))}
+                    className="hover:text-rose-600 transition"
+                  >
                     <X size={12} />
                   </button>
                 </span>
               ))}
             </div>
             <div className="flex gap-2">
-              <input
-                className="pixel-input flex-1"
+              <GlassInput
                 value={skillInput}
                 onChange={(e) => setSkillInput(e.target.value)}
                 placeholder="Add a skill"
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addSkill();
+                  }
+                }}
               />
-              <PixelButton variant="pink" size="md" onClick={addSkill}><Plus size={12}/></PixelButton>
+              <GlassButton variant="brand" size="md" onClick={addSkill}>
+                <Plus size={14} />
+              </GlassButton>
             </div>
           </Row>
+
           <div className="grid md:grid-cols-3 gap-4">
-            <Row label="BASE LOCATION">
-              <input className="pixel-input w-full" value={location} onChange={(e) => setLocation(e.target.value)} />
+            <Row label="Base Location">
+              <GlassInput
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
             </Row>
-            <Row label="REMOTE STANCE">
-              <select className="pixel-input w-full" value={remote} onChange={(e) => setRemote(e.target.value as typeof remote)}>
+            <Row label="Remote Stance">
+              <GlassSelect
+                value={remote}
+                onChange={(e) => setRemote(e.target.value as typeof remote)}
+              >
                 <option value="remote">Remote</option>
                 <option value="hybrid">Hybrid</option>
                 <option value="onsite">Onsite</option>
-              </select>
+              </GlassSelect>
             </Row>
-            <Row label="SLA COMMITMENT">
-              <div className="flex gap-1">
+            <Row label="SLA Commitment">
+              <div className="flex gap-1.5">
                 {[24, 48, 72].map((h) => (
                   <button
                     key={h}
                     type="button"
                     onClick={() => setSla(h as 24 | 48 | 72)}
-                    className={`flex-1 border-2 py-2 font-pixel text-[10px] transition-colors ${
+                    className={`flex-1 rounded-xl border py-2.5 text-xs font-semibold transition ${
                       sla === h
-                        ? "border-neon-green bg-neon-green text-black"
-                        : "border-bg-ink text-ink-muted hover:border-neon-green hover:text-neon-green"
+                        ? "bg-brand-primary text-white border-brand-primary shadow-brand-glow"
+                        : "bg-white/40 border-brand-ink/10 text-brand-muted hover:border-brand-primary hover:text-brand-primary"
                     }`}
                   >
                     {h}H
@@ -171,35 +210,51 @@ export default function DeployMission() {
               </div>
             </Row>
           </div>
-          <Row label="THE GAUNTLET · AI-GENERATED · EDIT FREELY">
-            <textarea
-              className="pixel-input w-full min-h-[120px]"
+
+          <Row label="The Gauntlet — AI-Generated · Edit Freely">
+            <GlassTextarea
               value={gauntletPrompt}
               onChange={(e) => setGauntletPrompt(e.target.value)}
+              className="min-h-[120px]"
               placeholder="The situational prompt every applicant must answer."
             />
           </Row>
-          <Row label="MISSION DESCRIPTION">
-            <textarea
-              className="pixel-input w-full min-h-[100px]"
+
+          <Row label="Mission Description">
+            <GlassTextarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[100px]"
             />
           </Row>
+
           <div className="grid md:grid-cols-2 gap-4">
-            <Row label="REWARD RANGE · MIN (₹ LPA)">
-              <input type="number" className="pixel-input w-full" value={salaryMin} onChange={(e) => setSalaryMin(+e.target.value)} />
+            <Row label="Reward Range — Min (₹ LPA)">
+              <GlassInput
+                type="number"
+                value={salaryMin}
+                onChange={(e) => setSalaryMin(+e.target.value)}
+              />
             </Row>
-            <Row label="REWARD RANGE · MAX (₹ LPA)">
-              <input type="number" className="pixel-input w-full" value={salaryMax} onChange={(e) => setSalaryMax(+e.target.value)} />
+            <Row label="Reward Range — Max (₹ LPA)">
+              <GlassInput
+                type="number"
+                value={salaryMax}
+                onChange={(e) => setSalaryMax(+e.target.value)}
+              />
             </Row>
           </div>
-        </ArcadeCard>
+        </GlassCard>
 
         <div className="flex justify-end">
-          <PixelButton variant="pink" size="lg" onClick={deploy} disabled={launching || !title || skills.length === 0}>
-            <Rocket size={14} /> {launching ? "DEPLOYING…" : "Deploy Mission"}
-          </PixelButton>
+          <GlassButton
+            variant="brand"
+            size="lg"
+            onClick={deploy}
+            disabled={launching || !title || skills.length === 0}
+          >
+            <Rocket size={16} /> {launching ? "Deploying…" : "Deploy Mission"}
+          </GlassButton>
         </div>
       </div>
     </main>
@@ -209,7 +264,9 @@ export default function DeployMission() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="font-pixel text-[10px] text-ink-muted block mb-2">{label}</label>
+      <label className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold block mb-2">
+        {label}
+      </label>
       {children}
     </div>
   );

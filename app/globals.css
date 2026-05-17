@@ -2,7 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===================================================================
+   unGhost — Editorial Design System (v2)
+   --------------------------------------------------------------------
+   - 90% neutrals (warm-grey), 10% brand blue
+   - Surgical glass — only ~12 surfaces use backdrop-filter
+   - Compound shadows, locked spacing, tabular numerals on stats
+   - Legacy utility classes preserved at bottom for migration
+   =================================================================== */
+
 :root {
+  /* ── Brand scale ── */
+  --brand-50:  #E8F4FE;
+  --brand-100: #C5E2FD;
+  --brand-500: #0191FC;
+  --brand-600: #017FE0;
+  --brand-700: #0168BD;
+  --brand-900: #003D75;
+
+  /* ── Neutral scale (warm-grey) ── */
+  --neutral-0:   #FFFFFF;
+  --neutral-25:  #FCFCFB;
+  --neutral-50:  #F8F7F5;
+  --neutral-100: #F2F0EC;
+  --neutral-200: #E8E5DF;
+  --neutral-300: #D4D0C8;
+  --neutral-400: #9C9690;
+  --neutral-500: #6B6660;
+  --neutral-700: #3F3B36;
+  --neutral-900: #1A1816;
+  --neutral-950: #0A0A0A;
+
+  /* ── Semantic ── */
+  --success: #0E9F6E;
+  --success-light: #E3F8EC;
+  --warning: #D97706;
+  --warning-light: #FFF4E6;
+  --error: #DC2626;
+  --error-light: #FEE7E7;
+  --info: #0284C7;
+  --info-light: #E0F2FE;
+  --highlight: #FCD34D;
+
+  /* ── Glass tokens (only used on approved surfaces) ── */
+  --glass-light-bg: rgba(255, 255, 255, 0.72);
+  --glass-light-border: rgba(255, 255, 255, 0.50);
+  --glass-heavy-bg: rgba(255, 255, 255, 0.88);
+  --glass-heavy-border: rgba(255, 255, 255, 0.50);
+  --glass-tint-bg: rgba(232, 244, 254, 0.65);
+  --glass-tint-border: rgba(1, 145, 252, 0.18);
+
+  /* ── Legacy aliases (do not use in new code) ── */
+  --brand-primary: #0191fc;
+  --brand-secondary: #3454da;
+  --brand-dark: #003D75;
+  --brand-light: #E8F4FE;
+  --brand-ink: #1A1816;
+  --brand-muted: #6B6660;
+  --glass-surface: rgba(255, 255, 255, 0.72);
+  --glass-surface-strong: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.50);
+  --glass-ring: rgba(1, 145, 252, 0.18);
   --bg-base: #0a0a0f;
   --bg-panel: #15151f;
   --neon-green: #39ff14;
@@ -12,172 +72,556 @@
   --neon-red: #ff003c;
 }
 
-* {
-  box-sizing: border-box;
-}
+/* ── BASE ───────────────────────────────────────────────────────── */
 
-html,
-body {
+* { box-sizing: border-box; }
+
+html, body {
   margin: 0;
   padding: 0;
-  background: var(--bg-base);
-  color: #f5f5f7;
   font-family: var(--font-inter), system-ui, sans-serif;
+  color: var(--neutral-700);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  font-feature-settings: "cv11" 1, "ss01" 1, "ss03" 1;
 }
 
 body {
-  background-image: radial-gradient(
-      circle at 20% 10%,
-      rgba(177, 74, 255, 0.08),
-      transparent 40%
-    ),
-    radial-gradient(circle at 80% 80%, rgba(0, 217, 255, 0.07), transparent 40%);
-  background-attachment: fixed;
-  min-height: 100vh;
+  background: var(--neutral-25);
+  /* Subtle mesh on canvas — used only when no hero gradient is present */
 }
 
 ::selection {
-  background: var(--neon-pink);
-  color: #000;
+  background: var(--brand-500);
+  color: #fff;
 }
 
-/* Pixel border helper */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--neutral-300);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-400);
+  background-clip: padding-box;
+}
+
+/* Honour reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 200ms !important;
+    transition-duration: 200ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── TYPOGRAPHY UTILITIES ───────────────────────────────────────── */
+
+.font-display {
+  font-family: var(--font-inter-display), var(--font-inter), system-ui, sans-serif;
+  font-feature-settings: "ss01" 1, "ss03" 1;
+}
+
+/* Tabular numerals — apply on any dashboard stat, price, timer, count */
+.tnum { font-feature-settings: "tnum" 1, "cv11" 1; font-variant-numeric: tabular-nums; }
+
+/* Editorial prose reading width */
+.prose-editorial {
+  max-width: 65ch;
+  color: var(--neutral-700);
+  line-height: 1.6;
+}
+.prose-editorial p { margin: 1em 0; }
+.prose-editorial h2 {
+  font-family: var(--font-inter-display), var(--font-inter), sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--neutral-900);
+  margin: 1.6em 0 0.6em;
+}
+.prose-editorial h3 {
+  font-family: var(--font-inter-display), var(--font-inter), sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.25;
+  color: var(--neutral-900);
+  margin: 1.4em 0 0.5em;
+}
+
+/* Two-tone headline — first phrase neutral, second phrase brand */
+.headline-twotone .accent { color: var(--brand-500); }
+
+/* All-caps label (badges, top-nav, section-labels) */
+.label-caps {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--neutral-500);
+}
+
+/* ── BUTTON SYSTEM (5 variants × 4 sizes) ───────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 100ms ease,
+    box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(1, 145, 252, 0.30);
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.btn:active:not(:disabled) { transform: scale(0.98); }
+
+/* Sizes */
+.btn-sm { height: 32px; padding: 0 12px; font-size: 14px; font-weight: 500; border-radius: 8px; }
+.btn-md { height: 40px; padding: 0 16px; font-size: 14px; font-weight: 500; }
+.btn-lg { height: 48px; padding: 0 20px; font-size: 16px; font-weight: 600; }
+.btn-xl { height: 56px; padding: 0 24px; font-size: 18px; font-weight: 600; border-radius: 12px; }
+
+/* Variants */
+.btn-primary {
+  background: var(--brand-500);
+  color: var(--neutral-0);
+}
+.btn-primary:hover:not(:disabled) { background: var(--brand-600); box-shadow: 0 2px 4px rgba(10,10,10,0.04), 0 4px 8px rgba(10,10,10,0.04); }
+.btn-primary:active:not(:disabled) { background: var(--brand-700); }
+
+.btn-secondary {
+  background: var(--neutral-0);
+  color: var(--neutral-950);
+  border-color: var(--neutral-300);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--neutral-25);
+  border-color: var(--neutral-400);
+}
+
+.btn-tertiary {
+  background: transparent;
+  color: var(--neutral-700);
+}
+.btn-tertiary:hover:not(:disabled) {
+  background: var(--neutral-100);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--neutral-700);
+  border-color: var(--neutral-200);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--neutral-50);
+  border-color: var(--neutral-300);
+}
+
+.btn-destructive {
+  background: var(--error);
+  color: var(--neutral-0);
+}
+.btn-destructive:hover:not(:disabled) { background: #B91C1C; }
+
+/* ── CARDS ──────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--neutral-0);
+  border-radius: 14px;
+  box-shadow:
+    0 2px 4px rgba(10,10,10,0.04),
+    0 4px 8px rgba(10,10,10,0.04);
+  transition: box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-hoverable:hover {
+  box-shadow:
+    0 4px 8px rgba(10,10,10,0.04),
+    0 12px 24px rgba(10,10,10,0.06);
+  transform: translateY(-2px);
+}
+.card-selected {
+  border: 2px solid var(--brand-500);
+  background: var(--brand-50);
+}
+
+/* ── FORM INPUTS ────────────────────────────────────────────────── */
+
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  background: var(--neutral-0);
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  color: var(--neutral-700);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: border-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+.input::placeholder { color: var(--neutral-400); }
+.input:hover:not(:focus) { border-color: var(--neutral-300); }
+.input:focus {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 4px rgba(1, 145, 252, 0.15);
+}
+.input-error {
+  border-color: var(--error);
+}
+.input-error:focus {
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
+}
+.input:disabled {
+  background: var(--neutral-50);
+  border-color: var(--neutral-200);
+  color: var(--neutral-400);
+  cursor: not-allowed;
+}
+.input-sm { height: 36px; padding: 0 12px; }
+.input-lg { height: 56px; padding: 0 20px; font-size: 16px; }
+
+/* Textarea inherits .input styling but auto-grows */
+textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: vertical; }
+
+/* ── BADGES / CHIPS / TAGS ──────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+.badge-md { height: 28px; padding: 0 12px; font-size: 14px; }
+
+.badge-success  { background: var(--success-light); color: var(--success); }
+.badge-warning  { background: var(--warning-light); color: var(--warning); }
+.badge-error    { background: var(--error-light);   color: var(--error); }
+.badge-info     { background: var(--brand-50);      color: var(--brand-500); }
+.badge-neutral  { background: var(--neutral-100);   color: var(--neutral-700); }
+.badge-highlight{ background: var(--highlight);     color: var(--neutral-950); }
+
+/* Tier badges A/B/C/D — match quality */
+.badge-tier-a { background: #0F4C81; color: #fff; }
+.badge-tier-b { background: var(--brand-500); color: #fff; }
+.badge-tier-c { background: #7A9CC6; color: #fff; }
+.badge-tier-d { background: var(--neutral-0); color: var(--neutral-500); border: 1px solid var(--neutral-300); }
+
+/* Filter chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  background: var(--neutral-100);
+  color: var(--neutral-700);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.chip:hover { background: var(--neutral-200); }
+.chip-active {
+  background: var(--brand-500);
+  color: var(--neutral-0);
+}
+
+/* ── GLASS — surgical, three recipes ────────────────────────────── */
+
+/* Approved usage only:
+   - .glass        → light glass (90% of cases)   — sticky nav scrolled, filter rail, toasts
+   - .glass-heavy  → modals, drawers, sheets
+   - .glass-tinted → brand hero moments (Magic Widget)
+*/
+
+.glass {
+  background: var(--glass-light-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-light-border);
+  box-shadow: 0 8px 32px rgba(10, 10, 10, 0.06);
+  border-radius: 20px;
+}
+
+.glass-heavy {
+  background: var(--glass-heavy-bg);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-heavy-border);
+  box-shadow: 0 24px 64px rgba(10, 10, 10, 0.16);
+  border-radius: 28px;
+}
+
+.glass-tinted {
+  background: var(--glass-tint-bg);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid var(--glass-tint-border);
+  box-shadow: 0 12px 32px rgba(1, 145, 252, 0.12);
+  border-radius: 40px;
+}
+
+/* Cap blur radius on small viewports for GPU perf */
+@media (max-width: 768px) {
+  .glass, .glass-heavy, .glass-tinted {
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+  }
+}
+
+/* Downgrade for low-memory devices and slow connections — pages can flip
+   this class on <html> after detecting navigator.deviceMemory or .connection */
+.no-glass .glass,
+.no-glass .glass-heavy,
+.no-glass .glass-tinted {
+  background: var(--neutral-0);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow:
+    0 8px 16px rgba(10,10,10,0.04),
+    0 24px 48px rgba(10,10,10,0.08);
+}
+
+/* ── SKELETONS ──────────────────────────────────────────────────── */
+
+.skeleton {
+  background: var(--neutral-100);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1400ms linear infinite;
+  border-radius: 6px;
+}
+.skeleton-text { height: 16px; border-radius: 4px; }
+.skeleton-title { height: 28px; border-radius: 6px; }
+.skeleton-avatar { width: 40px; height: 40px; border-radius: 9999px; }
+.skeleton-card { height: 120px; border-radius: 14px; }
+
+/* ── SECTION LABELS (replaces ad-hoc uppercase) ─────────────────── */
+
+.section-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--neutral-500);
+}
+
+/* ── HERO HELPERS ───────────────────────────────────────────────── */
+
+.mesh-hero {
+  background-image:
+    radial-gradient(800px 600px at 0% 0%, rgba(232, 244, 254, 0.8), transparent 60%),
+    radial-gradient(900px 600px at 100% 0%, rgba(245, 236, 255, 0.6), transparent 60%),
+    radial-gradient(900px 500px at 50% 100%, rgba(232, 244, 254, 0.6), transparent 60%);
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Text gradient — used VERY sparingly (logo wordmark only) */
+.text-brand-gradient {
+  background: linear-gradient(135deg, var(--brand-500) 0%, #3454DA 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ===================================================================
+   LEGACY UTILITY CLASSES
+   Kept so existing pages render during migration. Each maps to the new
+   editorial tokens — drop once every page is migrated to new utilities.
+   =================================================================== */
+
+.glass-panel {
+  background: var(--glass-light-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-light-border);
+  box-shadow: 0 8px 32px rgba(10, 10, 10, 0.06);
+  border-radius: 20px;
+}
+
+.glass-panel-strong {
+  background: var(--glass-heavy-bg);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-heavy-border);
+  box-shadow: 0 24px 64px rgba(10, 10, 10, 0.16);
+  border-radius: 24px;
+}
+
+.glass-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  background: var(--neutral-0);
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  color: var(--neutral-700);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 200ms, box-shadow 200ms;
+}
+.glass-input::placeholder { color: var(--neutral-400); }
+.glass-input:hover { border-color: var(--neutral-300); }
+.glass-input:focus {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 4px rgba(1, 145, 252, 0.15);
+}
+
+.btn-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background: var(--brand-500);
+  color: var(--neutral-0);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 200ms, transform 100ms, box-shadow 200ms;
+}
+.btn-brand:hover {
+  background: var(--brand-600);
+  box-shadow: 0 2px 4px rgba(10,10,10,0.04), 0 4px 8px rgba(10,10,10,0.04);
+}
+.btn-brand:active { background: var(--brand-700); transform: scale(0.98); }
+
+.btn-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background: var(--neutral-0);
+  color: var(--neutral-950);
+  font-weight: 500;
+  font-size: 14px;
+  border: 1px solid var(--neutral-300);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 200ms, border-color 200ms, transform 100ms;
+}
+.btn-glass:hover {
+  background: var(--neutral-25);
+  border-color: var(--neutral-400);
+}
+.btn-glass:active { transform: scale(0.98); }
+
+/* ===================================================================
+   LEGACY ARCADE STYLES — used by un-migrated pages only. To be removed
+   once those modules are migrated to the editorial system.
+   =================================================================== */
+
 .pixel-card {
   background: var(--bg-panel);
   border: 2px solid #000;
   box-shadow: 4px 4px 0 0 #000;
   position: relative;
 }
-
 .pixel-card-neon {
   background: var(--bg-panel);
   border: 2px solid currentColor;
   box-shadow: 4px 4px 0 0 currentColor;
 }
-
-/* Neon text bloom */
-.neon-text {
-  text-shadow: 0 0 12px currentColor, 0 0 4px currentColor;
-}
-
-.neon-text-soft {
-  text-shadow: 0 0 8px currentColor;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-track {
-  background: #15151f;
-}
-::-webkit-scrollbar-thumb {
-  background: #2a2a3d;
-  border: 2px solid #15151f;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--neon-blue);
-}
-
-/* CRT scanline overlay */
+.neon-text { text-shadow: 0 0 12px currentColor, 0 0 4px currentColor; }
+.neon-text-soft { text-shadow: 0 0 8px currentColor; }
 .crt-overlay {
   pointer-events: none;
   position: fixed;
   inset: 0;
   z-index: 1000;
   background-image: repeating-linear-gradient(
-    0deg,
-    rgba(255, 255, 255, 0.03) 0,
-    rgba(255, 255, 255, 0.03) 1px,
-    transparent 1px,
-    transparent 3px
+    0deg, rgba(255,255,255,.03) 0, rgba(255,255,255,.03) 1px, transparent 1px, transparent 3px
   );
   mix-blend-mode: overlay;
 }
-
 .crt-vignette {
   pointer-events: none;
   position: fixed;
   inset: 0;
   z-index: 999;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 55%,
-    rgba(0, 0, 0, 0.5) 100%
-  );
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.5) 100%);
 }
-
-/* Soft CRT flicker */
-.crt-flicker {
-  animation: crt-flicker 6s infinite;
-}
-@keyframes crt-flicker {
-  0%,
-  19%,
-  21%,
-  23%,
-  25%,
-  54%,
-  56%,
-  100% {
-    opacity: 1;
-  }
-  20%,
-  24%,
-  55% {
-    opacity: 0.92;
-  }
-}
-
-/* Grid bg */
 .bg-arcade-grid {
-  background-image: linear-gradient(rgba(0, 217, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 217, 255, 0.05) 1px, transparent 1px);
+  background-image:
+    linear-gradient(rgba(0,217,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,217,255,0.05) 1px, transparent 1px);
   background-size: 32px 32px;
 }
-
-/* Headings */
 .font-pixel {
   font-family: var(--font-press-start), monospace;
   letter-spacing: 0.04em;
   line-height: 1.4;
 }
-
-/* Glitch text */
-.glitch {
-  position: relative;
-  display: inline-block;
-}
-.glitch::before,
-.glitch::after {
+.glitch { position: relative; display: inline-block; }
+.glitch::before, .glitch::after {
   content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  overflow: hidden;
+  position: absolute; top: 0; left: 0; width: 100%; overflow: hidden;
 }
 .glitch::before {
-  color: var(--neon-pink);
-  clip-path: inset(0 0 60% 0);
-  transform: translate(-2px, -1px);
-  opacity: 0.7;
+  color: var(--neon-pink); clip-path: inset(0 0 60% 0);
+  transform: translate(-2px, -1px); opacity: 0.7;
 }
 .glitch::after {
-  color: var(--neon-blue);
-  clip-path: inset(60% 0 0 0);
-  transform: translate(2px, 1px);
-  opacity: 0.7;
+  color: var(--neon-blue); clip-path: inset(60% 0 0 0);
+  transform: translate(2px, 1px); opacity: 0.7;
 }
-
-/* Inputs */
 .pixel-input {
-  background: #0a0a0f;
-  border: 2px solid #2a2a3d;
-  color: #f5f5f7;
+  background: #0a0a0f; border: 2px solid #2a2a3d; color: #f5f5f7;
   padding: 0.7rem 0.9rem;
   font-family: var(--font-jetbrains), monospace;
   outline: none;
@@ -185,61 +629,27 @@ body {
 }
 .pixel-input:focus {
   border-color: var(--neon-blue);
-  box-shadow: 0 0 0 1px var(--neon-blue), 0 0 12px rgba(0, 217, 255, 0.4);
+  box-shadow: 0 0 0 1px var(--neon-blue), 0 0 12px rgba(0,217,255,0.4);
 }
-
-/* Disable pixel-stepped hover smoothing */
 .btn-pixel {
   image-rendering: pixelated;
   transition: transform 0.08s steps(2), box-shadow 0.08s steps(2);
 }
-.btn-pixel:hover {
-  transform: translate(-2px, -2px);
-}
-.btn-pixel:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 0 #000 !important;
-}
-
-/* Loading dot */
+.btn-pixel:hover { transform: translate(-2px, -2px); }
+.btn-pixel:active { transform: translate(2px, 2px); box-shadow: 0 0 0 0 #000 !important; }
 .cursor-blink::after {
   content: "▮";
   animation: blink 1.1s steps(2) infinite;
   color: var(--neon-green);
   margin-left: 4px;
 }
-@keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
-}
-
-/* Marquee */
 .marquee {
-  overflow: hidden;
-  position: relative;
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0,
-    #000 8%,
-    #000 92%,
-    transparent 100%
-  );
+  overflow: hidden; position: relative;
+  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
 }
 .marquee-track {
-  display: inline-flex;
-  white-space: nowrap;
+  display: inline-flex; white-space: nowrap;
   animation: ticker 40s linear infinite;
 }
-@keyframes ticker {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
+@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }

@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils/cn";
+import { cn } from "@/shared/lib/cn";
 import { motion, type HTMLMotionProps } from "framer-motion";
 
 interface Props extends HTMLMotionProps<"div"> {

@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils/cn";
+import { cn } from "@/shared/lib/cn";
 
 type Tone = "green" | "pink" | "blue" | "yellow" | "red" | "purple" | "muted";
 

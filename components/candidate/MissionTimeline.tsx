@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Application, Job, Stage } from "@/lib/data/types";
-import { slaCountdown } from "@/lib/utils/sla";
+import type { Application, Job, Stage } from "@/shared/types";
+import { slaCountdown } from "@/shared/lib/sla";
 import { Badge } from "@/components/arcade/Badge";
 
 const stageLabel: Record<Stage, string> = {

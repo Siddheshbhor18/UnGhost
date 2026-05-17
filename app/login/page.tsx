@@ -3,21 +3,45 @@
 import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
-import { ArrowRight, DoorOpen, Mail } from "lucide-react";
 import Link from "next/link";
-import { PixelButton } from "@/components/arcade/PixelButton";
-import { ArcadeCard } from "@/components/arcade/ArcadeCard";
-import { Badge } from "@/components/arcade/Badge";
+import { ArrowRight, GraduationCap, ShieldCheck, User2, BookOpen } from "lucide-react";
+import { DoorAnimation, Logo } from "@/components/glass";
+import {
+  Badge,
+  BackdropMesh,
+  Button,
+  Card,
+  Field,
+  Input,
+} from "@/components/ui";
+import clsx from "clsx";
+
+type Role = "student" | "recruiter" | "instructor" | "admin";
+
+const ROLES: { id: Role; label: string; icon: React.ReactNode; demoEmail: string; href: string }[] = [
+  { id: "student", label: "Student", icon: <User2 size={16} />, demoEmail: "alice@demo.test", href: "/dashboard" },
+  { id: "recruiter", label: "Recruiter", icon: <ShieldCheck size={16} />, demoEmail: "hr@stark.test", href: "/recruiter/command" },
+  { id: "instructor", label: "Instructor", icon: <BookOpen size={16} />, demoEmail: "cristian@instructor.test", href: "/instructor/today" },
+  { id: "admin", label: "Admin", icon: <GraduationCap size={16} />, demoEmail: "root@noghost.test", href: "/admin/today" },
+];
 
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/dashboard";
+  const nextParam = params.get("next");
+  const [role, setRole] = useState<Role>("student");
   const [email, setEmail] = useState("alice@demo.test");
   const [password, setPassword] = useState("demo");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [playDoor, setPlayDoor] = useState(false);
+  const [dest, setDest] = useState<string>("/");
+
+  function switchRole(r: Role) {
+    setRole(r);
+    setErr(null);
+    setEmail(ROLES.find((x) => x.id === r)!.demoEmail);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,105 +50,154 @@ function LoginInner() {
     const res = await signIn("credentials", { email, password, redirect: false });
     setBusy(false);
     if (res?.error) {
-      setErr("Wrong credentials. Try alice@demo.test / demo");
+      setErr("Wrong credentials. Try the demo email above with password 'demo'.");
       return;
     }
-    router.push(next);
-    router.refresh();
+    const target = nextParam ?? ROLES.find((x) => x.id === role)!.href;
+    setDest(target);
+    setPlayDoor(true);
   }
 
+  const active = ROLES.find((r) => r.id === role)!;
+
   return (
-    <main className="min-h-screen bg-bg-base bg-arcade-grid flex items-center justify-center px-4">
+    <main className="relative min-h-screen flex items-center justify-center px-4 py-10">
+      <BackdropMesh />
+      <DoorAnimation
+        active={playDoor}
+        studentName={role === "student" ? "Alice" : undefined}
+        onComplete={() => {
+          router.push(dest);
+          router.refresh();
+        }}
+      />
       <div className="w-full max-w-md">
-        <div className="text-center mb-6">
-          <Link href="/" className="font-pixel text-xs text-neon-pink neon-text">← NO/GHOST</Link>
+        <div className="flex justify-center mb-6">
+          <Link href="/">
+            <Logo size="md" />
+          </Link>
         </div>
 
-        <ArcadeCard glow="pink" className="relative overflow-hidden">
-          {/* door swing animation */}
-          <motion.div
-            initial={{ rotateY: -90, opacity: 0 }}
-            animate={{ rotateY: 0, opacity: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="absolute inset-x-0 top-0 flex justify-center pt-3 pointer-events-none"
-            style={{ transformOrigin: "left center" }}
-          >
-            <DoorOpen className="text-neon-pink/30" size={120} strokeWidth={1} />
-          </motion.div>
-
-          <div className="relative pt-24">
-            <Badge tone="pink" className="mb-2">▸ THE DOORWAY</Badge>
-            <h1 className="font-pixel text-xl text-neon-pink neon-text mb-1">
-              Unlock Your Terminal
-            </h1>
-            <p className="font-mono text-xs text-ink-muted mb-6">
-              Demo: <span className="text-neon-blue">alice@demo.test</span> · <span className="text-neon-blue">devraj@demo.test</span> · <span className="text-neon-blue">root@noghost.test</span> &nbsp;·&nbsp; pass: <span className="text-neon-green">demo</span>
-            </p>
-
-            <form onSubmit={submit} className="space-y-3">
-              <div>
-                <label className="font-pixel text-[10px] text-ink-muted">EMAIL</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pixel-input w-full mt-1"
-                  placeholder="you@yourdomain.com"
-                />
-              </div>
-              <div>
-                <label className="font-pixel text-[10px] text-ink-muted">PASSWORD</label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pixel-input w-full mt-1"
-                  placeholder="demo"
-                />
-              </div>
-              {err && (
-                <p className="font-mono text-xs text-neon-red border border-neon-red px-3 py-2">{err}</p>
-              )}
-              <PixelButton type="submit" variant="pink" size="lg" block disabled={busy}>
-                {busy ? "OPENING…" : <>Unlock Career <ArrowRight size={14} /></>}
-              </PixelButton>
-            </form>
-
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-[2px] bg-bg-ink flex-1" />
-              <span className="font-mono text-[10px] text-ink-dim">OR</span>
-              <div className="h-[2px] bg-bg-ink flex-1" />
-            </div>
-
-            <div className="space-y-2">
-              <PixelButton
-                variant="ghost"
-                block
-                size="md"
-                onClick={() => signIn("google", { callbackUrl: next }).catch(() => setErr("Google OAuth not configured. Use credentials."))}
+        <Card padded className="!p-7">
+          {/* Role pills */}
+          <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-neutral-100 mb-6">
+            {ROLES.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => switchRole(r.id)}
+                className={clsx(
+                  "flex items-center justify-center gap-1.5 py-2 rounded-lg text-body-sm font-semibold transition",
+                  role === r.id
+                    ? "bg-neutral-0 shadow-elev-1 text-neutral-900"
+                    : "text-neutral-500 hover:text-neutral-900",
+                )}
               >
-                <Mail size={14} /> Continue with Google
-              </PixelButton>
-              <PixelButton
-                variant="ghost"
-                block
-                size="md"
-                onClick={() => signIn("linkedin", { callbackUrl: next }).catch(() => setErr("LinkedIn OAuth not configured."))}
-              >
-                Continue with LinkedIn
-              </PixelButton>
-            </div>
-
-            <p className="mt-6 text-center font-mono text-[10px] text-ink-dim">
-              Recruiter?{" "}
-              <Link href="/recruiter/login" className="text-neon-blue underline">
-                Go to corporate auth
-              </Link>
-            </p>
+                {r.icon}
+                <span className="hidden sm:inline">{r.label}</span>
+              </button>
+            ))}
           </div>
-        </ArcadeCard>
+
+          <h1 className="font-display font-extrabold text-display-md text-neutral-950 tracking-tight mb-1">
+            Welcome back.
+          </h1>
+          <p className="text-body-sm text-neutral-500 mb-5">
+            Signing in as{" "}
+            <span className="font-semibold text-neutral-900">{active.label}</span>.
+            Demo password:{" "}
+            <span className="font-mono text-brand-500">demo</span>
+          </p>
+
+          <form onSubmit={submit} className="space-y-4">
+            <Field label="Email">
+              <Input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={active.demoEmail}
+                autoComplete="email"
+              />
+            </Field>
+            <Field label="Password">
+              <Input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="demo"
+                autoComplete="current-password"
+              />
+            </Field>
+            {err && (
+              <div
+                role="alert"
+                className="text-body-sm text-error bg-error-light border border-error/20 rounded-md px-3 py-2"
+              >
+                {err}
+              </div>
+            )}
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              fullWidth
+              loading={busy}
+              trailingIcon={!busy ? <ArrowRight size={14} /> : undefined}
+            >
+              {busy ? "Signing in…" : "Sign in"}
+            </Button>
+          </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px bg-neutral-200 flex-1" />
+            <span className="section-label">or</span>
+            <div className="h-px bg-neutral-200 flex-1" />
+          </div>
+
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onClick={() =>
+                signIn("google", { callbackUrl: active.href }).catch(() =>
+                  setErr("Google OAuth not configured. Use credentials."),
+                )
+              }
+            >
+              Continue with Google
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onClick={() =>
+                signIn("linkedin", { callbackUrl: active.href }).catch(() =>
+                  setErr("LinkedIn OAuth not configured."),
+                )
+              }
+            >
+              Continue with LinkedIn
+            </Button>
+          </div>
+
+          <p className="mt-6 text-center text-body-xs text-neutral-500">
+            New here?{" "}
+            <Link href="/signup" className="text-brand-500 font-semibold hover:underline">
+              Create an account
+            </Link>
+          </p>
+        </Card>
+
+        <div className="mt-4 text-center">
+          <Badge tone="neutral">
+            Demo accounts available · Switch role pill to try each side
+          </Badge>
+        </div>
       </div>
     </main>
   );
@@ -132,7 +205,7 @@ function LoginInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-bg-base" />}>
+    <Suspense fallback={<div className="min-h-screen" />}>
       <LoginInner />
     </Suspense>
   );

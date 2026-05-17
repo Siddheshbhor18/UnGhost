@@ -1,0 +1,29 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "plugins": ["boundaries"],
+  "settings": {
+    "boundaries/include": ["app/**/*", "components/**/*", "server/**/*", "shared/**/*"],
+    "boundaries/elements": [
+      { "type": "app",        "pattern": "app/**/*" },
+      { "type": "components", "pattern": "components/**/*" },
+      { "type": "server",     "pattern": "server/**/*" },
+      { "type": "shared",     "pattern": "shared/**/*" }
+    ]
+  },
+  "rules": {
+    "boundaries/element-types": [
+      "error",
+      {
+        "default": "disallow",
+        "rules": [
+          { "from": "app",        "allow": ["components", "server", "shared"] },
+          { "from": "components", "allow": ["components", "shared"] },
+          { "from": "server",     "allow": ["server", "shared"] },
+          { "from": "shared",     "allow": ["shared"] }
+        ]
+      }
+    ],
+    "react/no-unescaped-entities": "off",
+    "@typescript-eslint/no-explicit-any": "off"
+  }
+}
