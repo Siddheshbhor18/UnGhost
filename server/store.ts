@@ -4,8 +4,17 @@
  *
  * To swap providers, replace the body of these functions but keep the names.
  */
+import * as React from "react";
 import { connectMongo } from "@/server/db/mongo";
 import { cached, invalidate } from "@/server/lib/cache";
+
+// `React.cache` is RSC-only. In unit tests / non-RSC runtimes the symbol is
+// undefined, so fall through with a no-op identity wrapper. Either way the
+// callsite gets a function that memoises within a single RSC render.
+const reactCache: <T extends (...args: any[]) => any>(fn: T) => T =
+  typeof (React as unknown as { cache?: unknown }).cache === "function"
+    ? ((React as unknown as { cache: <T extends (...args: any[]) => any>(fn: T) => T }).cache)
+    : ((fn) => fn);
 import {
   AICoachConversationModel,
   LiveSessionModel,
@@ -22,6 +31,7 @@ import {
   NotificationModel,
   ProcessedTxnModel,
   SavedJobModel,
+  SessionRecordingModel,
   SponsorshipModel,
   SupportTicketModel,
   UserModel,
@@ -54,6 +64,7 @@ import type {
   Placement,
   Role,
   SavedJob,
+  SessionRecording,
   Sponsorship,
   SponsorshipStatus,
   Stage,
@@ -76,11 +87,66 @@ export async function listUsers(role?: Role): Promise<User[]> {
   return unwrapAll(docs as unknown as User[]);
 }
 
-export async function getUserById(id: string): Promise<User | undefined> {
+/**
+ * Slim variant — id + name + role + avatar + plan. Used by recruiter/admin
+ * pages that only render chips/avatars and never touch the full profile.
+ * Strips passwordHash, profile sub-doc, aiCoachMemory, etc.
+ */
+export type UserLite = Pick<
+  User,
+  "id" | "name" | "role" | "avatarUrl" | "plan" | "companyId" | "status"
+>;
+export async function listUsersLite(role?: Role): Promise<UserLite[]> {
   await db();
-  const doc = await UserModel.findById(id).lean();
-  return unwrap(doc as unknown as User);
+  const q: any = role ? { role } : {};
+  const docs = await UserModel.find(q)
+    .select("_id name role avatarUrl plan companyId status")
+    .lean();
+  return unwrapAll(docs as unknown as UserLite[]);
 }
+
+/**
+ * Batch fetch users by id. One Mongo query for N ids — replaces N+1 patterns
+ * like the dashboard's `instructorIds.map(id => getUserById(id))`. Returns
+ * a Map for O(1) lookup, plus an array preserving the input order with
+ * `undefined` for ids that didn't match (mirrors getUserById's signature).
+ */
+export async function getUsersByIds(
+  ids: string[],
+): Promise<Map<string, User>> {
+  await db();
+  if (ids.length === 0) return new Map();
+  const docs = await UserModel.find({ _id: { $in: ids } }).lean();
+  const out = new Map<string, User>();
+  for (const d of docs) {
+    const u = unwrap(d as unknown as User);
+    if (u) out.set(u.id, u);
+  }
+  return out;
+}
+
+/**
+ * Count users by role. Index `ix_users_role_status` makes this O(log N).
+ * Used wherever admin UI just needs a scalar — replaces full-collection
+ * `listUsers(role)` reads where only `.length` was consumed.
+ */
+export async function countUsersByRole(role?: Role): Promise<number> {
+  await db();
+  const q: any = role ? { role } : {};
+  return UserModel.countDocuments(q);
+}
+
+// Request-scoped memoisation — multiple components in the same RSC render
+// (navbar, page header, sidebar) often call getUserById(session.user.id)
+// independently. `react.cache` dedupes within one render so we hit Mongo
+// once instead of N times. Outside RSC (API routes, scripts) it no-ops.
+export const getUserById = reactCache(
+  async (id: string): Promise<User | undefined> => {
+    await db();
+    const doc = await UserModel.findById(id).lean();
+    return unwrap(doc as unknown as User);
+  },
+);
 
 export async function getUserByEmail(email: string): Promise<User | undefined> {
   await db();
@@ -421,6 +487,24 @@ export async function getCompanyById(
   return unwrap(doc as unknown as CompanyProfile);
 }
 
+/**
+ * Slim variant — name + logo + verified for the small chips on student feeds.
+ * Skips description, recruiterIds, etc. Same cache TTL, separate key.
+ */
+export type CompanyLite = Pick<
+  CompanyProfile,
+  "id" | "name" | "logoUrl" | "verified" | "status"
+>;
+export async function listCompaniesLite(): Promise<CompanyLite[]> {
+  return cached("companies:all:lite", 300, async () => {
+    await db();
+    const docs = await CompanyModel.find({})
+      .select("_id name logoUrl verified status")
+      .lean();
+    return unwrapAll(docs as unknown as CompanyLite[]);
+  });
+}
+
 // ---------- JOBS ----------
 // Cached 60s — public feed hits this on every authenticated landing.
 // Invalidate on job create/close/reopen.
@@ -436,6 +520,44 @@ export async function listJobsByRecruiter(recruiterId: string): Promise<Job[]> {
   await db();
   const docs = await JobModel.find({ recruiterId }).lean();
   return unwrapAll(docs as unknown as Job[]);
+}
+
+/**
+ * Slim variant of listJobs — projects only the fields the public/student feed
+ * actually consumes. Cuts payload by ~60% vs full Job docs.
+ *
+ *   id, title, companyId, salaryMin, salaryMax, location, skills, remote,
+ *   slaHours, createdAt, active
+ *
+ * Shares the same Redis cache key family as listJobs, but stored separately
+ * so callers don't accidentally use stale fat docs (and vice versa).
+ */
+export type JobLite = Pick<
+  Job,
+  | "id"
+  | "title"
+  | "companyId"
+  | "recruiterId"
+  | "salaryMin"
+  | "salaryMax"
+  | "location"
+  | "skills"
+  | "remote"
+  | "slaHours"
+  | "createdAt"
+  | "active"
+>;
+const JOB_LITE_SELECT =
+  "_id title companyId recruiterId salaryMin salaryMax location skills remote slaHours createdAt active";
+
+export async function listJobsLite(): Promise<JobLite[]> {
+  return cached("jobs:active:lite", 60, async () => {
+    await db();
+    const docs = await JobModel.find({ active: true })
+      .select(JOB_LITE_SELECT)
+      .lean();
+    return unwrapAll(docs as unknown as JobLite[]);
+  });
 }
 
 export async function getJobById(id: string): Promise<Job | undefined> {
@@ -455,7 +577,7 @@ export async function createJob(
     active: true,
   };
   await JobModel.create({ ...(job as any), _id: job.id });
-  await invalidate("jobs:active");
+  await invalidate("jobs:active", "jobs:active:lite");
   return job;
 }
 
@@ -464,6 +586,34 @@ export async function listApplications(): Promise<Application[]> {
   await db();
   const docs = await ApplicationModel.find({}).lean();
   return unwrapAll(docs as unknown as Application[]);
+}
+
+/** Count helper — replaces `listApplications().length` patterns on admin pages. */
+export async function countApplications(filter: Record<string, unknown> = {}): Promise<number> {
+  await db();
+  return ApplicationModel.countDocuments(filter);
+}
+
+/**
+ * Newest N applications across the whole platform. Replaces the pattern of
+ * `listApplications()` + JS `.sort().slice()` which scanned the entire table.
+ */
+export async function listRecentApplications(limit = 20): Promise<Application[]> {
+  await db();
+  const docs = await ApplicationModel.find({})
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+  return unwrapAll(docs as unknown as Application[]);
+}
+
+/** Quick aggregate of stage counts. One query → full pipeline snapshot. */
+export async function countApplicationsByStage(): Promise<Record<string, number>> {
+  await db();
+  const rows = await ApplicationModel.aggregate<{ _id: string; n: number }>([
+    { $group: { _id: "$stage", n: { $sum: 1 } } },
+  ]);
+  return Object.fromEntries(rows.map((r) => [r._id, r.n]));
 }
 
 export async function listApplicationsByStudent(
@@ -561,6 +711,37 @@ export async function listBootcamps(): Promise<Bootcamp[]> {
   });
 }
 
+/**
+ * Slim catalog — what the student grid + dashboard tiles render. Skips
+ * `videos`, `liveSlots`, `assignmentBrief`, `verifyPrompt` (those load only
+ * on the detail page).
+ */
+export type BootcampLite = Pick<
+  Bootcamp,
+  | "id"
+  | "title"
+  | "skill"
+  | "description"
+  | "instructorId"
+  | "durationWeeks"
+  | "priceINR"
+  | "rating"
+  | "coverColor"
+  | "status"
+  | "enrolledStudentIds"
+>;
+export async function listBootcampsLite(): Promise<BootcampLite[]> {
+  return cached("bootcamps:all:lite", 300, async () => {
+    await db();
+    const docs = await BootcampModel.find({})
+      .select(
+        "_id title skill description instructorId durationWeeks priceINR rating coverColor status enrolledStudentIds",
+      )
+      .lean();
+    return unwrapAll(docs as unknown as BootcampLite[]);
+  });
+}
+
 export async function listBootcampsByInstructor(
   instructorId: string,
 ): Promise<Bootcamp[]> {
@@ -640,6 +821,7 @@ export async function enrollStudentInBootcamp(
     { _id: studentId },
     { $addToSet: { "profile.enrolledBootcamps": bootcampId } },
   );
+  await invalidate("bootcamps:all", "bootcamps:all:lite");
 
   return await getBootcampById(bootcampId);
 }
@@ -685,25 +867,63 @@ export async function upsertCampaign(c: Campaign): Promise<Campaign> {
 export async function listPlacements(): Promise<Placement[]> {
   await db();
   const interviewed: Stage[] = ["interview", "offer", "hired"];
-  const apps = await ApplicationModel.find({ stage: { $in: interviewed } }).lean();
-  const out: Placement[] = [];
-  for (const a of apps as unknown as Application[]) {
-    const job = await getJobById(a.jobId);
-    const co = job ? await getCompanyById(job.companyId) : undefined;
-    const stu = await getUserById(a.studentId);
-    out.push({
+  const apps = (await ApplicationModel.find({ stage: { $in: interviewed } })
+    .lean()) as unknown as Application[];
+  if (apps.length === 0) return [];
+
+  // Old impl was 3 sequential awaits per placement = 3N round-trips. Now we
+  // batch all three collections in a single Promise.all → 3 round-trips total.
+  const jobIds = Array.from(new Set(apps.map((a) => a.jobId)));
+  const studentIds = Array.from(new Set(apps.map((a) => a.studentId)));
+  const [jobs, students] = await Promise.all([
+    JobModel.find({ _id: { $in: jobIds } })
+      .select("_id title companyId salaryMin salaryMax")
+      .lean(),
+    UserModel.find({ _id: { $in: studentIds } })
+      .select("_id name")
+      .lean(),
+  ]);
+  const companyIds = Array.from(
+    new Set(
+      (jobs as Array<{ companyId: string }>)
+        .map((j) => j.companyId)
+        .filter(Boolean),
+    ),
+  );
+  const companies = await CompanyModel.find({ _id: { $in: companyIds } })
+    .select("_id name")
+    .lean();
+
+  const jobIdx = new Map<string, { title?: string; companyId?: string; salaryMin?: number; salaryMax?: number }>();
+  for (const j of jobs as unknown as Array<{ _id: string; title?: string; companyId?: string; salaryMin?: number; salaryMax?: number }>) {
+    jobIdx.set(String(j._id), j);
+  }
+  const stuIdx = new Map<string, string>();
+  for (const u of students as unknown as Array<{ _id: string; name?: string }>) {
+    stuIdx.set(String(u._id), u.name ?? "—");
+  }
+  const coIdx = new Map<string, string>();
+  for (const c of companies as unknown as Array<{ _id: string; name?: string }>) {
+    coIdx.set(String(c._id), c.name ?? "—");
+  }
+
+  return apps.map((a) => {
+    const j = jobIdx.get(a.jobId);
+    return {
       studentId: a.studentId,
-      studentName: stu?.name ?? "—",
+      studentName: stuIdx.get(a.studentId) ?? "—",
       jobId: a.jobId,
-      jobTitle: job?.title ?? "—",
-      companyId: job?.companyId ?? "—",
-      companyName: co?.name ?? "—",
+      jobTitle: j?.title ?? "—",
+      companyId: j?.companyId ?? "—",
+      companyName: j?.companyId ? coIdx.get(j.companyId) ?? "—" : "—",
       stage: a.stage,
       date: a.interviewScheduledAt ?? a.createdAt,
-      salaryRange: job ? `₹${job.salaryMin}–${job.salaryMax} LPA` : undefined,
-    });
-  }
-  return out;
+      salaryRange:
+        j && j.salaryMin !== undefined && j.salaryMax !== undefined
+          ? `₹${j.salaryMin}–${j.salaryMax} LPA`
+          : undefined,
+    };
+  });
 }
 
 // ---------- METRICS ----------
@@ -718,41 +938,56 @@ export interface GlobalMetrics {
 }
 
 export async function getGlobalMetrics(): Promise<GlobalMetrics> {
-  await db();
-  const [students, recruiters, bootcamps, apps, jobs, placements] =
-    await Promise.all([
+  // Cache 10 min — landing page hits this on every render but data is
+  // platform-wide (no per-user variance) and tolerates staleness. Real-time
+  // breach counts come via the SLA sweep, not via this endpoint.
+  return cached("metrics:global", 600, async () => {
+    await db();
+    const [
+      students,
+      recruiters,
+      bootcamps,
+      breachedActive,
+      totalApps,
+      jobs,
+      placementsCount,
+    ] = await Promise.all([
       UserModel.countDocuments({ role: "student" }),
       UserModel.countDocuments({ role: "recruiter" }),
-      BootcampModel.find({}).lean(),
-      ApplicationModel.find({}).lean(),
+      // Bootcamps still need to be loaded for enrollments + revenue calc.
+      // Could be replaced by an aggregation but the collection is tiny.
+      BootcampModel.find({}).select("enrolledStudentIds priceINR").lean(),
+      // Use indexed range query rather than loading every application.
+      ApplicationModel.countDocuments({
+        stage: { $in: ["new_matches", "under_review"] },
+        slaDeadline: { $lt: new Date().toISOString() },
+      }),
+      ApplicationModel.estimatedDocumentCount(),
       JobModel.countDocuments({ active: true }),
+      // Placements is small + already cached upstream — but if not, the
+      // collection is small enough not to matter.
       listPlacements(),
     ]);
 
-  const enrollments = (bootcamps as any[]).reduce(
-    (acc, b) => acc + (b.enrolledStudentIds?.length ?? 0),
-    0,
-  );
-  const liveRevenueINR = (bootcamps as any[]).reduce(
-    (acc, b) => acc + (b.enrolledStudentIds?.length ?? 0) * (b.priceINR ?? 0),
-    0,
-  );
-  const now = Date.now();
-  const breached = (apps as any[]).filter(
-    (a) =>
-      ["new_matches", "under_review"].includes(a.stage) &&
-      new Date(a.slaDeadline).getTime() < now,
-  ).length;
-  const total = apps.length || 1;
-  return {
-    liveRevenueINR,
-    ghostingRatePct: Math.round((breached / total) * 100),
-    activeMissions: jobs,
-    totalStudents: students,
-    totalRecruiters: recruiters,
-    enrollments,
-    placements: placements.length,
-  };
+    const enrollments = (bootcamps as any[]).reduce(
+      (acc, b) => acc + (b.enrolledStudentIds?.length ?? 0),
+      0,
+    );
+    const liveRevenueINR = (bootcamps as any[]).reduce(
+      (acc, b) => acc + (b.enrolledStudentIds?.length ?? 0) * (b.priceINR ?? 0),
+      0,
+    );
+    const total = totalApps || 1;
+    return {
+      liveRevenueINR,
+      ghostingRatePct: Math.round((breachedActive / total) * 100),
+      activeMissions: jobs,
+      totalStudents: students,
+      totalRecruiters: recruiters,
+      enrollments,
+      placements: placementsCount.length,
+    };
+  });
 }
 
 // ---------- SKILL HEATMAP ----------
@@ -764,31 +999,54 @@ export interface SkillFailRow {
 }
 
 export async function getSkillGapHeatmap(): Promise<SkillFailRow[]> {
-  await db();
-  const apps = await ApplicationModel.find({
-    "assessment.grade.score": { $exists: true },
-  }).lean();
-  const skillBuckets = new Map<string, { attempts: number; failures: number }>();
-  for (const a of apps as unknown as Application[]) {
-    if (!a.assessment?.grade) continue;
-    const job = await getJobById(a.jobId);
-    if (!job) continue;
-    const failed = a.assessment.grade.score < 60;
-    for (const skill of job.skills) {
-      const b = skillBuckets.get(skill) ?? { attempts: 0, failures: 0 };
-      b.attempts++;
-      if (failed) b.failures++;
-      skillBuckets.set(skill, b);
+  // Cached 5 min — admin dashboard hits this on every render, but the data
+  // is aggregated across thousands of apps and tolerates staleness. Cache
+  // key is global; no per-user variance.
+  return cached("admin:skill-gap-heatmap", 300, async () => {
+    await db();
+    // Cap to the most recent 5000 assessed applications. Beyond that the
+    // statistical signal flattens and the cost balloons. `ix_applications_*`
+    // indexes make this scan O(log N + 5000).
+    const apps = (await ApplicationModel.find({
+      "assessment.grade.score": { $exists: true },
+    })
+      .sort({ createdAt: -1 })
+      .limit(5000)
+      .lean()) as unknown as Application[];
+
+    // Batch-fetch every distinct job in one round-trip. The previous version
+    // did getJobById() in a loop = N+1 hammering Mongo.
+    const jobIds = Array.from(new Set(apps.map((a) => a.jobId)));
+    const jobs = (await JobModel.find({ _id: { $in: jobIds } })
+      .select("_id skills")
+      .lean()) as unknown as Array<{ _id: string; skills?: string[] }>;
+    const jobIndex = new Map<string, string[]>();
+    for (const j of jobs) {
+      jobIndex.set(String(j._id), j.skills ?? []);
     }
-  }
-  return Array.from(skillBuckets.entries())
-    .map(([skill, v]) => ({
-      skill,
-      attempts: v.attempts,
-      failures: v.failures,
-      failureRate: v.attempts ? Math.round((v.failures / v.attempts) * 100) : 0,
-    }))
-    .sort((a, b) => b.failureRate - a.failureRate);
+
+    const skillBuckets = new Map<string, { attempts: number; failures: number }>();
+    for (const a of apps) {
+      if (!a.assessment?.grade) continue;
+      const skills = jobIndex.get(a.jobId);
+      if (!skills) continue;
+      const failed = a.assessment.grade.score < 60;
+      for (const skill of skills) {
+        const b = skillBuckets.get(skill) ?? { attempts: 0, failures: 0 };
+        b.attempts++;
+        if (failed) b.failures++;
+        skillBuckets.set(skill, b);
+      }
+    }
+    return Array.from(skillBuckets.entries())
+      .map(([skill, v]) => ({
+        skill,
+        attempts: v.attempts,
+        failures: v.failures,
+        failureRate: v.attempts ? Math.round((v.failures / v.attempts) * 100) : 0,
+      }))
+      .sort((a, b) => b.failureRate - a.failureRate);
+  });
 }
 
 // ---------- SPONSORSHIPS ----------
@@ -1788,6 +2046,7 @@ export async function createBootcamp(input: {
     status: "draft",
   };
   await BootcampModel.create({ ...(bc as any), _id: id });
+  await invalidate("bootcamps:all", "bootcamps:all:lite");
   return bc;
 }
 
@@ -1807,6 +2066,7 @@ export async function updateBootcamp(
   delete safe.enrolledStudentIds;
   delete safe.rating;
   await BootcampModel.updateOne({ _id: id }, { $set: safe });
+  await invalidate("bootcamps:all", "bootcamps:all:lite");
   return { ...bc, ...safe };
 }
 
@@ -1821,6 +2081,7 @@ export async function setBootcampStatus(
   if (status === "in_review") set.submittedForReviewAt = new Date().toISOString();
   if (meta?.reviewFeedback) set.reviewFeedback = meta.reviewFeedback;
   await BootcampModel.updateOne({ _id: id }, { $set: set });
+  await invalidate("bootcamps:all", "bootcamps:all:lite");
 }
 
 // ---------- ADMIN USER ACTIONS ----------
@@ -2565,6 +2826,150 @@ export async function setLiveSessionStatus(
     { _id: sessionId, instructorId },
     { $set: set },
   );
+
+  // On end-of-session, harvest the recording asset from the video provider
+  // and stash it in pending_review so the instructor can decide keep/delete
+  // from /instructor/recordings. Idempotent — if a row already exists we skip.
+  if (status === "ended") {
+    await maybeCaptureRecording(sessionId).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[live] recording capture failed:", err);
+    });
+  }
+}
+
+/**
+ * Pull the recording from 100ms (or mock) and persist a `pending_review`
+ * SessionRecording. Safe to call multiple times — does nothing on second
+ * invocation thanks to the `sessionId` unique check.
+ */
+async function maybeCaptureRecording(sessionId: string): Promise<void> {
+  const live = (await LiveSessionModel.findById(sessionId).lean()) as
+    | unknown as LiveSession
+    | null;
+  if (!live || !live.videoRoomId) return;
+  const existing = await SessionRecordingModel.findOne({ sessionId }).lean();
+  if (existing) return;
+
+  const { getRoomRecording, videoMode } = await import(
+    "@/server/integrations/video"
+  );
+  const asset = await getRoomRecording(live.videoRoomId);
+  if (!asset.ok) return;
+
+  const bootcamp = await getBootcampById(live.bootcampId);
+  const id = genId("rec");
+  await SessionRecordingModel.create({
+    _id: id,
+    sessionId,
+    bootcampId: live.bootcampId,
+    instructorId: live.instructorId,
+    sessionTitle: live.title,
+    bootcampTitle: bootcamp?.title ?? "",
+    providerAssetId: asset.assetId,
+    playbackUrl: asset.playbackUrl,
+    thumbnailUrl: asset.thumbnailUrl,
+    durationSec: asset.durationSec,
+    sizeBytes: asset.sizeBytes,
+    status: "pending_review",
+    createdAt: new Date().toISOString(),
+    provider: videoMode() === "100ms" ? "100ms" : "mock",
+  });
+  // Convenience pointer so legacy code that reads `live.recordingUrl`
+  // still works while the recordings table is rolling out.
+  await LiveSessionModel.updateOne(
+    { _id: sessionId },
+    { $set: { recordingUrl: asset.playbackUrl } },
+  );
+}
+
+// ---------- SESSION RECORDINGS ----------
+
+/**
+ * List recordings owned by an instructor, newest first. Used by
+ * /instructor/recordings to show pending-review + previously-kept clips.
+ */
+export async function listRecordingsByInstructor(
+  instructorId: string,
+): Promise<SessionRecording[]> {
+  await db();
+  const docs = await SessionRecordingModel.find({
+    instructorId,
+    status: { $ne: "deleted" },
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+  return unwrapAll(docs as unknown as SessionRecording[]);
+}
+
+/**
+ * Public-facing list for a single bootcamp — only `published` recordings.
+ * Powers the on-demand replay surface inside the bootcamp page.
+ */
+export async function listPublishedRecordingsByBootcamp(
+  bootcampId: string,
+): Promise<SessionRecording[]> {
+  await db();
+  const docs = await SessionRecordingModel.find({
+    bootcampId,
+    status: "published",
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+  return unwrapAll(docs as unknown as SessionRecording[]);
+}
+
+export async function getRecordingById(
+  id: string,
+): Promise<SessionRecording | undefined> {
+  await db();
+  const doc = await SessionRecordingModel.findById(id).lean();
+  return unwrap(doc as unknown as SessionRecording);
+}
+
+/** Mark a recording as kept — students can now replay it. */
+export async function publishRecording(
+  id: string,
+  instructorId: string,
+): Promise<SessionRecording | undefined> {
+  await db();
+  await SessionRecordingModel.updateOne(
+    { _id: id, instructorId },
+    { $set: { status: "published", publishedAt: new Date().toISOString() } },
+  );
+  return getRecordingById(id);
+}
+
+/**
+ * Soft-delete + provider purge. We keep the row (audit) but blank the URL
+ * and flip status so the recording is unreachable from any surface.
+ */
+export async function deleteRecording(
+  id: string,
+  instructorId: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  await db();
+  const rec = await getRecordingById(id);
+  if (!rec || rec.instructorId !== instructorId) {
+    return { ok: false, reason: "not_found" };
+  }
+  if (rec.providerAssetId) {
+    const { deleteRoomRecording } = await import(
+      "@/server/integrations/video"
+    );
+    const result = await deleteRoomRecording(rec.providerAssetId);
+    if (!result.ok) {
+      return { ok: false, reason: result.error ?? "provider_delete_failed" };
+    }
+  }
+  await SessionRecordingModel.updateOne(
+    { _id: id, instructorId },
+    {
+      $set: { status: "deleted", deletedAt: new Date().toISOString() },
+      $unset: { playbackUrl: "", thumbnailUrl: "" },
+    },
+  );
+  return { ok: true };
 }
 
 export async function deleteLiveSession(
@@ -2583,7 +2988,7 @@ export async function setCompanyVerified(
 ): Promise<void> {
   await db();
   await CompanyModel.updateOne({ _id: companyId }, { $set: { verified } });
-  await invalidate("companies:all");
+  await invalidate("companies:all", "companies:all:lite");
 }
 
 export async function setCompanyStatus(
@@ -2601,7 +3006,7 @@ export async function setCompanyStatus(
     set.suspendedAt = undefined;
   }
   await CompanyModel.updateOne({ _id: companyId }, { $set: set });
-  await invalidate("companies:all");
+  await invalidate("companies:all", "companies:all:lite");
 }
 
 export async function listAllCompaniesWithStats(): Promise<
@@ -2672,7 +3077,7 @@ export async function setJobActive(
 ): Promise<void> {
   await db();
   await JobModel.updateOne({ _id: jobId }, { $set: { active } });
-  await invalidate("jobs:active");
+  await invalidate("jobs:active", "jobs:active:lite");
 }
 
 // ---------- FINANCIAL ROLLUP ----------

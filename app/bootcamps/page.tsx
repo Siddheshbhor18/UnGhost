@@ -3,19 +3,20 @@ import { GraduationCap } from "lucide-react";
 import { authOptions } from "@/server/auth";
 import { GlassNavbar } from "@/components/glass";
 import { BackdropMesh, SectionLabel } from "@/components/ui";
-import { listBootcamps, getUserById } from "@/server/store";
+import { listBootcamps, getUserById, getUsersByIds } from "@/server/store";
 import { BootcampGrid } from "@/components/student/BootcampGrid";
 
 export default async function BootcampCatalog() {
   const session = await getServerSession(authOptions);
   const bcs = await listBootcamps();
 
+  // Batched instructor fetch — one $in query instead of N round-trips.
   const instructorIds = Array.from(new Set(bcs.map((b) => b.instructorId)));
-  const instructorList = await Promise.all(instructorIds.map((id) => getUserById(id)));
+  const instructorMap = await getUsersByIds(instructorIds);
   const instructorIndex = Object.fromEntries(
-    instructorIds.map((id, i) => [
+    instructorIds.map((id) => [
       id,
-      instructorList[i] ? { name: instructorList[i]!.name } : undefined,
+      instructorMap.get(id) ? { name: instructorMap.get(id)!.name } : undefined,
     ]),
   );
 
@@ -42,6 +43,23 @@ export default async function BootcampCatalog() {
             Recorded modules plus a live session with the instructor. Pass the
             skill-verify gate, earn a verified badge recruiters can filter on.
           </p>
+          <div className="mt-5 inline-flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50/60 px-4 py-3">
+            <span className="grid place-items-center w-9 h-9 rounded-xl bg-violet-600 text-white text-lg">
+              ✦
+            </span>
+            <div>
+              <p className="text-body-sm font-semibold text-violet-900">
+                Every bootcamp is bundled with Premium.
+              </p>
+              <p className="text-body-xs text-violet-700">
+                One ₹4,999 lifetime payment unlocks all bootcamps below — no
+                per-course fees.{" "}
+                <a href="/upgrade?to=premium" className="underline font-semibold">
+                  Go Premium
+                </a>
+              </p>
+            </div>
+          </div>
         </div>
 
         <BootcampGrid

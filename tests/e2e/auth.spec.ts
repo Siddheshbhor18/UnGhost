@@ -46,12 +46,15 @@ test.describe("Auth flow", () => {
     await page.goto("/login");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: /^recruiter$/i }).click();
-
-    // The role switch repopulates the email field with the demo recruiter
-    // address — wait for the controlled re-render before we type the pw.
+    // Login no longer pre-fills email after role-switch (avoids users
+    // accidentally signing in as the demo account), so the test must type
+    // the recruiter address explicitly.
     await page.waitForTimeout(150);
 
+    const emailField = page.getByLabel(/email/i);
     const pwField = page.getByLabel(/^password$/i);
+    await emailField.fill("");
+    await emailField.pressSequentially("hr@stark.test", { delay: 20 });
     await pwField.fill("");
     await pwField.pressSequentially("demo", { delay: 20 });
     await page.getByRole("button", { name: /^sign in$/i }).click();
@@ -68,10 +71,12 @@ test.describe("Auth flow", () => {
     await pwField.fill("");
     await pwField.pressSequentially("wrong-pw-xyz", { delay: 20 });
     await page.getByRole("button", { name: /^sign in$/i }).click();
-    // Phase-2 message updated — match the live copy.
-    await expect(page.getByRole("alert")).toContainText(
-      /(wrong credentials|check the email)/i,
-      { timeout: 8_000 },
-    );
+    // Next.js injects an invisible `__next-route-announcer__` with
+    // role="alert" on every page, so generic getByRole('alert') matches two
+    // nodes. Scope to the alert that actually contains text — the visible
+    // error banner.
+    await expect(
+      page.locator('[role="alert"]').filter({ hasText: /credentials|email/i }),
+    ).toContainText(/(wrong credentials|check the email)/i, { timeout: 8_000 });
   });
 });

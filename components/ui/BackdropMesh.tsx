@@ -1,9 +1,9 @@
-"use client";
-
 import clsx from "clsx";
 
 /**
  * Editorial background mesh — soft brand-toned blobs drifting subtly.
+ * Pure CSS, no client features. Stays a server component so hydration
+ * costs zero on every page that uses it.
  * Replaces the old `BlobField` with a calmer, design-system-aligned version.
  * Position absolutely behind page content; respects prefers-reduced-motion.
  */

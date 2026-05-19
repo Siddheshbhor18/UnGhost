@@ -10,7 +10,6 @@ import {
 import { LiveRoom } from "@/components/live/LiveRoom";
 import { BlobField, GlassBadge, GlassCard } from "@/components/glass";
 import Link from "next/link";
-import { Ghost } from "lucide-react";
 
 interface Ctx {
   params: { code: string };
@@ -27,8 +26,14 @@ export default async function LiveRoomPage({ params }: Ctx) {
       <main className="relative min-h-screen grid place-items-center px-4">
         <BlobField />
         <GlassCard className="max-w-md text-center !p-8">
-          <div className="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-brand-gradient text-white shadow-brand-glow mb-4">
-            <Ghost size={28} />
+          <div className="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-brand-gradient shadow-brand-glow mb-4">
+            <img
+              src="/symbol.svg"
+              alt="unGhost"
+              width={34}
+              height={34}
+              style={{ filter: "brightness(0) invert(1)" }}
+            />
           </div>
           <h1 className="font-display font-extrabold text-2xl text-brand-ink">
             Room not found

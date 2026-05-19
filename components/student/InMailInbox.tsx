@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   CheckCircle2,
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function InMailInbox({ initial }: Props) {
+  const router = useRouter();
   const [items, setItems] = useState<InMail[]>(initial);
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -38,13 +40,19 @@ export function InMailInbox({ initial }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action }),
       });
-      const data: InMail & { error?: string } = await res.json();
+      const data: InMail & { error?: string; threadId?: string } =
+        await res.json();
       if (data.error) {
         alert(data.error);
         return;
       }
       setItems((prev) => prev.map((i) => (i.id === id ? data : i)));
       setOpenId(null);
+      // On accept, the API materialises the message thread and returns its id.
+      // Hop straight into the chat so "Accept & open chat" actually opens chat.
+      if (action === "accept" && data.threadId) {
+        router.push(`/student/messages/${data.threadId}`);
+      }
     } finally {
       setBusy(false);
     }

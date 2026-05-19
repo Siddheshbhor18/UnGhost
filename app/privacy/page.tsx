@@ -1,6 +1,7 @@
 import { LegalShell, Section } from "@/components/legal/LegalShell";
 
 export const metadata = { title: "Privacy Policy · unGhost" };
+export const revalidate = 86400;
 
 export default function PrivacyPolicy() {
   return (

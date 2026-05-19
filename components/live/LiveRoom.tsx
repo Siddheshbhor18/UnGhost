@@ -13,6 +13,8 @@ import {
   Users as UsersIcon,
   MessageSquare,
   Radio,
+  MonitorUp,
+  MonitorX,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -54,6 +56,11 @@ export function LiveRoom({
   const [muted, setMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
   const [handUp, setHandUp] = useState(false);
+  // When 100ms SDK is wired, this flag dispatches `hmsActions
+  // .setScreenShareEnabled(...)`. For now it drives only the UI affordance so
+  // the button is in place + the click contract is locked.
+  const [sharing, setSharing] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const [chat, setChat] = useState<ChatMsg[]>([
     {
       id: "sys-1",
@@ -101,9 +108,46 @@ export function LiveRoom({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action: "end" }),
       });
-      router.push("/instructor/live");
+      // Land on the recordings page so the instructor can immediately Keep
+      // or Delete the just-finished clip — same flow as YouTube Studio.
+      router.push("/instructor/recordings");
     } else {
       router.push("/student/live");
+    }
+  }
+
+  /**
+   * Toggle screen share. With the real 100ms SDK present, this will call
+   * `hmsActions.setScreenShareEnabled(next)` and the SDK handles the
+   * browser permission prompt + track publish. Until then, the click flips
+   * local state so the UI works for design QA.
+   */
+  async function toggleScreenShare() {
+    setShareError(null);
+    const next = !sharing;
+    try {
+      // Lazy-load — if the package isn't installed, we fall through to
+      // local-state-only mode and warn the user once. String-arg `import()`
+      // bypasses TS module resolution so missing pkg is a runtime miss, not
+      // a build error.
+      const mod = await import(
+        /* webpackIgnore: true */ "@100mslive/react-sdk" as string
+      ).catch(() => null);
+      if (mod && typeof (mod as { useHMSActions?: unknown }).useHMSActions === "function") {
+        // The actual hook can't be invoked outside a component, so the
+        // wiring lives in a future HMSRoomProvider wrapper. For now we
+        // import lazily just to fail loud if the SDK is missing.
+        setSharing(next);
+      } else {
+        setSharing(next);
+        if (next) {
+          setShareError(
+            "Screen-share UI ready. Install @100mslive/react-sdk to actually publish your screen.",
+          );
+        }
+      }
+    } catch (err) {
+      setShareError((err as Error).message);
     }
   }
 
@@ -255,6 +299,14 @@ export function LiveRoom({
             label={handUp ? "Lower" : "Raise hand"}
           />
         )}
+        {/* Screen share — useful for both roles. Instructor shares slides /
+            code, student can share to walk through a solution. */}
+        <CtlButton
+          active={sharing}
+          onClick={toggleScreenShare}
+          icon={sharing ? <MonitorX size={16} /> : <MonitorUp size={16} />}
+          label={sharing ? "Stop sharing" : "Share screen"}
+        />
         <button
           onClick={leaveOrEnd}
           className="ml-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold transition"
@@ -263,6 +315,15 @@ export function LiveRoom({
           {isInstructor ? "End session" : "Leave"}
         </button>
       </footer>
+
+      {/* Screen-share status banner — slides in only when there's a message
+          (e.g. SDK missing in dev, permission denied). Auto-dismisses on next
+          toggle by setShareError(null). */}
+      {shareError ? (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-amber-500/90 text-white text-xs font-medium shadow-glass-lg">
+          {shareError}
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -7,7 +7,7 @@ import {
   listApplications,
   listBootcamps,
   listJobs,
-  listUsers,
+  countUsersByRole,
   getSkillGapHeatmap,
   maybeRunSlaSweep,
   detectTelemetryAlerts,
@@ -33,19 +33,22 @@ import {
 export default async function AdminToday() {
   await maybeRunSlaSweep();
   const telemetryAlerts = await detectTelemetryAlerts();
-  const [m, apps, jobs, bcs, students, recruiters, heatmap] = await Promise.all([
-    getGlobalMetrics(),
-    listApplications(),
-    listJobs(),
-    listBootcamps(),
-    listUsers("student"),
-    listUsers("recruiter"),
-    getSkillGapHeatmap(),
-  ]);
+  // Replaced full listUsers("student"/"recruiter") with countDocuments — admin
+  // dashboard only consumed `.length`, so the full collection scan was waste.
+  const [m, apps, jobs, bcs, studentCount, recruiterCount, heatmap] =
+    await Promise.all([
+      getGlobalMetrics(),
+      listApplications(),
+      listJobs(),
+      listBootcamps(),
+      countUsersByRole("student"),
+      countUsersByRole("recruiter"),
+      getSkillGapHeatmap(),
+    ]);
 
   // ── KPIs ──
   const liveRevenue = m.liveRevenueINR;
-  const activeUsers24h = students.length + recruiters.length;
+  const activeUsers24h = studentCount + recruiterCount;
   const ghostingRate = m.ghostingRatePct;
   const activeMissions = m.activeMissions;
   const monthlyBootcampRevenue = bcs.reduce(
@@ -138,7 +141,8 @@ export default async function AdminToday() {
   );
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Afternoon" : "Evening";
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
     <div className="p-8 space-y-6 max-w-7xl">

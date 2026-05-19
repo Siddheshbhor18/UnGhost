@@ -1,6 +1,8 @@
 import { LegalShell, Section } from "@/components/legal/LegalShell";
 
 export const metadata = { title: "Terms of Service · unGhost" };
+// Legal copy changes monthly at most — daily revalidate is plenty.
+export const revalidate = 86400;
 
 export default function TermsOfService() {
   return (

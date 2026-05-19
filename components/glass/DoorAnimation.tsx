@@ -7,9 +7,16 @@ import {
   useReducedMotion,
   type Variants,
 } from "framer-motion";
-import { Ghost, Heart, Moon, PartyPopper, Sparkles } from "lucide-react";
+import { Heart, Moon, PartyPopper, Sparkles } from "lucide-react";
 
-type Mood = "default" | "first_of_day" | "friday" | "late_night" | "long_absence";
+type Mood =
+  | "default"
+  | "morning"
+  | "afternoon"
+  | "evening"
+  | "friday"
+  | "late_night"
+  | "long_absence";
 
 interface Props {
   active: boolean;
@@ -24,15 +31,24 @@ function autoMood(): Mood {
   const now = new Date();
   const hr = now.getHours();
   const day = now.getDay();
+  // Late-night first (overrides Friday for 11pm+ sessions).
   if (hr >= 23 || hr < 5) return "late_night";
   if (day === 5) return "friday";
-  return "first_of_day";
+  // Real time-of-day split — previously every login between 5am and 11pm
+  // greeted "Good morning", which was wrong for the 11+ hours after noon.
+  if (hr < 12) return "morning";
+  if (hr < 17) return "afternoon";
+  return "evening";
 }
 
 function moodCopy(mood: Mood) {
   switch (mood) {
-    case "first_of_day":
+    case "morning":
       return { greeting: "Good morning", icon: <Sparkles size={14} className="text-amber-500" /> };
+    case "afternoon":
+      return { greeting: "Good afternoon", icon: <Sparkles size={14} className="text-amber-500" /> };
+    case "evening":
+      return { greeting: "Good evening", icon: <Moon size={14} className="text-brand-500" /> };
     case "friday":
       return { greeting: "Happy Friday", icon: <PartyPopper size={14} className="text-amber-500" /> };
     case "late_night":
@@ -430,9 +446,9 @@ export function DoorAnimation({
                   initial="hidden"
                   animate={stage}
                 >
-                  {/* Logo-style ghost — brand gradient bg + brand glow */}
+                  {/* Logo-style symbol — brand gradient bg + brand glow */}
                   <div
-                    className="grid place-items-center w-20 h-20 rounded-2xl text-white"
+                    className="grid place-items-center w-20 h-20 rounded-2xl"
                     style={{
                       background:
                         "linear-gradient(135deg, #0191FC 0%, #3454DA 100%)",
@@ -440,7 +456,13 @@ export function DoorAnimation({
                         "0 0 32px rgba(1,145,252,0.55), 0 12px 32px rgba(1,145,252,0.35), inset 0 1px 0 rgba(255,255,255,0.3)",
                     }}
                   >
-                    <Ghost size={42} strokeWidth={1.8} />
+                    <img
+                      src="/symbol.svg"
+                      alt="unGhost"
+                      width={48}
+                      height={48}
+                      style={{ filter: "brightness(0) invert(1)" }}
+                    />
                   </div>
                 </motion.div>
               </motion.div>

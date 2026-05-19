@@ -1,7 +1,8 @@
 import { GlassBadge, GlassCard } from "@/components/glass";
 import {
   getGlobalMetrics,
-  listApplications,
+  listRecentApplications,
+  countApplications,
   listJobs,
   listLiveCampaigns,
 } from "@/server/store";
@@ -17,17 +18,17 @@ import {
 } from "lucide-react";
 
 export default async function AdminMetrics() {
-  const [m, apps, jobs, heroCamps, dashCamps] = await Promise.all([
+  // Pulled apart `listApplications()` (full scan) into a recent-6 query + a
+  // count. Cuts a 5k-row read down to one indexed sort+limit + a counter.
+  const [m, recent, totalApps, jobs, heroCamps, dashCamps] = await Promise.all([
     getGlobalMetrics(),
-    listApplications(),
+    listRecentApplications(6),
+    countApplications(),
     listJobs(),
     listLiveCampaigns("landing_hero"),
     listLiveCampaigns("dashboard_top"),
   ]);
-  const recent = [...apps]
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
-    .slice(0, 6);
-  const breaches = Math.round((m.ghostingRatePct / 100) * apps.length);
+  const breaches = Math.round((m.ghostingRatePct / 100) * totalApps);
 
   return (
     <div className="p-8 space-y-8 max-w-7xl">

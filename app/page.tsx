@@ -7,7 +7,6 @@ import {
   BookOpen,
   Briefcase,
   Clock,
-  Ghost,
   Mail,
   Shield,
   Sparkles,
@@ -298,8 +297,8 @@ export default async function LandingPage() {
                 <span className="text-body-xs text-neutral-500">
                   {b.durationWeeks}w · {b.videos.length} videos
                 </span>
-                <span className="font-display font-bold text-neutral-900 tnum">
-                  ₹{b.priceINR.toLocaleString("en-IN")}
+                <span className="text-body-xs font-semibold text-violet-700 inline-flex items-center gap-1">
+                  ✦ Premium
                 </span>
               </div>
             </Card>
@@ -541,7 +540,7 @@ export default async function LandingPage() {
           <p>© {new Date().getFullYear()} unGhost Technologies Pvt Ltd · Mumbai, India</p>
           <p>
             Data residency: ap-south-1 · Made with{" "}
-            <Ghost size={11} className="inline text-brand-500" /> in India
+            <img src="/symbol.svg" alt="unGhost" width={12} height={12} className="inline align-text-bottom" /> in India
           </p>
         </div>
       </footer>

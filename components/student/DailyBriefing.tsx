@@ -41,8 +41,8 @@ export function DailyBriefing(props: BriefingProps) {
       : hour < 12
       ? "Good morning"
       : hour < 17
-      ? "Afternoon"
-      : "Evening";
+      ? "Good afternoon"
+      : "Good evening";
 
   const fragments: string[] = [];
   if (

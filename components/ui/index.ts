@@ -38,3 +38,5 @@ export { AppNav } from "./AppNav";
 export type { AppNavProps, AppNavItem } from "./AppNav";
 
 export { BackdropMesh } from "./BackdropMesh";
+
+export { PageLoadingShell } from "./PageLoadingShell";

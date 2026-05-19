@@ -1,8 +1,12 @@
+// Pure-static marketing copy — opt into ISR with a 1h revalidate window. Even
+// if our copy team updates the page mid-day, users see fresh content within
+// the hour and we serve from edge cache the rest of the time.
+export const revalidate = 3600;
+
 import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
-  Ghost,
   Heart,
   Mail,
   MapPin,
@@ -35,8 +39,14 @@ export default function AboutPage() {
 
         {/* Hero */}
         <GlassCard variant="strong" className="!p-8 mb-6 text-center">
-          <div className="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-brand-gradient text-white shadow-brand-glow mb-4">
-            <Ghost size={28} />
+          <div className="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-brand-gradient shadow-brand-glow mb-4">
+            <img
+              src="/symbol.svg"
+              alt="unGhost"
+              width={34}
+              height={34}
+              style={{ filter: "brightness(0) invert(1)" }}
+            />
           </div>
           <GlassBadge tone="brand">
             <Heart size={11} /> Made in Mumbai

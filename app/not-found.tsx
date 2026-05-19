@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Ghost, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, Search, Sparkles } from "lucide-react";
 import { BlobField, GlassBadge, GlassCard } from "@/components/glass";
 
 export default function NotFound() {
@@ -8,8 +8,14 @@ export default function NotFound() {
       <BlobField />
 
       <GlassCard variant="strong" className="!p-10 text-center max-w-lg w-full">
-        <div className="mx-auto grid place-items-center w-20 h-20 rounded-3xl bg-brand-gradient text-white shadow-brand-glow mb-5 animate-bounce">
-          <Ghost size={36} />
+        <div className="mx-auto grid place-items-center w-20 h-20 rounded-3xl bg-brand-gradient shadow-brand-glow mb-5 animate-bounce">
+          <img
+            src="/symbol.svg"
+            alt="unGhost"
+            width={44}
+            height={44}
+            style={{ filter: "brightness(0) invert(1)" }}
+          />
         </div>
 
         <GlassBadge tone="brand">

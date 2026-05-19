@@ -619,6 +619,38 @@ export const LiveSessionModel: Model<LiveSession> =
   (mongoose.models.LiveSession as Model<LiveSession>) ||
   mongoose.model<LiveSession>("LiveSession", LiveSessionSchema);
 
+// ---------- Session recordings ----------
+const SessionRecordingSchema = withJsonTransform(
+  new Schema(
+    {
+      _id: { type: String, required: true },
+      sessionId: { type: String, required: true, index: true },
+      bootcampId: { type: String, required: true, index: true },
+      instructorId: { type: String, required: true, index: true },
+      sessionTitle: String,
+      bootcampTitle: String,
+      providerAssetId: String,
+      playbackUrl: String,
+      thumbnailUrl: String,
+      durationSec: Number,
+      sizeBytes: Number,
+      status: { type: String, default: "pending_review", index: true },
+      createdAt: { type: String, required: true, index: true },
+      publishedAt: String,
+      deletedAt: String,
+      provider: { type: String, default: "mock" },
+    },
+    { versionKey: false },
+  ),
+);
+
+export const SessionRecordingModel: Model<import("@/shared/types").SessionRecording> =
+  (mongoose.models.SessionRecording as Model<import("@/shared/types").SessionRecording>) ||
+  mongoose.model<import("@/shared/types").SessionRecording>(
+    "SessionRecording",
+    SessionRecordingSchema,
+  );
+
 export const SavedSearchModel: Model<SavedSearch> =
   (mongoose.models.SavedSearch as Model<SavedSearch>) ||
   mongoose.model<SavedSearch>("SavedSearch", SavedSearchSchema);

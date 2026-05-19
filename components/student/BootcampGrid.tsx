@@ -100,8 +100,9 @@ export function BootcampGrid({
                     <p className="text-xs text-brand-muted">
                       by <span className="text-brand-ink font-semibold">{ins?.name ?? "—"}</span>
                     </p>
-                    <p className="font-display font-extrabold text-brand-ink">
-                      ₹{b.priceINR.toLocaleString("en-IN")}
+                    {/* Bootcamps are bundled in the Premium plan — no per-course price */}
+                    <p className="text-xs font-semibold text-violet-700 inline-flex items-center gap-1">
+                      ✦ Premium
                     </p>
                   </div>
                 </GlassCard>

@@ -103,7 +103,8 @@ export default async function RecruiterToday() {
     .slice(0, 3);
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Afternoon" : "Evening";
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
     <main className="relative min-h-screen">

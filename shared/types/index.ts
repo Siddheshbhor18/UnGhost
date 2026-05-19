@@ -645,10 +645,53 @@ export interface LiveSession {
   createdAt: string;
   startedAt?: string;
   endedAt?: string;
+  /** Quick-access URL for the legacy single-recording model. Prefer SessionRecording table. */
   recordingUrl?: string;
   /** 100ms room id, set when the session goes live. */
   videoRoomId?: string;
   videoProvider?: "100ms" | "mock";
+}
+
+/**
+ * Recording capture per live session. Created automatically on
+ * `recording.success` webhook from 100ms (or end-of-session for mock mode).
+ * Instructor lands on /instructor/recordings and either:
+ *   - publishes (keep on platform — students can watch async)
+ *   - deletes (calls provider delete API, removes row)
+ *
+ * Status lifecycle:
+ *   pending_review  → recording just landed, awaiting instructor decision
+ *   published       → instructor chose Keep · students can view
+ *   deleted         → instructor chose Delete · row kept for audit, URL stripped
+ */
+export type SessionRecordingStatus =
+  | "pending_review"
+  | "published"
+  | "deleted";
+
+export interface SessionRecording {
+  id: string;
+  sessionId: string;
+  bootcampId: string;
+  instructorId: string;
+  /** Denormalised for fast list rendering — saves a join per row. */
+  sessionTitle: string;
+  bootcampTitle: string;
+  /** Provider recording asset id — what we pass to deleteRecording(). */
+  providerAssetId?: string;
+  /** Public playback URL. Empty once status === "deleted". */
+  playbackUrl?: string;
+  /** Optional thumbnail snapshot. */
+  thumbnailUrl?: string;
+  durationSec?: number;
+  sizeBytes?: number;
+  status: SessionRecordingStatus;
+  createdAt: string;
+  /** When the instructor pressed Keep. */
+  publishedAt?: string;
+  /** When the instructor pressed Delete. */
+  deletedAt?: string;
+  provider: "100ms" | "mock";
 }
 
 export interface AICoachMemory {

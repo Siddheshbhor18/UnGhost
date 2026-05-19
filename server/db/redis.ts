@@ -76,7 +76,18 @@ interface MockEntry {
   /** Absolute expiry epoch ms, or null if no TTL. */
   expiresAt: number | null;
 }
-const mockStore = new Map<string, MockEntry>();
+
+// Stash the Map on globalThis so it survives Next.js dev HMR module reloads.
+// Without this, OTP set by /api/auth/signup is lost before /api/auth/verify-phone
+// can read it (each route boundary may re-evaluate this module). One process,
+// one map, regardless of how many times the module file is re-imported.
+const GLOBAL_KEY = "__unghost_mock_redis__";
+const globalAny = globalThis as unknown as {
+  [GLOBAL_KEY]?: Map<string, MockEntry>;
+};
+const mockStore: Map<string, MockEntry> =
+  globalAny[GLOBAL_KEY] ?? new Map<string, MockEntry>();
+globalAny[GLOBAL_KEY] = mockStore;
 
 function getMock(key: string): MockEntry | undefined {
   const e = mockStore.get(key);

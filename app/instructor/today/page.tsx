@@ -97,7 +97,8 @@ export default async function InstructorToday() {
     .slice(0, 2);
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Afternoon" : "Evening";
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
     <main className="relative min-h-screen">

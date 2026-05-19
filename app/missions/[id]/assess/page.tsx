@@ -624,8 +624,8 @@ export default function AssessmentPage() {
                         </p>
                       </div>
                     </div>
-                    <span className="text-sm font-display font-bold text-brand-ink shrink-0">
-                      ₹{b.priceINR.toLocaleString("en-IN")}
+                    <span className="text-xs font-semibold text-violet-700 inline-flex items-center gap-1 shrink-0">
+                      ✦ Premium
                     </span>
                   </Link>
                 ))}

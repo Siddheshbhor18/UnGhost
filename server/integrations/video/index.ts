@@ -153,3 +153,105 @@ function signManagementToken(accessKey: string, secret: string): string {
     secret,
   );
 }
+
+// ── Recording APIs ─────────────────────────────────────────────────────────
+export interface RecordingAsset {
+  ok: boolean;
+  assetId?: string;
+  playbackUrl?: string;
+  thumbnailUrl?: string;
+  durationSec?: number;
+  sizeBytes?: number;
+  error?: string;
+}
+
+/**
+ * Fetch the recording metadata for a finished 100ms room. In mock mode
+ * returns a synthetic asset so dev flows can exercise the publish/delete UI
+ * end-to-end without external service calls.
+ */
+export async function getRoomRecording(
+  videoRoomId: string,
+): Promise<RecordingAsset> {
+  if (videoMode() === "mock") {
+    return {
+      ok: true,
+      assetId: `mock_asset_${videoRoomId}`,
+      playbackUrl: `https://mock.100ms.live/recordings/${videoRoomId}.mp4`,
+      thumbnailUrl: `https://mock.100ms.live/thumbs/${videoRoomId}.jpg`,
+      durationSec: 1800,
+      sizeBytes: 240_000_000,
+    };
+  }
+  try {
+    const accessKey = process.env.HMS_ACCESS_KEY!;
+    const secret = process.env.HMS_APP_SECRET!;
+    const token = signManagementToken(accessKey, secret);
+    const res = await fetch(
+      `https://api.100ms.live/v2/recording-assets?room_id=${encodeURIComponent(
+        videoRoomId,
+      )}&limit=1`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) {
+      return { ok: false, error: `100ms ${res.status}` };
+    }
+    const data = (await res.json()) as {
+      data?: Array<{
+        id?: string;
+        path?: string;
+        thumbnails?: string[];
+        duration?: number;
+        size?: number;
+      }>;
+    };
+    const a = data.data?.[0];
+    if (!a) return { ok: false, error: "no_recording" };
+    return {
+      ok: true,
+      assetId: a.id,
+      playbackUrl: a.path,
+      thumbnailUrl: a.thumbnails?.[0],
+      durationSec: a.duration,
+      sizeBytes: a.size,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "unknown",
+    };
+  }
+}
+
+/**
+ * Delete a stored recording. Called when the instructor presses "Delete" on
+ * /instructor/recordings — frees provider storage and prevents anyone from
+ * fetching the playbackUrl later.
+ */
+export async function deleteRoomRecording(
+  assetId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (videoMode() === "mock") {
+    return { ok: true };
+  }
+  try {
+    const accessKey = process.env.HMS_ACCESS_KEY!;
+    const secret = process.env.HMS_APP_SECRET!;
+    const token = signManagementToken(accessKey, secret);
+    const res = await fetch(
+      `https://api.100ms.live/v2/recording-assets/${encodeURIComponent(
+        assetId,
+      )}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (!res.ok && res.status !== 404) {
+      return { ok: false, error: `100ms ${res.status}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "unknown" };
+  }
+}

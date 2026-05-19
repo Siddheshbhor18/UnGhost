@@ -10,6 +10,7 @@ import {
   markPhoneVerified,
   writeAuditLog,
 } from "@/server/store";
+import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -42,10 +43,17 @@ async function handler(req: Request) {
 
   const user = await getUserById(userId);
   if (!user) {
+    logger.warn({ userId }, "verify-phone.user-not-found");
     return NextResponse.json({ error: "user_not_found" }, { status: 404 });
   }
   const expected = user.profile?.contactPhone ?? "";
-  if (normalisePhone(phone) !== normalisePhone(expected)) {
+  const normPhone = normalisePhone(phone);
+  const normExpected = normalisePhone(expected);
+  if (normPhone !== normExpected) {
+    logger.warn(
+      { userId, phone: normPhone, expected: normExpected },
+      "verify-phone.phone-mismatch",
+    );
     return NextResponse.json(
       { error: "phone_mismatch" },
       { status: 400 },
@@ -54,6 +62,10 @@ async function handler(req: Request) {
 
   const result = await verifyOtp(phone, code);
   if (!result.ok) {
+    logger.warn(
+      { userId, phone: normPhone, code, error: result.error },
+      "verify-phone.otp-failed",
+    );
     return NextResponse.json(
       { error: result.error ?? "otp_failed" },
       { status: 400 },

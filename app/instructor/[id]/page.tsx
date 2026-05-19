@@ -178,8 +178,8 @@ export default async function InstructorPublicProfile({
                       <UsersIcon size={10} /> {b.enrolledStudentIds.length}{" "}
                       enrolled
                     </span>
-                    <span className="font-display font-bold text-brand-ink">
-                      ₹{b.priceINR.toLocaleString("en-IN")}
+                    <span className="text-[11px] font-semibold text-violet-700 inline-flex items-center gap-1">
+                      ✦ Premium
                     </span>
                   </div>
                 </Link>

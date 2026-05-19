@@ -4,7 +4,6 @@ import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { GlassButton } from "./GlassButton";
 import { NotificationBell } from "./NotificationBell";
-import { Ghost } from "lucide-react";
 
 export function GlassNavbar() {
   const { data: session } = useSession();
@@ -25,8 +24,14 @@ export function GlassNavbar() {
       <div className="mx-auto max-w-7xl px-4 pt-4">
         <nav className="glass-panel flex items-center justify-between px-5 py-3">
           <Link href={homeHref} className="flex items-center gap-2 group">
-            <span className="grid place-items-center w-9 h-9 rounded-xl bg-brand-gradient text-white shadow-brand-glow">
-              <Ghost size={18} />
+            <span className="grid place-items-center w-9 h-9 rounded-xl bg-brand-gradient shadow-brand-glow">
+              <img
+                src="/symbol.svg"
+                alt="unGhost"
+                width={22}
+                height={22}
+                style={{ filter: "brightness(0) invert(1)" }}
+              />
             </span>
             <span className="font-display font-bold text-lg text-brand-ink">
               un<span className="text-brand-gradient">Ghost</span>
@@ -55,6 +60,9 @@ export function GlassNavbar() {
                 <Link href="/student/applications" className="px-3 py-1.5 rounded-lg hover:text-brand-ink hover:bg-white/40 transition">
                   Applications
                 </Link>
+                <Link href="/student/messages" className="px-3 py-1.5 rounded-lg hover:text-brand-ink hover:bg-white/40 transition">
+                  Messages
+                </Link>
                 <Link href="/student/saved" className="px-3 py-1.5 rounded-lg hover:text-brand-ink hover:bg-white/40 transition">
                   Saved
                 </Link>
@@ -82,6 +90,9 @@ export function GlassNavbar() {
                 </Link>
                 <Link href="/instructor/live" className="px-3 py-1.5 rounded-lg hover:text-brand-ink hover:bg-white/40 transition">
                   Live
+                </Link>
+                <Link href="/instructor/recordings" className="px-3 py-1.5 rounded-lg hover:text-brand-ink hover:bg-white/40 transition">
+                  Recordings
                 </Link>
               </>
             )}

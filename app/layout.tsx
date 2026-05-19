@@ -43,6 +43,11 @@ export const metadata: Metadata = {
   title: "unGhost — We don't ghost. We unghost.",
   description:
     "AI-powered hiring missions, gated assessments, and bootcamps. Recruiters answer in 24–72 hours, guaranteed. Built for India.",
+  icons: {
+    icon: "/symbol.svg",
+    shortcut: "/symbol.svg",
+    apple: "/symbol.svg",
+  },
 };
 
 export const viewport: Viewport = {

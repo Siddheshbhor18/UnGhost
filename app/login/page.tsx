@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { signIn } from "next-auth/react";
+import dynamic from "next/dynamic";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, GraduationCap, ShieldCheck, User2, BookOpen } from "lucide-react";
-import { DoorAnimation, Logo } from "@/components/glass";
+import { Logo } from "@/components/glass";
 import {
   Badge,
   BackdropMesh,
@@ -15,6 +16,14 @@ import {
   Input,
 } from "@/components/ui";
 import clsx from "clsx";
+
+// DoorAnimation only renders post-submit — keep it out of the login page's
+// initial JS bundle (it pulls in framer-motion). Loads on demand when the
+// user actually triggers a successful sign-in.
+const DoorAnimation = dynamic(
+  () => import("@/components/glass/DoorAnimation").then((m) => m.DoorAnimation),
+  { ssr: false },
+);
 
 type Role = "student" | "recruiter" | "instructor" | "admin";
 
@@ -30,17 +39,26 @@ function LoginInner() {
   const params = useSearchParams();
   const nextParam = params.get("next");
   const [role, setRole] = useState<Role>("student");
-  const [email, setEmail] = useState("alice@demo.test");
-  const [password, setPassword] = useState("demo");
+  // Email + password start EMPTY — pre-filling with the demo account caused
+  // real users to accidentally sign in as Alice when they only changed the
+  // password. The role card still shows the demo email below the form for
+  // local-dev convenience.
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [playDoor, setPlayDoor] = useState(false);
   const [dest, setDest] = useState<string>("/");
+  // Real name from the freshly-issued session — passed to the door animation
+  // so it greets the actual signed-in user, not a hardcoded "Alice".
+  const [doorName, setDoorName] = useState<string | undefined>();
 
   function switchRole(r: Role) {
     setRole(r);
     setErr(null);
-    setEmail(ROLES.find((x) => x.id === r)!.demoEmail);
+    // Clear stale email so the password input never lines up against the
+    // previous role's account.
+    setEmail("");
   }
 
   async function submit(e: React.FormEvent) {
@@ -70,6 +88,14 @@ function LoginInner() {
       setErr("Wrong credentials. Check the email + password you used at signup.");
       return;
     }
+    // Pull the actual session so the door can greet the right person — fixes
+    // the "Welcome back Alice" bug when a non-Alice user signed in.
+    const fresh = await getSession();
+    const firstName =
+      fresh?.user?.name?.split(" ")[0] ??
+      email.split("@")[0].split(/[._-]/)[0] ??
+      undefined;
+    setDoorName(firstName);
     const target = nextParam ?? ROLES.find((x) => x.id === role)!.href;
     setDest(target);
     setPlayDoor(true);
@@ -82,7 +108,7 @@ function LoginInner() {
       <BackdropMesh />
       <DoorAnimation
         active={playDoor}
-        studentName={role === "student" ? "Alice" : undefined}
+        studentName={role === "student" ? doorName : undefined}
         onComplete={() => {
           router.push(dest);
           router.refresh();

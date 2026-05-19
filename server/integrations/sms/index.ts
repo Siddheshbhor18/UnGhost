@@ -128,6 +128,10 @@ export async function verifyOtp(
 
   if (smsMode() === "mock") {
     const stored = await r.get(otpKey(cleaned));
+    // eslint-disable-next-line no-console
+    console.log(
+      `[sms:mock] verify · phone=${cleaned} · code=${code} · stored=${stored ?? "(null)"} · key=${otpKey(cleaned)}`,
+    );
     if (!stored) {
       return { ok: false, channel: "mock", error: "otp_expired" };
     }

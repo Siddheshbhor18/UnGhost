@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { PixelButton } from "@/components/arcade/PixelButton";
 import { Badge } from "@/components/arcade/Badge";
-import { Ghost, Power } from "lucide-react";
+import { Power } from "lucide-react";
 
 export function Navbar() {
   const { data: session } = useSession();
@@ -13,8 +13,8 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 border-b-2 border-bg-ink/60 bg-bg-base/80 backdrop-blur supports-[backdrop-filter]:bg-bg-base/60">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
         <Link href="/" className="flex items-center gap-3 group">
-          <span className="text-neon-pink group-hover:scale-110 transition-transform">
-            <Ghost size={28} strokeWidth={1.6} />
+          <span className="group-hover:scale-110 transition-transform">
+            <img src="/symbol.svg" alt="unGhost" width={28} height={28} />
           </span>
           <span className="font-pixel text-sm neon-text text-neon-pink">NO/GHOST</span>
           <Badge tone="green">BETA</Badge>

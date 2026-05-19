@@ -16,6 +16,7 @@ import {
   listJobs,
   listBootcamps,
   getUserById,
+  getUsersByIds,
   listSponsorshipsByStudent,
   listInMailsByStudent,
   listNotInterestedJobIds,
@@ -94,14 +95,14 @@ export default async function DashboardPage() {
 
   const coIndex = Object.fromEntries(companies.map((c) => [c.id, c]));
   const jobIndex = Object.fromEntries(jobs.map((j) => [j.id, j]));
+  // Single batched fetch — kills the previous N+1 (one Mongo round-trip per
+  // instructor). With ~20 bootcamps this saves 15-30 round-trips.
   const instructorIds = Array.from(new Set(bcs.map((b) => b.instructorId)));
-  const instructorList = await Promise.all(
-    instructorIds.map((id) => getUserById(id)),
-  );
+  const instructorMap = await getUsersByIds(instructorIds);
   const instructorIndex = Object.fromEntries(
-    instructorIds.map((id, i) => [
+    instructorIds.map((id) => [
       id,
-      instructorList[i] ? { name: instructorList[i]!.name } : undefined,
+      instructorMap.get(id) ? { name: instructorMap.get(id)!.name } : undefined,
     ]),
   );
 

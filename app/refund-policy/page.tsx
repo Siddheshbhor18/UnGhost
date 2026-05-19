@@ -1,6 +1,7 @@
 import { LegalShell, Section } from "@/components/legal/LegalShell";
 
 export const metadata = { title: "Refund Policy · unGhost" };
+export const revalidate = 86400;
 
 export default function RefundPolicy() {
   return (

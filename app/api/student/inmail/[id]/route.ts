@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import {
   getInMailById,
+  getOrCreateInMailThread,
   getUserById,
   notify,
   updateInMailStatus,
@@ -40,6 +41,15 @@ export async function PATCH(
     params.id,
     body.action === "accept" ? "accepted" : "declined",
   );
+
+  // On accept, materialise (or fetch) the InMail → MessageThread so the
+  // student can be routed straight into chat. Decline does nothing extra.
+  let threadId: string | undefined;
+  if (body.action === "accept") {
+    const thread = await getOrCreateInMailThread(params.id);
+    threadId = thread?.id;
+  }
+
   const student = await getUserById(session.user.id);
   await notify({
     userId: im.recruiterId,
@@ -53,8 +63,10 @@ export async function PATCH(
       body.action === "accept"
         ? `Open a chat in your inbox.`
         : `Cooldown locked for 90 days.`,
-    link: "/recruiter/command",
+    link: threadId
+      ? `/recruiter/messages/${threadId}`
+      : "/recruiter/command",
     actorLabel: student?.name,
   });
-  return NextResponse.json(updated);
+  return NextResponse.json({ ...updated, threadId });
 }
