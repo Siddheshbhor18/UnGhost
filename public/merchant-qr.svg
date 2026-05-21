@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220">
+  <rect width="220" height="220" rx="16" fill="#F4F6FB"/>
+  <rect x="8" y="8" width="204" height="204" rx="12" fill="#fff" stroke="#E3E7F0" stroke-width="2" stroke-dasharray="6 4"/>
+  <g fill="#9CA8C2">
+    <rect x="44" y="44" width="20" height="20"/>
+    <rect x="156" y="44" width="20" height="20"/>
+    <rect x="44" y="156" width="20" height="20"/>
+    <rect x="84" y="84" width="12" height="12"/>
+    <rect x="108" y="76" width="8" height="8"/>
+    <rect x="128" y="92" width="14" height="14"/>
+    <rect x="84" y="116" width="8" height="8"/>
+    <rect x="116" y="124" width="12" height="12"/>
+    <rect x="100" y="140" width="8" height="8"/>
+  </g>
+  <text x="110" y="200" font-family="-apple-system, system-ui, sans-serif" font-size="9" fill="#6B7894" text-anchor="middle">replace /public/merchant-qr.svg</text>
+</svg>

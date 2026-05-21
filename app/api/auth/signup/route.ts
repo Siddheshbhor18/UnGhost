@@ -12,7 +12,11 @@ import { createUserWithCredentials } from "@/server/store";
 import { issueEmailVerifyToken } from "@/server/auth/email-verify-token";
 import { sendVerifyEmail } from "@/server/integrations/email";
 import { sendOtp, normalisePhone } from "@/server/integrations/sms";
-import { writeAuditLog } from "@/server/store";
+import {
+  attachReferrerToUser,
+  getPartnerByCode,
+  writeAuditLog,
+} from "@/server/store";
 import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
@@ -20,14 +24,23 @@ export const runtime = "nodejs";
 const Input = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().toLowerCase().email().max(120),
-  // Country prefix + national number, normalised before insert. We accept
-  // anything 7-15 digits — covers India (10) through long international.
-  phone: z.string().trim().min(7).max(20),
+  // Phone is optional — MSG91 OTP is retired. We still collect it for
+  // student outreach (product research), but never verify it.
+  phone: z.string().trim().min(7).max(20).optional().or(z.literal("")),
   password: z.string().min(8).max(72),
   role: z.enum(["student", "recruiter"]),
   acceptTos: z.literal(true),
   acceptService: z.literal(true),
   acceptMarketing: z.boolean().optional(),
+  /** Channel-partner attribution code captured via `?ref=<code>` and held
+   *  in the visitor's localStorage by `RefCapture`. Optional. */
+  referrerCode: z
+    .string()
+    .regex(/^[a-z0-9-]+$/i)
+    .min(3)
+    .max(48)
+    .optional()
+    .or(z.literal("")),
 });
 
 /**
@@ -57,7 +70,9 @@ async function handler(req: Request) {
   }
 
   const passwordHash = await hashPassword(data.password);
-  const normalisedPhone = normalisePhone(data.phone);
+  // Phone is optional — pass empty string when absent so the store helper's
+  // uniqueness check skips it gracefully (`if (phone) { ... }` inside).
+  const normalisedPhone = data.phone ? normalisePhone(data.phone) : "";
 
   const result = await createUserWithCredentials({
     email: data.email,
@@ -84,6 +99,32 @@ async function handler(req: Request) {
 
   const user = result.user;
 
+  // Attribute this signup to a channel partner if the visitor came in via
+  // `?ref=<code>`. The wizard reads localStorage on submit + sends the
+  // code here. We look up the partner, attach, audit. Best-effort — a bad
+  // code never blocks signup, it just goes unattributed.
+  if (data.referrerCode) {
+    try {
+      const partner = await getPartnerByCode(data.referrerCode.toLowerCase());
+      if (partner?.active) {
+        await attachReferrerToUser(user.id, partner.id);
+        await writeAuditLog({
+          actorId: user.id,
+          actorRole: data.role,
+          action: "auth.signup-attributed",
+          targetType: "user",
+          targetId: user.id,
+          summary: `Signup attributed to partner ${partner.code}`,
+        });
+      }
+    } catch (err) {
+      logger.warn(
+        { err, code: data.referrerCode, userId: user.id },
+        "signup.attribution-failed",
+      );
+    }
+  }
+
   // Issue email verify token + send link. If Redis-side rate limit trips
   // (shouldn't on a fresh user) we still complete signup — the user can
   // resend later.
@@ -94,8 +135,12 @@ async function handler(req: Request) {
     });
   }
 
-  // Fire OTP. Capture demoOtp in mock mode so the UI can auto-fill it.
-  const otp = await sendOtp(normalisedPhone);
+  // MSG91 is retired — we don't fire an OTP. Phone is collected for outreach
+  // only and never verified. The legacy `/verify-phone` route still exists
+  // for dev but the live login flow skips it.
+  const otp = normalisedPhone
+    ? await sendOtp(normalisedPhone).catch(() => ({ channel: "mock", demoOtp: undefined }))
+    : { channel: "mock", demoOtp: undefined };
 
   await writeAuditLog({
     actorId: user.id,

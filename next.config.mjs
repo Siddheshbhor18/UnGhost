@@ -27,25 +27,38 @@ const CSP = [
   "upgrade-insecure-requests",
 ].join("; ");
 
+const isProd = process.env.NODE_ENV === "production";
+
+// HSTS is intentionally OMITTED in development. The header tells browsers
+// "always use HTTPS for this hostname" — Chrome caches that for `localhost`
+// permanently, then refuses subsequent HTTP loads of the dev server with
+// `ERR_SSL_PROTOCOL_ERROR`. Only send HSTS in production where TLS is real.
 const securityHeaders = [
   { key: "Content-Security-Policy", value: CSP },
-  {
-    key: "Strict-Transport-Security",
-    // 2 years, include subdomains, preload-eligible.
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
+  ...(isProd
+    ? [
+        {
+          key: "Strict-Transport-Security",
+          // 2 years, include subdomains, preload-eligible.
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+      ]
+    : []),
   { key: "X-Content-Type-Options", value: "nosniff" },
-  // Legacy header, complements `frame-ancestors 'none'` for older browsers.
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    // Mic enabled for AI-coach voice + live sessions. Camera off-by-default
-    // until live video flow ships fully. Geo + FLoC off entirely.
     value: "camera=(), microphone=(self), geolocation=(), interest-cohort=()",
   },
   { key: "X-DNS-Prefetch-Control", value: "on" },
 ];
+
+// CSP's `upgrade-insecure-requests` directive also forces HTTPS — yank it in
+// dev for the same reason as HSTS. The full prod CSP still ships in prod.
+const DEV_CSP = CSP.replace("; upgrade-insecure-requests", "");
+const ACTIVE_CSP = isProd ? CSP : DEV_CSP;
+securityHeaders[0] = { key: "Content-Security-Policy", value: ACTIVE_CSP };
 
 const nextConfig = {
   reactStrictMode: true,

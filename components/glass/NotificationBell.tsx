@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import clsx from "clsx";
+import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
 import type { AppNotification, NotificationKind } from "@/shared/types";
 
 const KIND_ICON: Record<NotificationKind, string> = {
@@ -48,6 +49,14 @@ export function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  // Wobble the bell + pop the badge when unread climbs (new notification
+  // arrived between polls). Skipped on first paint to avoid a spurious
+  // wobble when the initial unread count loads. Skipped on decrement so
+  // marking-as-read stays silent.
+  const bellControls = useAnimationControls();
+  const dotControls = useAnimationControls();
+  const prevUnread = useRef<number | null>(null);
+  const reduceMotion = useReducedMotion();
 
   // Initial poll + 60s background refresh
   useEffect(() => {
@@ -75,6 +84,24 @@ export function NotificationBell() {
       clearInterval(t);
     };
   }, []);
+
+  // Fire the wobble whenever unread strictly increases from its previous
+  // known value. First mount establishes the baseline silently.
+  useEffect(() => {
+    const prev = prevUnread.current;
+    prevUnread.current = unread;
+    if (prev === null) return;
+    if (unread <= prev) return;
+    if (reduceMotion) return;
+    bellControls.start({
+      rotate: [0, -14, 12, -10, 8, -4, 0],
+      transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+    });
+    dotControls.start({
+      scale: [1, 1.45, 1],
+      transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    });
+  }, [unread, bellControls, dotControls, reduceMotion]);
 
   // Close on outside click
   useEffect(() => {
@@ -117,11 +144,19 @@ export function NotificationBell() {
         className="relative grid place-items-center w-9 h-9 rounded-xl bg-white/40 border border-brand-ink/5 text-brand-ink hover:bg-white/70 hover:text-brand-primary transition"
         aria-label="Notifications"
       >
-        <Bell size={16} />
+        <motion.span
+          animate={bellControls}
+          style={{ originX: 0.5, originY: 0.15, display: "inline-flex" }}
+        >
+          <Bell size={16} />
+        </motion.span>
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow">
+          <motion.span
+            animate={dotControls}
+            className="absolute -top-1 -right-1 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow"
+          >
             {unread > 9 ? "9+" : unread}
-          </span>
+          </motion.span>
         )}
       </button>
 

@@ -1,13 +1,18 @@
 // Real Claude adapter via @anthropic-ai/sdk. Used when ANTHROPIC_API_KEY set.
-// Default model: claude-opus-4-7. Adaptive thinking + structured outputs.
-// Note: SDK 0.40 types don't fully model adaptive thinking + output_config yet,
-// so the request body is typed via `as never` — params still serialize correctly
-// at the wire level. Falls back to the deterministic mock on any failure.
+//
+// Default model: claude-haiku-4-5 — the cost-efficient tier. Roughly 60× cheaper
+// than Opus 4.7 per token, with structured-output and instruction-following
+// quality that comfortably handles every task in this app: resume parsing,
+// match scoring, assessment grading, coach chat. Override per-call (or
+// globally) via ANTHROPIC_MODEL env var if you ever need to escalate a
+// specific flow to Sonnet or Opus.
+//
+// Falls back to the deterministic mock on any failure.
 import Anthropic from "@anthropic-ai/sdk";
 import type { AIAdapter } from "./index";
 import { mockAdapter } from "./mock";
 
-const MODEL = "claude-opus-4-7";
+const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
 
 function getClient() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

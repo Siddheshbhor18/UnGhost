@@ -125,7 +125,7 @@ export function LiveScheduleClient({ bootcamps, initialSessions }: Props) {
                   <div className="flex items-center gap-2 mb-1">
                     <StatusPill status={s.status} />
                     <span className="text-[10px] uppercase tracking-wider text-brand-muted">
-                      {bootcampLabel(s.bootcampId)}
+                      {bootcampLabel(s.bootcampId ?? "")}
                     </span>
                   </div>
                   <p className="font-display font-bold text-brand-ink">

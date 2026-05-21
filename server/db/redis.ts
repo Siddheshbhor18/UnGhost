@@ -52,8 +52,14 @@ const upstashClient: RedisLike = {
     return upstash().set(key, value);
   },
   async get(key) {
-    const v = await upstash().get<string | number | null>(key);
-    return v === null || v === undefined ? null : String(v);
+    // Upstash auto-deserializes values that look like JSON. That breaks
+    // callers (e.g. idempotency cache) that stored a JSON string and
+    // expect to JSON.parse() it back. Re-stringify objects so the
+    // returned shape always matches what `set()` was given.
+    const v = await upstash().get<unknown>(key);
+    if (v === null || v === undefined) return null;
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
   },
   async del(...keys) {
     if (keys.length === 0) return 0;

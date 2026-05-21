@@ -32,6 +32,7 @@ import {
 import { MagicWidget } from "@/components/landing/MagicWidget";
 import { FAQ } from "@/components/landing/FAQ";
 import { CookieConsent } from "@/components/landing/CookieConsent";
+import { LiveSessionsTeaser } from "@/components/live/LiveSessionsTeaser";
 import {
   listJobs,
   listCompanies,
@@ -132,6 +133,11 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ─────────── LIVE SESSIONS TEASER ─────────── */}
+      {/* Self-hides when nothing to show. Picks one of 4 states based on
+          the next-upcoming or currently-live free session in Mongo. */}
+      <LiveSessionsTeaser />
 
       {/* ─────────── HOW IT WORKS ─────────── */}
       <section className="mx-auto max-w-content px-4 py-20">

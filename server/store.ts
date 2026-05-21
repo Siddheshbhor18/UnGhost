@@ -29,6 +29,7 @@ import {
   MessageThreadModel,
   NotInterestedModel,
   NotificationModel,
+  PartnerModel,
   ProcessedTxnModel,
   SavedJobModel,
   SessionRecordingModel,
@@ -65,6 +66,8 @@ import type {
   Role,
   SavedJob,
   SessionRecording,
+  Partner,
+  PartnerStats,
   Sponsorship,
   SponsorshipStatus,
   Stage,
@@ -395,6 +398,237 @@ export async function sweepExpiredPlans(): Promise<{
     },
   );
   return { demoted: ids };
+}
+
+// ---------- PARTNERS (channel referrals) ----------
+
+import { randomBytes } from "node:crypto";
+
+/**
+ * Generate a fresh dashboard token. 32 bytes → 64 hex chars. Enough entropy
+ * that brute-forcing the URL is infeasible; behaves like a long password.
+ */
+function freshPartnerToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+/** Slug a free-form name into a URL-safe partner code. */
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48);
+}
+
+export interface CreatePartnerInput {
+  name: string;
+  contactEmail: string;
+  commissionPct?: number;
+  notes?: string;
+  /** Optional override. If absent, derived from name. */
+  code?: string;
+}
+
+export async function createPartner(
+  input: CreatePartnerInput,
+  createdByAdminId: string,
+): Promise<Partner> {
+  await db();
+  // Code can clash — append a 4-char nonce on collision.
+  let code = input.code ? slugify(input.code) : slugify(input.name);
+  const exists = await PartnerModel.findOne({ code }).lean();
+  if (exists) {
+    code = `${code}-${randomBytes(2).toString("hex")}`;
+  }
+  const partner: Partner = {
+    id: `prt_${randomBytes(6).toString("hex")}`,
+    code,
+    name: input.name.trim(),
+    contactEmail: input.contactEmail.trim().toLowerCase(),
+    commissionPct: input.commissionPct ?? 0,
+    dashboardToken: freshPartnerToken(),
+    active: true,
+    notes: input.notes,
+    createdAt: new Date().toISOString(),
+    createdByAdminId,
+  };
+  await PartnerModel.create({ _id: partner.id, ...partner });
+  return partner;
+}
+
+export async function listPartners(): Promise<Partner[]> {
+  await db();
+  const docs = await PartnerModel.find({})
+    .sort({ createdAt: -1 })
+    .lean();
+  return unwrapAll(docs as unknown as Partner[]);
+}
+
+export async function getPartnerByCode(
+  code: string,
+): Promise<Partner | undefined> {
+  await db();
+  const doc = await PartnerModel.findOne({ code }).lean();
+  return unwrap(doc as unknown as Partner);
+}
+
+export async function getPartnerById(
+  id: string,
+): Promise<Partner | undefined> {
+  await db();
+  const doc = await PartnerModel.findById(id).lean();
+  return unwrap(doc as unknown as Partner);
+}
+
+export async function updatePartner(
+  id: string,
+  patch: Partial<
+    Pick<Partner, "name" | "contactEmail" | "commissionPct" | "notes" | "active">
+  >,
+): Promise<Partner | undefined> {
+  await db();
+  await PartnerModel.updateOne({ _id: id }, { $set: patch });
+  return getPartnerById(id);
+}
+
+/** Mint a new dashboard token. Call this from /api/partners/[code]/rotate. */
+export async function rotatePartnerToken(id: string): Promise<Partner | undefined> {
+  await db();
+  await PartnerModel.updateOne(
+    { _id: id },
+    {
+      $set: {
+        dashboardToken: freshPartnerToken(),
+        tokenRotatedAt: new Date().toISOString(),
+      },
+    },
+  );
+  return getPartnerById(id);
+}
+
+/**
+ * Verify partner code + token together. Returns the Partner if both match
+ * AND the partner is active. Returns `undefined` for ALL failure modes so
+ * the route can render 404 without leaking which axis failed.
+ */
+export async function verifyPartnerToken(
+  code: string,
+  token: string,
+): Promise<Partner | undefined> {
+  if (!code || !token || token.length < 32) return undefined;
+  const p = await getPartnerByCode(code);
+  if (!p || !p.active) return undefined;
+  if (p.dashboardToken !== token) return undefined;
+  return p;
+}
+
+/**
+ * Compute stats for a partner. Counts attributed users + their paid plans.
+ * Commission = sum of pricing × commissionPct for referred users who have
+ * a paid plan (`pro` or `premium`).
+ */
+export async function getPartnerStats(
+  partnerId: string,
+): Promise<PartnerStats> {
+  await db();
+  const partner = await getPartnerById(partnerId);
+  const pct = partner?.commissionPct ?? 0;
+
+  const [signups, paidPro, paidPremium] = await Promise.all([
+    UserModel.countDocuments({ referrerPartnerId: partnerId }),
+    UserModel.countDocuments({
+      referrerPartnerId: partnerId,
+      plan: "pro",
+    }),
+    UserModel.countDocuments({
+      referrerPartnerId: partnerId,
+      plan: "premium",
+    }),
+  ]);
+
+  // Pricing matches PLAN_PRICING in shared/types/index.ts (₹999 Pro / ₹4,999
+  // Premium). Inlined here to avoid client-bundling that constant.
+  const estCommissionINR = Math.round(
+    (paidPro * 999 + paidPremium * 4999) * (pct / 100),
+  );
+  return {
+    partnerId,
+    signups,
+    paidPro,
+    paidPremium,
+    estCommissionINR,
+  };
+}
+
+/** Bulk stats for the admin table. One query per partner — fine for ≤200 partners. */
+export async function listPartnersWithStats(): Promise<
+  Array<Partner & { stats: PartnerStats }>
+> {
+  const partners = await listPartners();
+  return Promise.all(
+    partners.map(async (p) => ({
+      ...p,
+      stats: await getPartnerStats(p.id),
+    })),
+  );
+}
+
+/**
+ * Stamp a freshly-created user with their referring partner. Idempotent —
+ * never overwrites an existing referrerPartnerId (first-touch wins on the
+ * server even if the client sends a new code later).
+ */
+export async function attachReferrerToUser(
+  userId: string,
+  partnerId: string,
+): Promise<void> {
+  await db();
+  await UserModel.updateOne(
+    { _id: userId, referrerPartnerId: { $exists: false } },
+    {
+      $set: {
+        referrerPartnerId: partnerId,
+        referrerCapturedAt: new Date().toISOString(),
+      },
+    },
+  );
+}
+
+/** Anonymised referral list — used on partner's own dashboard. */
+export async function listPartnerReferrals(
+  partnerId: string,
+  limit = 50,
+): Promise<
+  Array<{
+    alias: string;
+    plan: string;
+    signedUpAt: string;
+  }>
+> {
+  await db();
+  const docs = await UserModel.find({ referrerPartnerId: partnerId })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .select("profile.alias name plan createdAt")
+    .lean();
+  return docs.map((d) => {
+    const dd = d as unknown as {
+      profile?: { alias?: string };
+      name?: string;
+      plan?: string;
+      createdAt?: string;
+    };
+    // Privacy: never expose real name to partners — alias only. If alias
+    // is missing, fall back to a generic label, not the real name.
+    const alias = dd.profile?.alias?.replace(/\./g, " ") ?? "student";
+    return {
+      alias,
+      plan: dd.plan ?? "free",
+      signedUpAt: dd.createdAt ?? "",
+    };
+  });
 }
 
 /** All active admin user ids. Used for fan-out notifications (bootcamp review, escalations). */
@@ -2029,13 +2263,18 @@ export async function createBootcamp(input: {
 }): Promise<Bootcamp> {
   await db();
   const id = genId("bc");
+  const priceINR = input.priceINR ?? 2499;
   const bc: Bootcamp = {
     id,
     skill: input.skill,
     category: input.category,
     title: input.title,
     description: input.description ?? "",
-    priceINR: input.priceINR ?? 2499,
+    priceINR,
+    // Mirror priceINR into paise — authoritative for checkout math.
+    // Admin can tune this independently later via the bootcamp edit form.
+    priceInPaise: priceINR * 100,
+    gstPercent: 18,
     durationWeeks: input.durationWeeks ?? 3,
     instructorId: input.instructorId,
     videos: [],
@@ -2044,6 +2283,14 @@ export async function createBootcamp(input: {
     rating: 0,
     coverColor: "#0191FC",
     status: "draft",
+    // Enrollment + scheduling fields — admin fills before publishing.
+    enrollmentOpensAt: null,
+    enrollmentClosesAt: null,
+    startsAt: null,
+    endsAt: null,
+    maxStudents: 495,
+    currentSubmissionCount: 0,
+    sessions: [],
   };
   await BootcampModel.create({ ...(bc as any), _id: id });
   await invalidate("bootcamps:all", "bootcamps:all:lite");
@@ -2753,7 +3000,9 @@ export async function listUpcomingLiveForStudent(
   }
   return unwrapAll(sessions as unknown as LiveSession[]).map((s) => ({
     ...s,
-    bootcampTitle: titleMap.get(s.bootcampId) ?? "Bootcamp",
+    // bootcampId is nullable now (free lead-gen sessions skip it). Fall
+    // back to a generic label rather than crashing the dashboard query.
+    bootcampTitle: (s.bootcampId && titleMap.get(s.bootcampId)) ?? "Bootcamp",
   }));
 }
 
@@ -2857,6 +3106,9 @@ async function maybeCaptureRecording(sessionId: string): Promise<void> {
   const asset = await getRoomRecording(live.videoRoomId);
   if (!asset.ok) return;
 
+  // Free-tier sessions have no bootcamp parent — skip recording (the
+  // YouTube path handles its own recordings).
+  if (!live.bootcampId) return;
   const bootcamp = await getBootcampById(live.bootcampId);
   const id = genId("rec");
   await SessionRecordingModel.create({

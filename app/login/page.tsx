@@ -1,111 +1,120 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useRef, useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, GraduationCap, ShieldCheck, User2, BookOpen } from "lucide-react";
-import { Logo } from "@/components/glass";
 import {
-  Badge,
-  BackdropMesh,
-  Button,
-  Card,
-  Field,
-  Input,
-} from "@/components/ui";
-import clsx from "clsx";
+  motion,
+  useAnimationControls,
+  useReducedMotion,
+} from "framer-motion";
+import { ArrowRight, Lock, Mail } from "lucide-react";
+import { GlassCard } from "@/components/glass";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthInput } from "@/components/auth/AuthInput";
+import { OAuthButtons } from "@/components/auth/OAuthButtons";
+import { RolePicker, ROLE_PILLS, type Role } from "@/components/auth/RolePicker";
+import type { AuthHeroPhase } from "@/components/auth/AuthHero";
 
-// DoorAnimation only renders post-submit — keep it out of the login page's
-// initial JS bundle (it pulls in framer-motion). Loads on demand when the
-// user actually triggers a successful sign-in.
 const DoorAnimation = dynamic(
   () => import("@/components/glass/DoorAnimation").then((m) => m.DoorAnimation),
   { ssr: false },
 );
 
-type Role = "student" | "recruiter" | "instructor" | "admin";
+const HREF_BY_ROLE: Record<Role, string> = {
+  student: "/dashboard",
+  recruiter: "/recruiter/command",
+  instructor: "/instructor/today",
+  admin: "/admin/today",
+};
 
-const ROLES: { id: Role; label: string; icon: React.ReactNode; demoEmail: string; href: string }[] = [
-  { id: "student", label: "Student", icon: <User2 size={16} />, demoEmail: "alice@demo.test", href: "/dashboard" },
-  { id: "recruiter", label: "Recruiter", icon: <ShieldCheck size={16} />, demoEmail: "hr@stark.test", href: "/recruiter/command" },
-  { id: "instructor", label: "Instructor", icon: <BookOpen size={16} />, demoEmail: "cristian@instructor.test", href: "/instructor/today" },
-  { id: "admin", label: "Admin", icon: <GraduationCap size={16} />, demoEmail: "root@noghost.test", href: "/admin/today" },
-];
+const EASE_OUT_SOFT: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+/** Delay between hero "entering" phase start and the full-screen
+ *  DoorAnimation overlay. Lets the hero ghost actually glide into the door
+ *  before the larger door scene takes over. */
+const HERO_TO_OVERLAY_MS = 550;
 
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
+  const reduced = useReducedMotion();
+  const shake = useAnimationControls();
   const nextParam = params.get("next");
+
   const [role, setRole] = useState<Role>("student");
-  // Email + password start EMPTY — pre-filling with the demo account caused
-  // real users to accidentally sign in as Alice when they only changed the
-  // password. The role card still shows the demo email below the form for
-  // local-dev convenience.
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<AuthHeroPhase>("idle");
   const [playDoor, setPlayDoor] = useState(false);
   const [dest, setDest] = useState<string>("/");
-  // Real name from the freshly-issued session — passed to the door animation
-  // so it greets the actual signed-in user, not a hardcoded "Alice".
   const [doorName, setDoorName] = useState<string | undefined>();
+
+  const demoForActiveRole = ROLE_PILLS.find((r) => r.id === role)?.demoEmail;
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   function switchRole(r: Role) {
     setRole(r);
     setErr(null);
-    // Clear stale email so the password input never lines up against the
-    // previous role's account.
     setEmail("");
+  }
+
+  async function shakeError() {
+    if (reduced) return;
+    await shake.start({
+      x: [0, -6, 6, -4, 4, 0],
+      transition: { duration: 0.32, ease: EASE_OUT_SOFT },
+    });
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setErr(null);
-    const res = await signIn("credentials", { email, password, redirect: false });
-    setBusy(false);
+    setPhase("submitting");
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
     if (res?.error) {
-      // NextAuth surfaces our `throw new Error("...")` text in res.error.
-      // We tag phone-verification refusals with a `PHONE_UNVERIFIED` prefix
-      // in server/auth so we can route the user to /verify-phone instead of
-      // showing a generic wrong-credentials message.
+      setBusy(false);
+      setPhase("idle");
       if (res.error.includes("PHONE_UNVERIFIED")) {
-        setErr("Your phone isn't verified yet. Finish signup at /verify-phone.");
-        return;
-      }
-      if (
+        setErr("Your account needs verification. Reach out at support@unghost.in.");
+      } else if (
         res.error.toLowerCase().includes("suspended") ||
         res.error.toLowerCase().includes("banned") ||
         res.error.toLowerCase().includes("grace")
       ) {
-        // Pass through the human-readable suspension/ban message verbatim.
         setErr(res.error);
-        return;
+      } else {
+        setErr("Wrong credentials. Check the email + password you used at signup.");
       }
-      setErr("Wrong credentials. Check the email + password you used at signup.");
+      void shakeError();
       return;
     }
-    // Pull the actual session so the door can greet the right person — fixes
-    // the "Welcome back Alice" bug when a non-Alice user signed in.
+
+    // Auth OK. Greet by real first name + start the door-entering choreography
+    // on the hero. After ~550 ms the full-screen DoorAnimation overlay takes
+    // over and routes to the role's destination.
     const fresh = await getSession();
     const firstName =
       fresh?.user?.name?.split(" ")[0] ??
       email.split("@")[0].split(/[._-]/)[0] ??
       undefined;
     setDoorName(firstName);
-    const target = nextParam ?? ROLES.find((x) => x.id === role)!.href;
-    setDest(target);
-    setPlayDoor(true);
+    setDest(nextParam ?? HREF_BY_ROLE[role]);
+    setPhase("entering");
+    setTimeout(() => setPlayDoor(true), reduced ? 0 : HERO_TO_OVERLAY_MS);
   }
 
-  const active = ROLES.find((r) => r.id === role)!;
-
   return (
-    <main className="relative min-h-screen flex items-center justify-center px-4 py-10">
-      <BackdropMesh />
+    <AuthShell role={role} mode="signin" heroPhase={phase}>
       <DoorAnimation
         active={playDoor}
         studentName={role === "student" ? doorName : undefined}
@@ -114,136 +123,183 @@ function LoginInner() {
           router.refresh();
         }}
       />
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-6">
-          <Link href="/">
-            <Logo size="md" />
-          </Link>
-        </div>
 
-        <Card padded className="!p-7">
-          {/* Role pills */}
-          <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-neutral-100 mb-6">
-            {ROLES.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => switchRole(r.id)}
-                className={clsx(
-                  "flex items-center justify-center gap-1.5 py-2 rounded-lg text-body-sm font-semibold transition",
-                  role === r.id
-                    ? "bg-neutral-0 shadow-elev-1 text-neutral-900"
-                    : "text-neutral-500 hover:text-neutral-900",
-                )}
-              >
-                {r.icon}
-                <span className="hidden sm:inline">{r.label}</span>
-              </button>
-            ))}
+      <BreatheCard shake={shake} reduced={!!reduced}>
+        <GlassCard variant="strong" className="!p-6">
+          <div className="mb-4">
+            <h1 className="font-display font-extrabold text-2xl text-brand-ink tracking-tight">
+              Welcome back
+            </h1>
+            <p className="text-sm text-brand-muted mt-0.5">
+              Sign in to pick up where you left off.
+            </p>
           </div>
 
-          <h1 className="font-display font-extrabold text-display-md text-neutral-950 tracking-tight mb-1">
-            Welcome back.
-          </h1>
-          <p className="text-body-sm text-neutral-500 mb-5">
-            Signing in as{" "}
-            <span className="font-semibold text-neutral-900">{active.label}</span>.
-            Demo password:{" "}
-            <span className="font-mono text-brand-500">demo</span>
-          </p>
+          <div className="mb-4">
+            <RolePicker value={role} onChange={switchRole} variant="pills" />
+            {demoForActiveRole ? (
+              <p className="text-[10px] text-brand-muted mt-2 ml-3.5">
+                Demo email · <span className="font-mono">{demoForActiveRole}</span>
+              </p>
+            ) : null}
+          </div>
 
-          <form onSubmit={submit} className="space-y-4">
-            <Field label="Email">
-              <Input
+          <motion.form
+            ref={formRef}
+            onSubmit={submit}
+            className="space-y-2.5"
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: {},
+              show: { transition: { staggerChildren: reduced ? 0 : 0.04 } },
+            }}
+          >
+            <motion.div variants={fieldV(reduced)}>
+              <AuthInput
+                label="Email"
                 type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={active.demoEmail}
                 autoComplete="email"
-              />
-            </Field>
-            <Field label="Password">
-              <Input
-                type="password"
+                leadingIcon={<Mail size={14} />}
+                value={email}
+                onValueChange={setEmail}
+                validate={validateEmail}
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="demo"
-                autoComplete="current-password"
               />
-            </Field>
-            {err && (
+            </motion.div>
+
+            <motion.div variants={fieldV(reduced)}>
+              <AuthInput
+                label="Password"
+                type="password"
+                autoComplete="current-password"
+                leadingIcon={<Lock size={14} />}
+                value={password}
+                onValueChange={setPassword}
+                required
+              />
+              <div className="flex justify-end mt-1">
+                <Link
+                  href="/forgot-password"
+                  className="text-[11px] font-semibold text-brand-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            </motion.div>
+
+            {err ? (
               <div
                 role="alert"
-                className="text-body-sm text-error bg-error-light border border-error/20 rounded-md px-3 py-2"
+                className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"
               >
                 {err}
               </div>
-            )}
-            <Button
+            ) : null}
+
+            <motion.button
               type="submit"
-              variant="primary"
-              size="md"
-              fullWidth
-              loading={busy}
-              trailingIcon={!busy ? <ArrowRight size={14} /> : undefined}
+              variants={fieldV(reduced)}
+              disabled={busy || !email || !password}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-3 text-sm font-semibold text-white shadow-brand-glow/40 transition"
             >
-              {busy ? "Signing in…" : "Sign in"}
-            </Button>
-          </form>
+              {busy ? (
+                <span className="inline-block w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+              ) : (
+                <>
+                  Sign in <ArrowRight size={14} />
+                </>
+              )}
+            </motion.button>
+          </motion.form>
 
-          <div className="my-5 flex items-center gap-3">
-            <div className="h-px bg-neutral-200 flex-1" />
-            <span className="section-label">or</span>
-            <div className="h-px bg-neutral-200 flex-1" />
+          <div className="my-4 flex items-center gap-3">
+            <span className="h-px bg-brand-ink/10 flex-1" />
+            <span className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
+              or
+            </span>
+            <span className="h-px bg-brand-ink/10 flex-1" />
           </div>
 
-          <div className="space-y-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              fullWidth
-              onClick={() =>
-                signIn("google", { callbackUrl: active.href }).catch(() =>
-                  setErr("Google OAuth not configured. Use credentials."),
-                )
-              }
-            >
-              Continue with Google
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              fullWidth
-              onClick={() =>
-                signIn("linkedin", { callbackUrl: active.href }).catch(() =>
-                  setErr("LinkedIn OAuth not configured."),
-                )
-              }
-            >
-              Continue with LinkedIn
-            </Button>
-          </div>
+          <OAuthButtons callbackUrl={dest !== "/" ? dest : undefined} onError={setErr} />
 
-          <p className="mt-6 text-center text-body-xs text-neutral-500">
+          <p className="mt-5 text-center text-[11px] text-brand-muted">
             New here?{" "}
-            <Link href="/signup" className="text-brand-500 font-semibold hover:underline">
+            <Link
+              href="/signup"
+              className="text-brand-primary font-semibold hover:underline"
+            >
               Create an account
             </Link>
           </p>
-        </Card>
-
-        <div className="mt-4 text-center">
-          <Badge tone="neutral">
-            Demo accounts available · Switch role pill to try each side
-          </Badge>
-        </div>
-      </div>
-    </main>
+        </GlassCard>
+      </BreatheCard>
+    </AuthShell>
   );
+}
+
+/**
+ * BreatheCard — wraps the form card with two layered motions:
+ *   1. The error-shake controls (passed in from parent).
+ *   2. A constant soft box-shadow pulse that reads as "alive" without
+ *      shifting layout pixels. Using box-shadow instead of scale keeps
+ *      child elements stable for Playwright hit-testing.
+ */
+function BreatheCard({
+  shake,
+  reduced,
+  children,
+}: {
+  shake: ReturnType<typeof useAnimationControls>;
+  reduced: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <motion.div animate={shake}>
+      <motion.div
+        className="rounded-3xl"
+        animate={
+          reduced
+            ? { boxShadow: "0 0 0px rgba(1,145,252,0)" }
+            : {
+                boxShadow: [
+                  "0 0 0px rgba(1,145,252,0)",
+                  "0 0 28px rgba(1,145,252,0.15)",
+                  "0 0 0px rgba(1,145,252,0)",
+                ],
+              }
+        }
+        transition={
+          reduced
+            ? { duration: 0 }
+            : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }
+        }
+      >
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function validateEmail(v: string) {
+  if (!/\S+@\S+\.\S+/.test(v)) {
+    return { ok: false, message: "That doesn't look like a valid email." };
+  }
+  return { ok: true };
+}
+
+function fieldV(reduced: boolean | null) {
+  if (reduced) {
+    return { hidden: { opacity: 0 }, show: { opacity: 1 } };
+  }
+  return {
+    hidden: { opacity: 0, y: 8 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.32, ease: EASE_OUT_SOFT },
+    },
+  };
 }
 
 export default function LoginPage() {

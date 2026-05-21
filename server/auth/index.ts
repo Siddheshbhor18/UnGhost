@@ -92,15 +92,9 @@ export const authOptions: AuthOptions = {
           );
         }
 
-        // Phone-verification gate. We check for an explicit `false` so legacy
-        // / seed users (where the field is undefined) keep working without a
-        // grandfather migration. Newly created users via /api/auth/signup get
-        // the field set to `false` and must clear /verify-phone first.
-        if (user.phoneVerified === false) {
-          throw new Error(
-            "PHONE_UNVERIFIED · Verify your phone number to sign in. Check the OTP we sent during signup.",
-          );
-        }
+        // Phone-verification gate REMOVED. We dropped MSG91 / SMS OTP from
+        // the platform — email is the sole identity factor. Password resets
+        // use Resend, signup verifies the email but never the phone.
         // Email-verification is informational, not blocking — UI surfaces a
         // banner after sign-in so the user can click the link any time.
 

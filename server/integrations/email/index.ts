@@ -121,3 +121,85 @@ export async function sendPasswordReset(
       </div>`,
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+//  BOOTCAMP PAYMENT / ENROLLMENT TRANSACTIONAL EMAILS
+//  Fired by the QR-payment flow. Replaces the MSG91 SMS path entirely.
+//  Promised activation window is 20 minutes — keep the copy aligned with
+//  the UI confirmation toast on the enrollment page.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Helper: confirms receipt of a QR-payment submission (admin still verifying). */
+export async function sendPaymentReceived(
+  to: string,
+  vars: { name: string; bootcampTitle: string; utr: string },
+): Promise<EmailResult> {
+  const { name, bootcampTitle, utr } = vars;
+  return sendEmail({
+    to,
+    subject: `We received your payment for ${bootcampTitle}`,
+    text: `Hi ${name},\n\nWe received your UPI payment for "${bootcampTitle}" (UTR: ${utr}).\n\nOur team is verifying it now. Your account will be activated within ~20 minutes. You'll get a confirmation email once you're in.\n\nIf you have questions, reply to this email.\n\n— Team unGhost`,
+    html: `
+      <div style="font-family:system-ui,sans-serif;padding:24px;max-width:560px;color:#1A1816">
+        <h2 style="margin:0 0 12px 0">Payment received ✓</h2>
+        <p>Hi ${name},</p>
+        <p>We received your UPI payment for <strong>${bootcampTitle}</strong>.</p>
+        <table style="border-collapse:collapse;margin:16px 0">
+          <tr><td style="padding:4px 12px 4px 0;color:#666">UTR</td><td style="padding:4px 0;font-family:monospace">${utr}</td></tr>
+        </table>
+        <p>Our team is verifying it now. <strong>Your account will be activated within ~20 minutes.</strong> You'll get a confirmation email once you're in.</p>
+        <p style="color:#666;font-size:13px">Questions? Reply to this email.</p>
+        <p style="color:#999;font-size:11px;margin-top:24px">— Team unGhost</p>
+      </div>`,
+  });
+}
+
+/** Helper: enrollment approved — student now has dashboard access. */
+export async function sendEnrollmentApproved(
+  to: string,
+  vars: { name: string; bootcampTitle: string },
+): Promise<EmailResult> {
+  const { name, bootcampTitle } = vars;
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard`;
+  return sendEmail({
+    to,
+    subject: `You're enrolled in ${bootcampTitle} 🎉`,
+    text: `Hi ${name},\n\nYou're officially enrolled in "${bootcampTitle}".\n\nHead to your dashboard to see the schedule and join the first session:\n${dashboardUrl}\n\nLet's go.\n\n— Team unGhost`,
+    html: `
+      <div style="font-family:system-ui,sans-serif;padding:24px;max-width:560px;color:#1A1816">
+        <h2 style="margin:0 0 12px 0">You're in 🎉</h2>
+        <p>Hi ${name},</p>
+        <p>You're officially enrolled in <strong>${bootcampTitle}</strong>.</p>
+        <p><a href="${dashboardUrl}" style="display:inline-block;padding:12px 20px;background:#0191FC;color:#fff;border-radius:12px;text-decoration:none;font-weight:600">Open your dashboard</a></p>
+        <p style="color:#666;font-size:13px">You'll see your bootcamp schedule, joining links for live sessions (visible 15 min before start), and recordings as they're posted.</p>
+        <p style="color:#999;font-size:11px;margin-top:24px">— Team unGhost</p>
+      </div>`,
+  });
+}
+
+/** Helper: enrollment rejected — payment couldn't be verified. */
+export async function sendEnrollmentRejected(
+  to: string,
+  vars: { name: string; bootcampTitle: string; reason: string },
+): Promise<EmailResult> {
+  const { name, bootcampTitle, reason } = vars;
+  const retryUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/bootcamps`;
+  return sendEmail({
+    to,
+    subject: `We couldn't verify your payment for ${bootcampTitle}`,
+    text: `Hi ${name},\n\nWe weren't able to verify your payment for "${bootcampTitle}".\n\nReason: ${reason}\n\nIf this was a mistake, please resubmit with the correct details:\n${retryUrl}\n\nIf you've actually paid and believe this is a verification error, reply to this email with a screenshot of the UPI transaction and we'll sort it within 24 hours.\n\n— Team unGhost`,
+    html: `
+      <div style="font-family:system-ui,sans-serif;padding:24px;max-width:560px;color:#1A1816">
+        <h2 style="margin:0 0 12px 0">Payment couldn't be verified</h2>
+        <p>Hi ${name},</p>
+        <p>We weren't able to verify your payment for <strong>${bootcampTitle}</strong>.</p>
+        <div style="background:#FEF2F2;border-left:3px solid #DC2626;padding:12px 16px;margin:16px 0;border-radius:6px">
+          <p style="margin:0;color:#7F1D1D"><strong>Reason:</strong> ${reason}</p>
+        </div>
+        <p>If this was a mistake, please resubmit with the correct details:</p>
+        <p><a href="${retryUrl}" style="display:inline-block;padding:12px 20px;background:#0191FC;color:#fff;border-radius:12px;text-decoration:none;font-weight:600">Resubmit payment</a></p>
+        <p style="color:#666;font-size:13px">If you've actually paid and believe this is a verification error, reply to this email with a screenshot of the UPI transaction and we'll sort it within 24 hours.</p>
+        <p style="color:#999;font-size:11px;margin-top:24px">— Team unGhost</p>
+      </div>`,
+  });
+}

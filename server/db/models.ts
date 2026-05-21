@@ -143,6 +143,9 @@ const UserSchema = withJsonTransform(
       phoneVerified: { type: Boolean, default: false },
       phoneVerifiedAt: String,
       createdAt: String,
+      // ── Channel-partner attribution ──────────────────────────────
+      referrerPartnerId: { type: String, index: true },
+      referrerCapturedAt: String,
     },
     { versionKey: false },
   ),
@@ -245,6 +248,24 @@ const BootcampVideoSchema = new Schema(
   { _id: false },
 );
 
+// One live session inside a bootcamp. Created at scheduling time; `meetUrl`
+// + `calendarEventId` are populated later by the daily Vercel cron that
+// provisions tomorrow's Google Meet events. `recordingUrl` stays null on
+// free Google Workspace tiers — instructor pastes a YouTube/Drive/R2 link
+// via the admin "Upload recording" form after the session ends.
+const BootcampSessionSchema = new Schema(
+  {
+    _id: { type: String, required: true },
+    title: String,
+    scheduledFor: { type: Date, default: null },
+    durationMinutes: { type: Number, default: 90 },
+    meetUrl: { type: String, default: null },
+    calendarEventId: { type: String, default: null },
+    recordingUrl: { type: String, default: null },
+  },
+  { _id: true },
+);
+
 const BootcampSchema = withJsonTransform(
   new Schema(
     {
@@ -253,7 +274,13 @@ const BootcampSchema = withJsonTransform(
       category: { type: String, index: true },
       title: String,
       description: String,
+      // Legacy rupee price kept for backwards-compat reads. priceInPaise
+      // is authoritative — all calc + display goes through computeTotalPaise().
       priceINR: Number,
+      priceInPaise: { type: Number, default: 0 },
+      // GST rate applied on top of the base price at checkout. Default 18%
+      // matches Indian SaaS / education standard rate.
+      gstPercent: { type: Number, default: 18 },
       durationWeeks: Number,
       instructorId: String,
       videos: [BootcampVideoSchema],
@@ -264,6 +291,19 @@ const BootcampSchema = withJsonTransform(
       status: { type: String, index: true, default: "published" },
       submittedForReviewAt: String,
       reviewFeedback: String,
+      // ── Enrollment window + capacity (added by qr-payments-and-meet plan) ──
+      enrollmentOpensAt: { type: Date, default: null },
+      enrollmentClosesAt: { type: Date, default: null },
+      startsAt: { type: Date, default: null },
+      endsAt: { type: Date, default: null },
+      // Google Meet caps per-event attendees at 500 — reserve 5 for staff
+      // so default ceiling is 495. Per-bootcamp override allowed.
+      maxStudents: { type: Number, default: 495 },
+      // Atomic counter incremented by /api/enrollments POST inside a
+      // findOneAndUpdate guard (count < maxStudents). Decremented on
+      // admin reject so a rejected slot frees up. Approval keeps it counted.
+      currentSubmissionCount: { type: Number, default: 0 },
+      sessions: { type: [BootcampSessionSchema], default: [] },
     },
     { versionKey: false },
   ),
@@ -307,6 +347,115 @@ export const ApplicationModel: Model<Application> =
 export const BootcampModel: Model<Bootcamp> =
   (mongoose.models.Bootcamp as Model<Bootcamp>) ||
   mongoose.model<Bootcamp>("Bootcamp", BootcampSchema);
+
+// ─────────────────────────────────────────────────────────────────────────
+//  PaymentSubmission
+//  A student-submitted record claiming they've paid for a bootcamp via
+//  the static merchant QR. Admin manually verifies the UTR against the
+//  PhonePe merchant portal before flipping status to `approved`.
+//
+//  Why a partial unique index, not a hard one:
+//    A student may legitimately resubmit a different UTR after their
+//    first submission was rejected (e.g. typo). The partial filter on
+//    {status ∈ pending_verification, approved} blocks duplicate active
+//    submissions while leaving rejected ones alone.
+//
+//  Why `expectedAmountInPaise` is denormalised onto the submission:
+//    Bootcamp price changes (rare but possible) shouldn't retroactively
+//    flag old submissions as wrong-amount. Lock the expected total at
+//    submission time.
+// ─────────────────────────────────────────────────────────────────────────
+const PaymentSubmissionSchema = withJsonTransform(
+  new Schema(
+    {
+      _id: { type: String, required: true },
+      userId: { type: String, required: true, index: true },
+      bootcampId: { type: String, required: true, index: true },
+      expectedAmountInPaise: { type: Number, required: true },
+      utr: {
+        type: String,
+        required: true,
+        trim: true,
+        uppercase: true,
+        // Index defined separately below as a partial filter — declaring
+        // `index: true` here too would create a duplicate, which Mongoose
+        // warns about and then silently drops one of.
+      },
+      upiApp: {
+        type: String,
+        enum: ["phonepe", "gpay", "paytm", "bhim", "other"],
+        required: true,
+      },
+      payerMobile: { type: String, required: true, trim: true },
+      status: {
+        type: String,
+        enum: ["pending_verification", "approved", "rejected", "flagged"],
+        default: "pending_verification",
+        index: true,
+      },
+      rejectionReason: { type: String, default: null },
+      // Idempotency key the client sends as `Idempotency-Key` header.
+      // Server stores it for 24h in Redis with the resulting submission id
+      // so retries with the same key return the original submission.
+      idempotencyKey: { type: String, default: null, index: true },
+      reviewedBy: { type: String, default: null },
+      reviewedAt: { type: Date, default: null },
+      notes: { type: String, default: null },
+      createdAt: { type: Date, default: Date.now, index: true },
+      updatedAt: { type: Date, default: Date.now },
+    },
+    { versionKey: false, timestamps: true },
+  ),
+);
+
+// Admin dashboard query: oldest pending first.
+PaymentSubmissionSchema.index({ status: 1, createdAt: 1 });
+// Block duplicate active submissions per student/bootcamp. `flagged` is
+// included so a student whose submission is held for review can't sneak in
+// a second one and inflate the seat counter.
+PaymentSubmissionSchema.index(
+  { userId: 1, bootcampId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $in: ["pending_verification", "approved", "flagged"] },
+    },
+  },
+);
+// Catch duplicate UTRs submitted by different users (fraud signal).
+PaymentSubmissionSchema.index(
+  { utr: 1 },
+  {
+    partialFilterExpression: {
+      status: { $in: ["pending_verification", "approved", "flagged"] },
+    },
+  },
+);
+
+export interface PaymentSubmission {
+  id: string;
+  userId: string;
+  bootcampId: string;
+  expectedAmountInPaise: number;
+  utr: string;
+  upiApp: "phonepe" | "gpay" | "paytm" | "bhim" | "other";
+  payerMobile: string;
+  status: "pending_verification" | "approved" | "rejected" | "flagged";
+  rejectionReason: string | null;
+  idempotencyKey: string | null;
+  reviewedBy: string | null;
+  reviewedAt: Date | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const PaymentSubmissionModel: Model<PaymentSubmission> =
+  (mongoose.models.PaymentSubmission as Model<PaymentSubmission>) ||
+  mongoose.model<PaymentSubmission>(
+    "PaymentSubmission",
+    PaymentSubmissionSchema,
+  );
 
 export const CampaignModel: Model<Campaign> =
   (mongoose.models.Campaign as Model<Campaign>) ||
@@ -594,7 +743,8 @@ const LiveSessionSchema = withJsonTransform(
   new Schema(
     {
       _id: { type: String, required: true },
-      bootcampId: { type: String, index: true },
+      // Optional — free lead-gen webinars have no parent bootcamp.
+      bootcampId: { type: String, index: true, default: null },
       instructorId: { type: String, index: true },
       title: String,
       description: String,
@@ -602,6 +752,11 @@ const LiveSessionSchema = withJsonTransform(
       durationMin: Number,
       status: { type: String, default: "scheduled", index: true },
       roomCode: { type: String, unique: true, index: true },
+      // 'free' opens to any logged-in user; 'paid' enforces bootcamp enrollment.
+      tier: { type: String, default: "free", index: true },
+      // YouTube Live video ID. Admin pastes it once the broadcaster is up.
+      // Until set, the /live/[code] page shows "starting soon" instead of the iframe.
+      youtubeVideoId: { type: String, default: null },
       registeredStudentIds: [String],
       attendedStudentIds: [String],
       createdAt: { type: String, index: true },
@@ -618,6 +773,86 @@ const LiveSessionSchema = withJsonTransform(
 export const LiveSessionModel: Model<LiveSession> =
   (mongoose.models.LiveSession as Model<LiveSession>) ||
   mongoose.model<LiveSession>("LiveSession", LiveSessionSchema);
+
+// ---------- Live session chat ----------
+// Chat messages live on a separate collection for fast appends + bounded
+// query (latest N for a session). TTL index auto-purges after 7 days so we
+// don't bloat the DB long-term — lecture chats aren't archive material.
+const LiveSessionMessageSchema = withJsonTransform(
+  new Schema(
+    {
+      _id: { type: String, required: true },
+      sessionId: { type: String, required: true, index: true },
+      userId: { type: String, required: true, index: true },
+      // Denormalised user name — keeps the chat render path zero-join.
+      // Stale if user renames mid-session; acceptable for live chat.
+      userName: { type: String, required: true },
+      body: { type: String, required: true },
+      createdAt: { type: Date, default: Date.now, index: true },
+      deletedAt: { type: Date, default: null, index: true },
+      deletedBy: { type: String, default: null },
+    },
+    { versionKey: false },
+  ),
+);
+// TTL — automatic cleanup after 7 days. Mongo runs the reaper every 60 sec.
+LiveSessionMessageSchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 7 * 24 * 60 * 60 },
+);
+// Hot-path index — fetch the latest N for a session, paginated by id.
+LiveSessionMessageSchema.index({ sessionId: 1, createdAt: -1 });
+
+export interface LiveSessionMessage {
+  id: string;
+  sessionId: string;
+  userId: string;
+  userName: string;
+  body: string;
+  createdAt: Date;
+  deletedAt: Date | null;
+  deletedBy: string | null;
+}
+
+export const LiveSessionMessageModel: Model<LiveSessionMessage> =
+  (mongoose.models.LiveSessionMessage as Model<LiveSessionMessage>) ||
+  mongoose.model<LiveSessionMessage>(
+    "LiveSessionMessage",
+    LiveSessionMessageSchema,
+  );
+
+// ---------- Live session attendee (lead capture) ----------
+// One doc per (session, user). Writes once on first chat-join. Used to:
+//   • Count unique attendees for analytics
+//   • Email follow-ups ("thanks for joining, here's the bootcamp")
+//   • Build a marketing-allowed lead list for free sessions
+// The composite _id prevents duplicate joins from creating extra rows.
+const LiveSessionAttendeeSchema = withJsonTransform(
+  new Schema(
+    {
+      _id: { type: String, required: true }, // `${sessionId}:${userId}`
+      sessionId: { type: String, required: true, index: true },
+      userId: { type: String, required: true, index: true },
+      joinedAt: { type: Date, default: Date.now },
+    },
+    { versionKey: false },
+  ),
+);
+LiveSessionAttendeeSchema.index({ sessionId: 1, joinedAt: 1 });
+
+export interface LiveSessionAttendee {
+  id: string;
+  sessionId: string;
+  userId: string;
+  joinedAt: Date;
+}
+
+export const LiveSessionAttendeeModel: Model<LiveSessionAttendee> =
+  (mongoose.models.LiveSessionAttendee as Model<LiveSessionAttendee>) ||
+  mongoose.model<LiveSessionAttendee>(
+    "LiveSessionAttendee",
+    LiveSessionAttendeeSchema,
+  );
 
 // ---------- Session recordings ----------
 const SessionRecordingSchema = withJsonTransform(
@@ -741,6 +976,33 @@ const ProcessedTxnSchema = withJsonTransform(
 export const ProcessedTxnModel: Model<ProcessedTxn> =
   (mongoose.models.ProcessedTxn as Model<ProcessedTxn>) ||
   mongoose.model<ProcessedTxn>("ProcessedTxn", ProcessedTxnSchema);
+
+// ---------- Partner (channel referrals) ----------
+// Each row is a referral source. URL-safe `code` keys the public-facing
+// link. `dashboardToken` is the bearer that authenticates the partner's
+// dashboard at /p/<code>?key=<token>. Rotating the token re-issues the URL.
+const PartnerSchema = withJsonTransform(
+  new Schema(
+    {
+      _id: { type: String, required: true },
+      code: { type: String, required: true, unique: true, index: true },
+      name: { type: String, required: true },
+      contactEmail: { type: String, required: true },
+      commissionPct: { type: Number, default: 0 },
+      dashboardToken: { type: String, required: true },
+      active: { type: Boolean, default: true, index: true },
+      notes: String,
+      createdAt: { type: String, required: true },
+      createdByAdminId: { type: String, required: true },
+      tokenRotatedAt: String,
+    },
+    { versionKey: false },
+  ),
+);
+
+export const PartnerModel: Model<import("@/shared/types").Partner> =
+  (mongoose.models.Partner as Model<import("@/shared/types").Partner>) ||
+  mongoose.model<import("@/shared/types").Partner>("Partner", PartnerSchema);
 
 /**
  * Strip mongo's `_id` and shape doc back to domain object with `id`.

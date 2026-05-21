@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Press_Start_2P } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/shared/Providers";
+import { RefCapture } from "@/components/attribution/RefCapture";
 import { DemoModeBadge } from "@/components/glass";
 
 /**
@@ -68,6 +69,7 @@ export default function RootLayout({
     >
       <body>
         <Providers>{children}</Providers>
+        <RefCapture />
         <DemoModeBadge />
       </body>
     </html>

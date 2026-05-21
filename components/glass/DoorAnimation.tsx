@@ -9,7 +9,7 @@ import {
 } from "framer-motion";
 import { Heart, Moon, PartyPopper, Sparkles } from "lucide-react";
 
-type Mood =
+export type Mood =
   | "default"
   | "morning"
   | "afternoon"
@@ -27,7 +27,7 @@ interface Props {
   onComplete?: () => void;
 }
 
-function autoMood(): Mood {
+export function autoMood(): Mood {
   const now = new Date();
   const hr = now.getHours();
   const day = now.getDay();
@@ -41,7 +41,7 @@ function autoMood(): Mood {
   return "evening";
 }
 
-function moodCopy(mood: Mood) {
+export function moodCopy(mood: Mood) {
   switch (mood) {
     case "morning":
       return { greeting: "Good morning", icon: <Sparkles size={14} className="text-amber-500" /> };

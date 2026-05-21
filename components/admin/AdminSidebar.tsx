@@ -20,6 +20,9 @@ import {
   LifeBuoy,
   MailOpen,
   Plug,
+  Handshake,
+  Wallet,
+  Radio,
 } from "lucide-react";
 import { Logo, GlassBadge } from "@/components/glass";
 
@@ -34,11 +37,14 @@ const NAV = [
   { href: "/admin/placements", label: "Placements", icon: Award },
   { href: "/admin/moderation", label: "Moderation", icon: ShieldAlert },
   { href: "/admin/financial", label: "Financial", icon: IndianRupee },
+  { href: "/admin/payment-approvals", label: "Payment approvals", icon: Wallet },
+  { href: "/admin/live-sessions", label: "Live sessions", icon: Radio },
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
   { href: "/admin/emails", label: "Email templates", icon: MailOpen },
   { href: "/admin/audit", label: "Audit", icon: FileSearch },
   { href: "/admin/telemetry", label: "Telemetry", icon: TrendingUp },
   { href: "/admin/campaigns", label: "Campaigns", icon: Megaphone },
+  { href: "/admin/partners", label: "Partners", icon: Handshake },
   { href: "/admin/integrations", label: "Integrations", icon: Plug },
 ];
 

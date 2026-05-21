@@ -255,6 +255,43 @@ export interface User {
   phoneVerified?: boolean;
   phoneVerifiedAt?: string;
   createdAt?: string;
+  /** Channel-partner attribution. Set on signup if a `?ref=<code>` was
+   *  captured during the visit. Powers /admin/partners + /p/[code] stats. */
+  referrerPartnerId?: string;
+  referrerCapturedAt?: string;
+}
+
+/**
+ * Channel partner (referral). Each row owns a unique short `code` and a long
+ * `dashboardToken`. The partner's URL is `unghost.in/p/<code>?key=<token>`.
+ * Signups arriving with `?ref=<code>` get attributed.
+ */
+export interface Partner {
+  id: string;
+  /** URL-safe slug, e.g. "acme-college-mumbai". Unique. */
+  code: string;
+  name: string;
+  contactEmail: string;
+  /** Percentage of paid-conversion revenue owed to the partner (0-50). */
+  commissionPct: number;
+  /** Long random hex — bearer token for the partner's dashboard URL. */
+  dashboardToken: string;
+  /** When true, /signup attribution still works; when false, link returns 404. */
+  active: boolean;
+  notes?: string;
+  createdAt: string;
+  createdByAdminId: string;
+  tokenRotatedAt?: string;
+}
+
+/** Aggregate stats for a single partner. Computed on demand. */
+export interface PartnerStats {
+  partnerId: string;
+  signups: number;
+  paidPro: number;
+  paidPremium: number;
+  /** Estimated commission in INR rupees (not paise). */
+  estCommissionINR: number;
 }
 
 export interface Job {
@@ -333,17 +370,37 @@ export type BootcampStatus =
   | "changes_requested"
   | "archived";
 
+/** One live session inside a bootcamp. Used by the Vercel-cron Meet
+ *  provisioning + the JoinSessionButton. */
+export interface BootcampSession {
+  id: string;
+  title: string;
+  /** ISO timestamp. Null = admin hasn't scheduled this session yet. */
+  scheduledFor: string | null;
+  durationMinutes: number;
+  /** Populated by the daily cron at ~midnight IST for tomorrow's sessions. */
+  meetUrl: string | null;
+  calendarEventId: string | null;
+  /** Manually uploaded by instructor post-session (Drive / YouTube / R2). */
+  recordingUrl: string | null;
+}
+
 export interface Bootcamp {
   id: string;
   skill: string;
   category: BootcampCategory;
   title: string;
   description: string;
+  /** @deprecated kept for backwards-compat reads. Use `priceInPaise`. */
   priceINR: number;
+  /** Authoritative price in paise. All checkout math goes through computeTotalPaise(). */
+  priceInPaise: number;
+  /** GST rate (integer percent). Default 18%. */
+  gstPercent: number;
   durationWeeks: number;
   instructorId: string; // admin user id
   videos: BootcampVideo[];
-  liveSlots: string[]; // ISO timestamps
+  liveSlots: string[]; // ISO timestamps (legacy — superseded by sessions[].scheduledFor)
   enrolledStudentIds: string[];
   rating: number;
   coverColor: string; // legacy neon token; ignored by glass UI
@@ -353,6 +410,18 @@ export interface Bootcamp {
   submittedForReviewAt?: string;
   /** Set when admin requests changes — instructor sees the feedback. */
   reviewFeedback?: string;
+  // ── QR-payment + Meet enrollment fields ───────────────────────────────
+  /** ISO timestamp. Enrollment POST is rejected outside [opensAt, closesAt]. */
+  enrollmentOpensAt: string | null;
+  enrollmentClosesAt: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  /** Capacity ceiling — Google Meet caps at 500, reserve 5 for staff. */
+  maxStudents: number;
+  /** Atomic counter for capacity check. Reads via findOneAndUpdate guard. */
+  currentSubmissionCount: number;
+  /** Live sessions schedule. Meet URLs filled by daily cron. */
+  sessions: BootcampSession[];
 }
 
 export type SponsorshipStatus =
@@ -628,9 +697,14 @@ export type LiveSessionStatus =
   | "ended"
   | "cancelled";
 
+/** "free" sessions are lead-gen webinars open to any logged-in user.
+ *  "paid" sessions are gated by enrollment in the linked bootcamp. */
+export type LiveSessionTier = "free" | "paid";
+
 export interface LiveSession {
   id: string;
-  bootcampId: string;
+  /** Optional now — free lead-gen sessions have no bootcamp parent. */
+  bootcampId?: string | null;
   instructorId: string;
   title: string;
   description?: string;
@@ -640,6 +714,11 @@ export interface LiveSession {
   status: LiveSessionStatus;
   /** Short code used in /live/[code] URLs. */
   roomCode: string;
+  /** Free vs paid — controls auth gate. Default 'free'. */
+  tier?: LiveSessionTier;
+  /** YouTube Live video ID. Pasted by admin once the broadcaster goes live.
+   *  Until set, the session page shows a "starting soon" placeholder. */
+  youtubeVideoId?: string | null;
   registeredStudentIds: string[];
   attendedStudentIds: string[];
   createdAt: string;

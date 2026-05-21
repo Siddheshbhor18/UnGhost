@@ -1,6 +1,6 @@
 // Unified integration-status helper. Used by /admin/integrations and by
 // the demo-mode badge.
-import { aiMode } from "@/server/integrations/ai";
+import { aiMode, aiProvider } from "@/server/integrations/ai";
 import { smsMode } from "@/server/integrations/sms";
 import { emailMode } from "@/server/integrations/email";
 import { paymentsMode } from "@/server/integrations/payments";
@@ -39,10 +39,17 @@ export function listIntegrations(): IntegrationStatus[] {
     {
       id: "ai",
       label: "AI (LLM)",
-      provider: "Anthropic Claude",
+      provider:
+        aiProvider() === "groq"
+          ? "Groq Llama 3.1 8B Instant (→ Gemini fallback)"
+          : aiProvider() === "gemini"
+            ? "Google Gemini 2.5 Flash"
+            : aiProvider() === "anthropic"
+              ? "Anthropic Claude Haiku 4.5"
+              : "Mock (deterministic)",
       mode: aiMode(),
-      envKeys: ["ANTHROPIC_API_KEY"],
-      hint: "Set ANTHROPIC_API_KEY to swap mock for real Claude responses.",
+      envKeys: ["GROQ_API_KEY", "GOOGLE_AI_API_KEY", "ANTHROPIC_API_KEY"],
+      hint: "Priority: GROQ_API_KEY (low-latency primary) > GOOGLE_AI_API_KEY (fallback) > ANTHROPIC_API_KEY. Each provider catches its own failures and chains down.",
     },
     {
       id: "sms",

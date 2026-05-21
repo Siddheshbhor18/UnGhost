@@ -1,0 +1,10 @@
+# unGhost robots.txt
+User-agent: *
+Allow: /
+
+# Hide partner portal from search engines. The dashboard URL doubles as a
+# bearer token — surfacing it in a crawler index would be a leak.
+Disallow: /p/
+Disallow: /api/
+
+Sitemap: https://www.unghost.in/sitemap.xml
