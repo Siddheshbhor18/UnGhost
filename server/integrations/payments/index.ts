@@ -80,7 +80,11 @@ export async function createPayment(
     });
     // In mock mode we drop a fake hosted-checkout URL that immediately
     // redirects to the success callback. UI shows a "Demo · auto-succeed" banner.
-    const url = `${input.redirectUrl}?status=success&orderId=${input.orderId}&mock=1`;
+    const urlObj = new URL(input.redirectUrl);
+    urlObj.searchParams.set("status", "success");
+    urlObj.searchParams.set("orderId", input.orderId);
+    urlObj.searchParams.set("mock", "1");
+    const url = urlObj.toString();
     return {
       ok: true,
       channel: "mock",
