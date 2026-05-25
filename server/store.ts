@@ -3481,6 +3481,57 @@ export async function listUpcomingLiveForStudent(
   }));
 }
 
+/**
+ * Landing-page teaser data — fetch free-tier live sessions around "now" so
+ * LiveSessionsTeaser can pick the right render state (live, starting-soon,
+ * upcoming, recent-recording, or nothing).
+ *
+ * Previously the component imported `connectMongo` + `LiveSessionModel`
+ * directly, violating the boundaries/element-types rule and blocking prod
+ * builds. This store function is the proper data-access layer entrypoint.
+ */
+export interface TeaserLiveSession {
+  code: string;
+  title: string;
+  description?: string;
+  startsAt?: string;
+  status: string;
+  endedAt?: string;
+  youtubeVideoId?: string | null;
+  recordingUrl?: string;
+}
+
+export async function listFreeLiveTeaserSessions(): Promise<TeaserLiveSession[]> {
+  await db();
+  const docs = await LiveSessionModel.find({
+    tier: "free",
+    status: { $in: ["scheduled", "live", "ended"] },
+  })
+    .sort({ startsAt: 1 })
+    .limit(20)
+    .lean();
+
+  return (docs as unknown as Array<{
+    roomCode: string;
+    title: string;
+    description?: string;
+    startsAt?: string;
+    status: string;
+    endedAt?: string;
+    youtubeVideoId?: string | null;
+    recordingUrl?: string;
+  }>).map((s) => ({
+    code: s.roomCode,
+    title: s.title,
+    description: s.description,
+    startsAt: s.startsAt,
+    status: s.status,
+    endedAt: s.endedAt,
+    youtubeVideoId: s.youtubeVideoId,
+    recordingUrl: s.recordingUrl,
+  }));
+}
+
 export async function registerForLiveSession(
   sessionId: string,
   studentId: string,

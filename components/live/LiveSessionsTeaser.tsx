@@ -16,41 +16,10 @@
  * unauthenticated visitors.
  */
 import Link from "next/link";
-import { connectMongo } from "@/server/db/mongo";
-import { LiveSessionModel } from "@/server/db/models";
-
-interface TeaserSession {
-  code: string;
-  title: string;
-  description?: string;
-  startsAt?: string;
-  status: string;
-  youtubeVideoId?: string | null;
-  recordingUrl?: string;
-}
+import { listFreeLiveTeaserSessions, type TeaserLiveSession } from "@/server/store";
 
 export async function LiveSessionsTeaser() {
-  await connectMongo();
-
-  // Single bounded query — fetch the most-relevant 10 free sessions in
-  // both directions around now, then pick the right state in JS. Keeps
-  // the index-driven query simple.
-  const sessions = (await LiveSessionModel.find({
-    tier: "free",
-    status: { $in: ["scheduled", "live", "ended"] },
-  })
-    .sort({ startsAt: 1 })
-    .limit(20)
-    .lean()) as unknown as Array<{
-    roomCode: string;
-    title: string;
-    description?: string;
-    startsAt?: string;
-    status: string;
-    youtubeVideoId?: string | null;
-    recordingUrl?: string;
-    endedAt?: string;
-  }>;
+  const sessions = await listFreeLiveTeaserSessions();
 
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
@@ -58,7 +27,7 @@ export async function LiveSessionsTeaser() {
   const live = sessions.find(
     (s) => s.status === "live" && s.youtubeVideoId,
   );
-  if (live) return <LiveNowCard session={toTeaser(live)} />;
+  if (live) return <LiveNowCard session={live} />;
 
   const upcoming = sessions
     .filter(
@@ -76,10 +45,10 @@ export async function LiveSessionsTeaser() {
   if (next) {
     const msAway = new Date(next.startsAt!).getTime() - now;
     if (msAway < day) {
-      return <StartsSoonCard session={toTeaser(next)} msAway={msAway} />;
+      return <StartsSoonCard session={next} msAway={msAway} />;
     }
     if (msAway < 30 * day) {
-      return <UpcomingCard session={toTeaser(next)} extras={upcoming.slice(1, 3).map(toTeaser)} />;
+      return <UpcomingCard session={next} extras={upcoming.slice(1, 3)} />;
     }
   }
 
@@ -96,7 +65,7 @@ export async function LiveSessionsTeaser() {
         new Date(b.endedAt!).getTime() - new Date(a.endedAt!).getTime(),
     );
   if (recent[0]) {
-    return <RecentRecordingCard session={toTeaser(recent[0])} />;
+    return <RecentRecordingCard session={recent[0]} />;
   }
 
   // State 5 — nothing to surface. Render nothing so the landing page
@@ -104,30 +73,13 @@ export async function LiveSessionsTeaser() {
   return null;
 }
 
-function toTeaser(s: {
-  roomCode: string;
-  title: string;
-  description?: string;
-  startsAt?: string;
-  status: string;
-  youtubeVideoId?: string | null;
-  recordingUrl?: string;
-}): TeaserSession {
-  return {
-    code: s.roomCode,
-    title: s.title,
-    description: s.description,
-    startsAt: s.startsAt,
-    status: s.status,
-    youtubeVideoId: s.youtubeVideoId,
-    recordingUrl: s.recordingUrl,
-  };
-}
+
+
 
 // ─────────────────────────────────────────────────────────────────────────
 //  State 1: LIVE NOW — loudest visual, pulsing dot, attendance encourager
 // ─────────────────────────────────────────────────────────────────────────
-function LiveNowCard({ session }: { session: TeaserSession }) {
+function LiveNowCard({ session }: { session: TeaserLiveSession }) {
   return (
     <section className="mx-auto max-w-content px-4 py-12">
       <Link
@@ -170,7 +122,7 @@ function StartsSoonCard({
   session,
   msAway,
 }: {
-  session: TeaserSession;
+  session: TeaserLiveSession;
   msAway: number;
 }) {
   const minutes = Math.max(1, Math.floor(msAway / 60_000));
@@ -215,8 +167,8 @@ function UpcomingCard({
   session,
   extras,
 }: {
-  session: TeaserSession;
-  extras: TeaserSession[];
+  session: TeaserLiveSession;
+  extras: TeaserLiveSession[];
 }) {
   return (
     <section className="mx-auto max-w-content px-4 py-12">
@@ -291,7 +243,7 @@ function UpcomingCard({
 // ─────────────────────────────────────────────────────────────────────────
 //  State 4: RECENT RECORDING — "missed it? catch up"
 // ─────────────────────────────────────────────────────────────────────────
-function RecentRecordingCard({ session }: { session: TeaserSession }) {
+function RecentRecordingCard({ session }: { session: TeaserLiveSession }) {
   return (
     <section className="mx-auto max-w-content px-4 py-12">
       <Link
