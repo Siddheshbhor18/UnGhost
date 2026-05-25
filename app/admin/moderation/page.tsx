@@ -1,57 +1,30 @@
 import {
   AlertTriangle,
   Briefcase,
+  CheckCircle2,
   FileText,
   Flag,
   MessageCircle,
   ShieldAlert,
+  Sparkles,
   User as UserIcon,
 } from "lucide-react";
 import { GlassBadge, GlassCard } from "@/components/glass";
-import {
-  createModerationFlag,
-  listModerationFlags,
-} from "@/server/store";
+import { listModerationFlags } from "@/server/store";
 import { ModerationActionCard } from "@/components/admin/ModerationActionCard";
 
-// Phase 1: seed a few example flags on first visit so the queue isn't empty.
-// Real impl: flags arrive via Inngest jobs from AI moderation pre-check.
-async function seedIfEmpty() {
-  const existing = await listModerationFlags({ limit: 1 });
-  if (existing.length > 0) return;
-  await Promise.all([
-    createModerationFlag({
-      kind: "job_posting",
-      targetId: "job_demo_1",
-      targetLabel: "Senior Engineer · Vague Co.",
-      contentExcerpt:
-        "Looking for rockstar 10x ninjas who can work 12-hour days and rapidly grind. Salary based on passion.",
-      aiConfidence: 78,
-      reasons: ["unrealistic_expectations", "non_specific_role", "salary_disclosed_as_passion"],
-      reportedBy: "ai_moderation",
-    }),
-    createModerationFlag({
-      kind: "user_message",
-      targetId: "msg_demo_1",
-      targetLabel: "Recruiter → Anonymous candidate",
-      contentExcerpt:
-        "How old are you? Are you married? We prefer younger candidates with no family commitments.",
-      aiConfidence: 96,
-      reasons: ["age_discrimination", "marital_status_inquiry"],
-      reportedBy: "ai_moderation",
-    }),
-    createModerationFlag({
-      kind: "bootcamp_assignment",
-      targetId: "assn_demo_1",
-      targetLabel: "Top-10 submission · LLM Grounding",
-      contentExcerpt:
-        "Furthermore, in conclusion, it is important to note that LLM grounding is a critical aspect of...",
-      aiConfidence: 84,
-      reasons: ["ai_generated_likelihood", "generic_phrasing"],
-      reportedBy: "ai_detection",
-    }),
-  ]);
-}
+// NOTE — auto-seeding of demo flags was removed (was: a `seedIfEmpty()` that
+// silently inserted 3 fake "Vague Co." / age-discrimination / AI-detection
+// rows into the real ModerationFlag collection on every render of an empty
+// queue). That was acceptable as a dev fixture, but in prod it polluted the
+// DB and made the queue feel "live" when it wasn't. Real flags now only
+// arrive from:
+//   • the auto-flag write inside admin/user moderation actions
+//   • the abuse webhook receiver (see app/api/webhooks/100ms etc.)
+//   • the future Inngest AI-moderation pipeline (parked until cohort 2).
+//
+// If the queue is genuinely empty, the empty state below reads as "queue
+// clear" rather than auto-fabricating work for the admin.
 
 const KIND_ICON: Record<string, React.ReactNode> = {
   job_posting: <Briefcase size={14} />,
@@ -62,7 +35,6 @@ const KIND_ICON: Record<string, React.ReactNode> = {
 };
 
 export default async function ModerationQueue() {
-  await seedIfEmpty();
   const [pending, decided] = await Promise.all([
     listModerationFlags({ decision: "pending", limit: 50 }),
     listModerationFlags({ limit: 30 }),
@@ -84,13 +56,15 @@ export default async function ModerationQueue() {
         </p>
       </div>
 
-      {/* Stats strip */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Stats strip — only counts what's actually in the DB. The earlier
+          "~70% AI pre-filter" tile was a static literal; removed until
+          there's a real moderation pipeline emitting metrics we can show. */}
+      <div className="grid grid-cols-2 gap-3 max-w-xl">
         <GlassCard className="!p-4">
           <p className="text-[10px] uppercase tracking-wider text-amber-600 font-semibold">
             Pending
           </p>
-          <p className="font-display text-3xl font-bold text-amber-600 mt-1">
+          <p className="font-display text-3xl font-bold text-amber-600 mt-1 tnum">
             {pending.length}
           </p>
         </GlassCard>
@@ -98,19 +72,8 @@ export default async function ModerationQueue() {
           <p className="text-[10px] uppercase tracking-wider text-emerald-600 font-semibold">
             Decided (recent)
           </p>
-          <p className="font-display text-3xl font-bold text-emerald-600 mt-1">
+          <p className="font-display text-3xl font-bold text-emerald-600 mt-1 tnum">
             {recentDecided.length}
-          </p>
-        </GlassCard>
-        <GlassCard className="!p-4">
-          <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold">
-            AI auto-pre-filter
-          </p>
-          <p className="font-display text-3xl font-bold text-brand-primary mt-1">
-            ~70%
-          </p>
-          <p className="text-[10px] text-brand-muted mt-1">
-            of garbage caught before this queue
           </p>
         </GlassCard>
       </div>
@@ -121,9 +84,18 @@ export default async function ModerationQueue() {
           Awaiting decision · {pending.length}
         </h2>
         {pending.length === 0 ? (
-          <GlassCard className="text-center !py-10">
-            <p className="text-sm text-brand-muted">
-              Queue clear. AI pre-filter handling everything.
+          <GlassCard className="text-center !py-12">
+            <div className="mx-auto grid place-items-center w-14 h-14 rounded-2xl bg-emerald-500/15 text-emerald-600 mb-3">
+              <CheckCircle2 size={26} />
+            </div>
+            <p className="font-display font-bold text-brand-ink">All clear</p>
+            <p className="text-sm text-brand-muted mt-1.5 max-w-md mx-auto leading-relaxed">
+              No flags awaiting review. New flags arrive when admins flag
+              users / jobs / messages, or when the abuse-detection pipeline
+              writes one.
+            </p>
+            <p className="text-[11px] text-brand-muted/80 mt-4 inline-flex items-center gap-1">
+              <Sparkles size={11} /> Auto AI pre-filter is a Phase-2 item
             </p>
           </GlassCard>
         ) : (

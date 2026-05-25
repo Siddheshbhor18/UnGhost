@@ -19,6 +19,7 @@ import {
 import { GlassBadge, GlassButton, GlassCard } from "@/components/glass";
 import { TutorPanel } from "@/components/student/TutorPanel";
 import { SkillCheckModal } from "@/components/student/SkillCheckModal";
+import { VideoPlayer } from "@/components/bootcamp/VideoPlayer";
 import type { Bootcamp, BootcampProgress, BootcampVideo } from "@/shared/types";
 import type { SkillCheckQuestion } from "@/shared/types/ai";
 
@@ -296,35 +297,26 @@ export function LearnInterface({
 
       {/* ── Center: Player + content tabs ──────────────── */}
       <div className="lg:col-span-6 space-y-4">
-        {/* Video stage */}
+        {/* Video stage — VideoPlayer auto-routes YouTube embed vs HTML5
+            video vs "coming soon" placeholder depending on the URL shape. */}
         <GlassCard className="!p-0 overflow-hidden">
-          <div className="relative aspect-video bg-brand-ink">
-            {isLocked ? (
-              <div className="absolute inset-0 grid place-items-center text-white/80 text-center p-6">
-                <div>
-                  <Lock size={28} className="mx-auto mb-3" />
-                  <p className="font-display font-bold text-lg">
-                    Locked
-                  </p>
-                  <p className="text-sm text-white/60 mt-1">
-                    Pass the previous lesson's skill check to unlock this video.
-                  </p>
-                </div>
+          {isLocked ? (
+            <div className="relative aspect-video bg-brand-ink grid place-items-center text-white/80 text-center p-6">
+              <div>
+                <Lock size={28} className="mx-auto mb-3" />
+                <p className="font-display font-bold text-lg">Locked</p>
+                <p className="text-sm text-white/60 mt-1">
+                  Pass the previous lesson&apos;s skill check to unlock this video.
+                </p>
               </div>
-            ) : (
-              <div className="absolute inset-0 grid place-items-center text-white/80">
-                <div className="text-center">
-                  <PlayCircle size={48} className="mx-auto mb-2" />
-                  <p className="text-sm font-mono text-white/60">
-                    Video placeholder · {activeVideo?.durationMin ?? 0} min
-                  </p>
-                  <p className="text-xs text-white/40 mt-1">
-                    Real impl: HLS via Cloudflare Stream
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <VideoPlayer
+              url={activeVideo?.url ?? null}
+              posterUrl={activeVideo?.posterUrl}
+              title={activeVideo?.title}
+            />
+          )}
           <div className="p-4 flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold">

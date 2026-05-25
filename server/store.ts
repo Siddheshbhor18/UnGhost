@@ -241,7 +241,6 @@ export async function createUserWithCredentials(
     plan: "free",
     planType: "free",
     emailVerified: false,
-    phoneVerified: false,
     status: "active",
     createdAt: now,
   };
@@ -284,16 +283,6 @@ export async function markEmailVerified(userId: string): Promise<void> {
   await UserModel.updateOne(
     { _id: userId },
     { $set: { emailVerified: true, emailVerifiedAt: now } },
-  );
-}
-
-/** Flip phoneVerified to true. Idempotent. */
-export async function markPhoneVerified(userId: string): Promise<void> {
-  await db();
-  const now = new Date().toISOString();
-  await UserModel.updateOne(
-    { _id: userId },
-    { $set: { phoneVerified: true, phoneVerifiedAt: now } },
   );
 }
 
@@ -999,6 +988,382 @@ export async function getBootcampProgress(
   return list.find((p) => p.bootcampId === bootcampId);
 }
 
+/**
+ * Real "Needs Action Now" + content-performance signals for the instructor
+ * Today page. Aggregates BootcampProgress across all enrolled students of
+ * the instructor's bootcamps. Replaces the previous fabricated "Vague Co.
+ * stuck students" + "14:30 drop-off" strings.
+ *
+ * Cheap on small data: one fetch of instructor's bootcamps + one User
+ * query filtered to those bootcamp IDs. At cohort-1 scale (500 students
+ * × 3 bootcamps = ~1500 progress docs) this is single-digit ms in Mongo.
+ */
+export interface InstructorTodaySignals {
+  stuckStudents: Array<{
+    studentId: string;
+    studentName: string;
+    bootcampId: string;
+    bootcampTitle: string;
+    videoId: string;
+    attempts: number;
+  }>;
+  inactiveStudents: Array<{
+    studentId: string;
+    studentName: string;
+    bootcampId: string;
+    bootcampTitle: string;
+    daysSinceJoined: number;
+    videosWatched: number;
+    totalVideos: number;
+  }>;
+  biggestDropoff: {
+    bootcampId: string;
+    bootcampTitle: string;
+    videoId: string;
+    videoTitle: string;
+    watchedFromPrev: number; // students who watched the previous video
+    watchedThis: number;     // and dropped before/at this one
+    dropoffPct: number;
+  } | null;
+}
+
+export async function getInstructorTodaySignals(
+  instructorId: string,
+): Promise<InstructorTodaySignals> {
+  await db();
+  // Step 1: instructor's bootcamps
+  const bootcamps = (await BootcampModel.find({ instructorId })
+    .select("_id title videos enrolledStudentIds")
+    .lean()) as unknown as Array<{
+    _id: string;
+    title: string;
+    videos: Array<{ id: string; title: string }>;
+    enrolledStudentIds: string[];
+  }>;
+  if (bootcamps.length === 0) {
+    return { stuckStudents: [], inactiveStudents: [], biggestDropoff: null };
+  }
+  const bootcampById = new Map(bootcamps.map((b) => [String(b._id), b]));
+  const allStudentIds = [
+    ...new Set(bootcamps.flatMap((b) => b.enrolledStudentIds ?? [])),
+  ];
+  if (allStudentIds.length === 0) {
+    return { stuckStudents: [], inactiveStudents: [], biggestDropoff: null };
+  }
+
+  // Step 2: students with progress in those bootcamps
+  const users = (await UserModel.find({ _id: { $in: allStudentIds } })
+    .select("name profile.bootcampProgress profile.joinedAt")
+    .lean()) as unknown as Array<{
+    _id: string;
+    name?: string;
+    profile?: {
+      joinedAt?: string;
+      bootcampProgress?: Array<{
+        bootcampId: string;
+        videosWatched?: string[];
+        skillChecksPassed?: string[];
+        skillCheckAttempts?: Record<string, number>;
+      }>;
+    };
+  }>;
+
+  // Build a quick (studentId → user) lookup
+  const userById = new Map(users.map((u) => [String(u._id), u]));
+
+  const stuckStudents: InstructorTodaySignals["stuckStudents"] = [];
+  const inactiveStudents: InstructorTodaySignals["inactiveStudents"] = [];
+
+  // Iterate bootcamp × enrolled-student combinations
+  for (const bc of bootcamps) {
+    for (const sid of bc.enrolledStudentIds ?? []) {
+      const u = userById.get(sid);
+      if (!u) continue;
+      const progress = u.profile?.bootcampProgress?.find(
+        (p) => p.bootcampId === String(bc._id),
+      );
+      const attempts = progress?.skillCheckAttempts ?? {};
+      const passed = new Set(progress?.skillChecksPassed ?? []);
+
+      // STUCK — failed a skill check ≥3 times and haven't passed it
+      for (const [videoId, n] of Object.entries(attempts)) {
+        if (n >= 3 && !passed.has(videoId)) {
+          const v = bc.videos.find((vid) => vid.id === videoId);
+          if (!v) continue;
+          stuckStudents.push({
+            studentId: sid,
+            studentName: u.name ?? "(no name)",
+            bootcampId: String(bc._id),
+            bootcampTitle: bc.title,
+            videoId,
+            attempts: n,
+          });
+        }
+      }
+
+      // INACTIVE — enrolled but watched fewer than 50% of videos despite
+      // joining more than 7 days ago. No `lastActiveAt` field on
+      // BootcampProgress today; we proxy from User.profile.joinedAt.
+      const joinedAt = u.profile?.joinedAt;
+      if (joinedAt && bc.videos.length > 0) {
+        const days =
+          (Date.now() - new Date(joinedAt).getTime()) / (1000 * 60 * 60 * 24);
+        const watched = progress?.videosWatched?.length ?? 0;
+        const pct = watched / bc.videos.length;
+        if (days >= 7 && pct < 0.5) {
+          inactiveStudents.push({
+            studentId: sid,
+            studentName: u.name ?? "(no name)",
+            bootcampId: String(bc._id),
+            bootcampTitle: bc.title,
+            daysSinceJoined: Math.floor(days),
+            videosWatched: watched,
+            totalVideos: bc.videos.length,
+          });
+        }
+      }
+    }
+  }
+
+  // BIGGEST DROP-OFF — across all bootcamps, find the lesson with the
+  // largest "previous-video-watched but not-this-video-watched" cohort.
+  // Skips lesson 0 (no previous to compare). Surfaces at most one signal
+  // — the worst — to keep the instructor focused.
+  let biggestDropoff: InstructorTodaySignals["biggestDropoff"] = null;
+  for (const bc of bootcamps) {
+    if (bc.videos.length < 2) continue;
+    for (let i = 1; i < bc.videos.length; i++) {
+      const prev = bc.videos[i - 1];
+      const cur = bc.videos[i];
+      let watchedPrev = 0;
+      let watchedCur = 0;
+      for (const sid of bc.enrolledStudentIds ?? []) {
+        const u = userById.get(sid);
+        const set = new Set(
+          u?.profile?.bootcampProgress?.find(
+            (p) => p.bootcampId === String(bc._id),
+          )?.videosWatched ?? [],
+        );
+        if (set.has(prev.id)) watchedPrev++;
+        if (set.has(cur.id)) watchedCur++;
+      }
+      // Need a minimum sample to count this as a meaningful signal —
+      // 3 students who watched prev. Below that it's noise.
+      if (watchedPrev < 3) continue;
+      const dropoff = watchedPrev - watchedCur;
+      const pct = (dropoff / watchedPrev) * 100;
+      if (!biggestDropoff || pct > biggestDropoff.dropoffPct) {
+        biggestDropoff = {
+          bootcampId: String(bc._id),
+          bootcampTitle: bc.title,
+          videoId: cur.id,
+          videoTitle: cur.title,
+          watchedFromPrev: watchedPrev,
+          watchedThis: watchedCur,
+          dropoffPct: Math.round(pct),
+        };
+      }
+    }
+  }
+  // Only surface if drop-off is meaningful (>25%)
+  if (biggestDropoff && biggestDropoff.dropoffPct < 25) {
+    biggestDropoff = null;
+  }
+
+  // Cap per-list output to avoid wall-of-cards UX. Stuck > inactive
+  // priority (a student failing a quiz needs more help than an idle one).
+  return {
+    stuckStudents: stuckStudents.slice(0, 5),
+    inactiveStudents: inactiveStudents.slice(0, 5),
+    biggestDropoff,
+  };
+}
+
+/**
+ * Flat row representing one student's assignment submission to one of the
+ * instructor's bootcamps. Used by the /instructor/grading queue.
+ */
+export interface InstructorGradingRow {
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  bootcampId: string;
+  bootcampTitle: string;
+  submittedAt: string;
+  totalScore: number;
+  plagiarismFlag: boolean;
+  reviewed: boolean;
+  reviewedAt?: string;
+}
+
+/**
+ * List every submitted assignment across the instructor's bootcamps.
+ *
+ * Why this is a 2-step query instead of an aggregation pipeline:
+ *   1. Fetch instructor-owned bootcamp IDs (small set, <50 typical)
+ *   2. Find users whose profile.bootcampProgress[].bootcampId ∈ that set
+ *      AND has a submittedAt assignment
+ * The aggregation alternative ($lookup + $unwind on bootcampProgress) is
+ * harder to read and not faster at this scale. Revisit if instructors
+ * accumulate >5k students.
+ */
+export async function listInstructorSubmissions(
+  instructorId: string,
+  opts?: { reviewed?: boolean; bootcampId?: string },
+): Promise<InstructorGradingRow[]> {
+  await db();
+  // Step 1: instructor's bootcamps.
+  const bootcamps = (await BootcampModel.find({ instructorId })
+    .select("_id title")
+    .lean()) as unknown as Array<{ _id: string; title: string }>;
+  if (bootcamps.length === 0) return [];
+  const bootcampIds = bootcamps.map((b) => String(b._id));
+  const bootcampTitleById = new Map(
+    bootcamps.map((b) => [String(b._id), b.title]),
+  );
+
+  // Step 2: users with at least one submitted assignment in those bootcamps.
+  const filterBootcamps = opts?.bootcampId
+    ? [opts.bootcampId]
+    : bootcampIds;
+  const users = (await UserModel.find({
+    "profile.bootcampProgress": {
+      $elemMatch: {
+        bootcampId: { $in: filterBootcamps },
+        "assignment.submittedAt": { $exists: true },
+      },
+    },
+  })
+    .select("name email profile.bootcampProgress")
+    .lean()) as unknown as Array<{
+    _id: string;
+    name?: string;
+    email?: string;
+    profile?: {
+      bootcampProgress?: Array<{
+        bootcampId: string;
+        assignment?: {
+          submittedAt?: string;
+          plagiarismFlag?: boolean;
+          grade?: {
+            totalScore: number;
+            reviewedByInstructorId?: string;
+            reviewedAt?: string;
+          };
+        };
+      }>;
+    };
+  }>;
+
+  const rows: InstructorGradingRow[] = [];
+  for (const u of users) {
+    for (const p of u.profile?.bootcampProgress ?? []) {
+      if (!filterBootcamps.includes(p.bootcampId)) continue;
+      const a = p.assignment;
+      if (!a?.submittedAt) continue;
+      const reviewed = Boolean(a.grade?.reviewedAt);
+      if (opts?.reviewed === true && !reviewed) continue;
+      if (opts?.reviewed === false && reviewed) continue;
+      rows.push({
+        studentId: String(u._id),
+        studentName: u.name ?? "(no name)",
+        studentEmail: u.email ?? "",
+        bootcampId: p.bootcampId,
+        bootcampTitle: bootcampTitleById.get(p.bootcampId) ?? "(unknown)",
+        submittedAt: a.submittedAt,
+        totalScore: a.grade?.totalScore ?? 0,
+        plagiarismFlag: a.plagiarismFlag ?? false,
+        reviewed,
+        reviewedAt: a.grade?.reviewedAt,
+      });
+    }
+  }
+  // Unreviewed first, then oldest-submitted first within each group.
+  rows.sort((a, b) => {
+    if (a.reviewed !== b.reviewed) return a.reviewed ? 1 : -1;
+    return (a.submittedAt ?? "").localeCompare(b.submittedAt ?? "");
+  });
+  return rows;
+}
+
+/**
+ * Apply an instructor's review/override to a submitted assignment.
+ *
+ * Preserves the original AI grade in `aiGrade` for audit. Sets
+ * `reviewedByInstructorId` + `reviewedAt` so the queue can filter on
+ * "needs review". Throws if the bootcamp doesn't belong to the instructor
+ * (defense in depth — the API layer already checks).
+ */
+export interface InstructorGradeOverride {
+  totalScore?: number;
+  perCriterion?: Array<{ key: string; score: number; feedback: string }>;
+  strengths?: string[];
+  improvements?: string[];
+  plagiarismFlag?: boolean;
+  instructorNote?: string;
+}
+
+export async function applyInstructorGradeOverride(
+  instructorId: string,
+  studentId: string,
+  bootcampId: string,
+  override: InstructorGradeOverride,
+): Promise<{ ok: boolean; reason?: string }> {
+  await db();
+  // Ownership check — instructor can only review their own bootcamps.
+  const bc = await BootcampModel.findOne({
+    _id: bootcampId,
+    instructorId,
+  })
+    .select("_id")
+    .lean();
+  if (!bc) return { ok: false, reason: "bootcamp_not_owned" };
+
+  const existing = await getBootcampProgress(studentId, bootcampId);
+  if (!existing?.assignment?.submittedAt) {
+    return { ok: false, reason: "not_submitted" };
+  }
+  if (!existing.assignment.grade) {
+    return { ok: false, reason: "not_graded" };
+  }
+
+  // Snapshot the AI grade once (don't overwrite if instructor reviews twice).
+  const aiGrade =
+    existing.assignment.grade.aiGrade ?? {
+      totalScore: existing.assignment.grade.totalScore,
+      perCriterion: existing.assignment.grade.perCriterion,
+      strengths: existing.assignment.grade.strengths,
+      improvements: existing.assignment.grade.improvements,
+      gradedAt: existing.assignment.grade.gradedAt,
+    };
+
+  const now = new Date().toISOString();
+  const next: import("@/shared/types").BootcampProgress = {
+    ...existing,
+    assignment: {
+      ...existing.assignment,
+      plagiarismFlag:
+        override.plagiarismFlag ?? existing.assignment.plagiarismFlag,
+      grade: {
+        ...existing.assignment.grade,
+        aiGrade,
+        totalScore: override.totalScore ?? existing.assignment.grade.totalScore,
+        perCriterion:
+          override.perCriterion ?? existing.assignment.grade.perCriterion,
+        strengths: override.strengths ?? existing.assignment.grade.strengths,
+        improvements:
+          override.improvements ?? existing.assignment.grade.improvements,
+        reviewedByInstructorId: instructorId,
+        reviewedAt: now,
+        instructorNote:
+          override.instructorNote ?? existing.assignment.grade.instructorNote,
+      },
+    },
+  };
+  await upsertBootcampProgress(studentId, next);
+  return { ok: true };
+}
+
 /** Upsert progress for a student/bootcamp pair. Replaces the entry in-place. */
 export async function upsertBootcampProgress(
   studentId: string,
@@ -1094,7 +1459,15 @@ export async function upsertCampaign(c: Campaign): Promise<Campaign> {
     { $set: payload },
     { upsert: true },
   );
+  await invalidate("bootcamps:all", "bootcamps:all:lite");
   return c;
+}
+
+/** Delete a campaign by id. Returns true if a row was removed. */
+export async function deleteCampaign(id: string): Promise<boolean> {
+  await db();
+  const res = await CampaignModel.deleteOne({ _id: id });
+  return res.deletedCount > 0;
 }
 
 // ---------- PLACEMENTS ----------
@@ -1608,6 +1981,29 @@ export async function notify(input: NotifyInput): Promise<void> {
       createdAt: new Date().toISOString(),
     };
     await NotificationModel.create({ _id: n.id, ...n });
+
+    // Real-time fan-out — publish to the user's private channel so an
+    // open NotificationBell tab updates within ~200ms instead of waiting
+    // for the next 60s poll. Without PUSHER_* env vars this writes to an
+    // in-memory ring buffer (server/integrations/realtime) which the
+    // bell can ignore — polling continues to work either way. Failure
+    // is non-fatal: the row is already in Mongo and the next poll picks
+    // it up.
+    try {
+      const { publish } = await import("@/server/integrations/realtime");
+      await publish(`user:${input.userId}`, "notification.new", {
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        kind: n.kind,
+        priority: n.priority,
+        createdAt: n.createdAt,
+      });
+    } catch (pubErr) {
+      // Don't log full stack — too noisy at scale. The mock adapter
+      // never throws; only a real Pusher 5xx would land here.
+      console.warn("[notify] publish failed", pubErr);
+    }
   } catch (err) {
     console.warn("[notify] failed", err);
   }
@@ -2317,6 +2713,38 @@ export async function updateBootcamp(
   return { ...bc, ...safe };
 }
 
+/**
+ * Set a single lesson video's playback URL. Used by the instructor studio's
+ * "paste a YouTube / R2 URL per lesson" form. Validates instructor
+ * ownership before writing so a hostile request to another instructor's
+ * bootcamp gets a clean refusal.
+ *
+ * `url` may be null to clear (revert to the "Lesson uploaded soon"
+ * placeholder). Empty strings normalise to null.
+ */
+export async function setBootcampVideoUrl(
+  bootcampId: string,
+  instructorId: string,
+  videoId: string,
+  url: string | null,
+): Promise<{ ok: boolean; reason?: string }> {
+  await db();
+  const bc = await getBootcampById(bootcampId);
+  if (!bc) return { ok: false, reason: "not_found" };
+  if (bc.instructorId !== instructorId) return { ok: false, reason: "forbidden" };
+  const exists = bc.videos.some((v) => v.id === videoId);
+  if (!exists) return { ok: false, reason: "video_not_found" };
+  const normalised = url && url.trim().length > 0 ? url.trim() : null;
+  // Positional `$` updates the matching subdoc only — leaves other lesson
+  // entries untouched.
+  await BootcampModel.updateOne(
+    { _id: bootcampId, "videos.id": videoId },
+    { $set: { "videos.$.url": normalised } },
+  );
+  await invalidate("bootcamps:all", "bootcamps:all:lite");
+  return { ok: true };
+}
+
 /** Update lifecycle status — instructor-driven (draft → in_review) or admin-driven. */
 export async function setBootcampStatus(
   id: string,
@@ -2669,6 +3097,53 @@ export async function deleteSavedSearch(
 ): Promise<void> {
   await db();
   await SavedSearchModel.deleteOne({ _id: id, recruiterId });
+}
+
+/**
+ * Re-runs a saved search's filters and returns candidates whose account was
+ * created after `sinceISO`. Capped at 20 matches per search to keep digest
+ * emails skimmable. Used by the weekly digest cron.
+ *
+ * NOTE: Saved searches today filter the *candidate* database (see
+ * CandidateSearchFilters + searchCandidates), so this looks for new matching
+ * candidates, not jobs — which matches the UI promise of "new matching
+ * candidates" on the Saved Searches page.
+ */
+export async function findMatchingCandidatesForSavedSearch(
+  savedSearch: SavedSearch,
+  sinceISO: string,
+): Promise<CandidateSearchResult[]> {
+  let filters: CandidateSearchFilters;
+  try {
+    filters = JSON.parse(savedSearch.filtersJson ?? "{}") as CandidateSearchFilters;
+  } catch {
+    return [];
+  }
+  const all = await searchCandidates(filters);
+  const since = new Date(sinceISO).getTime();
+  const fresh = all.filter((r) => {
+    const created = r.user.createdAt ? new Date(r.user.createdAt).getTime() : 0;
+    return created >= since;
+  });
+  return fresh.slice(0, 20);
+}
+
+/** Lists all saved searches whose alertFrequency matches the given level. */
+export async function listSavedSearchesByFrequency(
+  frequency: SavedSearch["alertFrequency"],
+): Promise<SavedSearch[]> {
+  await db();
+  const docs = await SavedSearchModel.find({ alertFrequency: frequency }).lean();
+  return unwrapAll(docs as unknown as SavedSearch[]);
+}
+
+/** Stamps a saved search with its most recent digest-run timestamp. */
+export async function touchSavedSearchLastRun(
+  id: string,
+  iso: string,
+): Promise<void> {
+  await db();
+  await SavedSearchModel.updateOne({ _id: id }, { $set: { lastRunAt: iso } });
 }
 
 export async function createJobTemplate(input: {
@@ -3482,4 +3957,145 @@ export async function updateEmailTemplate(
       },
     },
   );
+}
+
+// ---------- OAuth user provisioning ----------
+/**
+ * First-touch user upsert for OAuth providers (Google / LinkedIn).
+ *
+ * NextAuth's CredentialsProvider has its own `authorize()` that returns a
+ * user object with `id` + `role` pulled from Mongo. OAuth providers skip
+ * that path entirely — the provider just hands us a verified email +
+ * profile blob, and unless we materialise a row, the session JWT lacks
+ * `id`/`role`, which breaks every role-gated API + redirect downstream.
+ *
+ * Contract:
+ *   • Match by case-insensitive email. If a row exists (regardless of how
+ *     it was created — credentials signup, prior OAuth signin, admin seed),
+ *     return it as-is. We do NOT overwrite name/avatar/role on subsequent
+ *     OAuth signins — the user may have edited their profile, and the
+ *     OAuth provider's name is often less curated than what they set in-app.
+ *   • New rows default to role: "student" and emailVerified: true (OAuth
+ *     providers verify email by construction — Google/LinkedIn refuse to
+ *     issue tokens for unverified accounts).
+ *   • `_id` shape matches createUserWithCredentials' student prefix
+ *     (`usr_<hex16>`) so downstream code that pattern-matches on prefixes
+ *     keeps working. `randomUUID` is the same source used in /api/enrollments
+ *     and /api/admin/campaigns.
+ */
+export async function upsertOAuthUser(input: {
+  email: string;
+  name?: string;
+  avatarUrl?: string;
+  oauthProvider: "google" | "linkedin";
+}): Promise<User> {
+  await db();
+  const emailLower = input.email.trim().toLowerCase();
+
+  // Existing row wins — never clobber a credentials-signup user's profile
+  // just because they later clicked "Continue with Google" with the same
+  // email. Account-linking semantics: same email = same account.
+  const existing = await UserModel.findOne({
+    email: { $regex: `^${escapeRegex(emailLower)}$`, $options: "i" },
+  }).lean();
+  if (existing) {
+    return unwrap(existing as unknown as User) as User;
+  }
+
+  const { randomUUID } = await import("crypto");
+  const now = new Date().toISOString();
+  const id = `usr_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  const fallbackName = emailLower.split("@")[0] ?? "user";
+  const displayName = input.name?.trim() || fallbackName;
+
+  const payload: any = {
+    _id: id,
+    email: emailLower,
+    // No password — OAuth-only accounts can't log in via Credentials. They
+    // can use /forgot-password to set one later, which proves email ownership
+    // via the same provider that signed them in.
+    passwordHash: "",
+    role: "student",
+    name: displayName,
+    avatarUrl: input.avatarUrl,
+    profile: {
+      alias: displayName.toLowerCase().replace(/\s+/g, "."),
+      contactEmail: emailLower,
+      contactPhone: "",
+      trajectory: "actively_hunting",
+      skills: [],
+      verifiedSkills: [],
+      enrolledBootcamps: [],
+      history: [],
+      joinedAt: now,
+      lastActiveAt: now,
+    },
+    plan: "free",
+    planType: "free",
+    // OAuth providers only issue tokens after verifying the email — skip
+    // the verify-email gate; the third-party already did that work.
+    emailVerified: true,
+    emailVerifiedAt: now,
+    oauthProvider: input.oauthProvider,
+    createdAt: now,
+    status: "active",
+  };
+
+  // Race-safe insert. Two concurrent OAuth callbacks for the same brand-new
+  // email both hit the `existing` check, both see null, both try to insert.
+  // `$setOnInsert` keyed on email + the unique email index means the second
+  // insert no-ops; we then re-read to return whichever doc won the race.
+  await UserModel.updateOne(
+    { email: emailLower },
+    { $setOnInsert: payload },
+    { upsert: true },
+  );
+
+  const created = await UserModel.findOne({ email: emailLower }).lean();
+  return unwrap(created as unknown as User) as User;
+}
+
+// ---------- INMAIL REFUND SWEEP ----------
+
+/**
+ * Sweep pending InMails whose 14-day refund deadline has passed. For each
+ * expired InMail we flip status to `ignored_refunded`, stamp `respondedAt`,
+ * credit the recruiter back +1 InMail credit, and drop an inbox notification.
+ *
+ * Designed to be called by `/api/cron/inmail-refund-sweep` on a daily cron —
+ * deadlines move at day granularity so anything more frequent is wasted work.
+ * Each InMail is processed in isolation so one bad row can't stall the batch.
+ */
+export async function expireUnrespondedInMails(): Promise<{ refunded: number }> {
+  await db();
+  const now = new Date().toISOString();
+  const expired = await InMailModel.find({
+    status: "pending",
+    refundDeadline: { $lt: now },
+  }).lean();
+  const list = unwrapAll(expired as unknown as InMail[]);
+
+  let refunded = 0;
+  for (const im of list) {
+    try {
+      const respondedAt = new Date().toISOString();
+      await InMailModel.updateOne(
+        { _id: im.id },
+        { $set: { status: "ignored_refunded", respondedAt } },
+      );
+      await adjustInMailCredits(im.recruiterId, +1);
+      await notify({
+        userId: im.recruiterId,
+        kind: "inmail_declined",
+        priority: "normal",
+        title: "InMail credit refunded",
+        body: "A student didn't respond to your InMail within 14 days — your credit is back.",
+        link: "/recruiter/messages",
+      });
+      refunded++;
+    } catch (err) {
+      console.warn("[expireUnrespondedInMails] failed for", im.id, err);
+    }
+  }
+  return { refunded };
 }

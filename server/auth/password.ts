@@ -40,8 +40,14 @@ export async function verifyPassword(
     const ok = await bcrypt.compare(plain, storedHash);
     return { ok, shouldRehash: false };
   }
-  // Legacy plaintext seed compatibility — allow exact match, flag for rehash.
-  if (plain === storedHash) {
+  // Legacy plaintext seed compatibility. DEV ONLY — kept so the seed
+  // script's plain "demo" password keeps working on local dev databases
+  // that haven't been re-seeded. In production this branch is a "log in
+  // as anyone with a short fake hash" bug, so we hard-disable it.
+  //
+  // If you really need to re-enable this for a one-off prod migration,
+  // do it from a privileged migration script — not by editing this gate.
+  if (process.env.NODE_ENV !== "production" && plain === storedHash) {
     return { ok: true, shouldRehash: true };
   }
   return { ok: false, shouldRehash: false };

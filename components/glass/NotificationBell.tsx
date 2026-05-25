@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   Bell,
   CheckCheck,
@@ -44,6 +45,7 @@ function relativeTime(iso: string) {
 }
 
 export function NotificationBell() {
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -58,7 +60,10 @@ export function NotificationBell() {
   const prevUnread = useRef<number | null>(null);
   const reduceMotion = useReducedMotion();
 
-  // Initial poll + 60s background refresh
+  // ─── Background poll (always on) — keeps the bell honest even when
+  //     Pusher is mock-mode OR the connection drops. Pusher push below
+  //     just triggers an immediate extra poll for near-zero latency.
+  const pollRef = useRef<() => Promise<void>>(async () => {});
   useEffect(() => {
     let cancelled = false;
     async function poll() {
@@ -77,6 +82,7 @@ export function NotificationBell() {
         /* ignore */
       }
     }
+    pollRef.current = poll;
     poll();
     const t = setInterval(poll, 60_000);
     return () => {
@@ -84,6 +90,47 @@ export function NotificationBell() {
       clearInterval(t);
     };
   }, []);
+
+  // ─── Real-time push via Pusher (opt-in). When NEXT_PUBLIC_PUSHER_KEY
+  //     is set, we subscribe to the user's private channel and trigger
+  //     an immediate poll on every `notification.new` event. Without
+  //     the env var, this whole block is a no-op and the 60s poll is
+  //     the only source of updates. Dynamic import keeps pusher-js
+  //     out of the initial bundle for users without realtime enabled.
+  const userId = session?.user?.id;
+  useEffect(() => {
+    if (!userId) return;
+    const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+    if (!key || !cluster) return;
+    let cleanup: (() => void) | null = null;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { default: Pusher } = await import("pusher-js");
+        if (cancelled) return;
+        const client = new Pusher(key, { cluster });
+        const channel = client.subscribe(`user:${userId}`);
+        channel.bind("notification.new", () => {
+          // Trigger the existing poll — gets fresh items + unread count
+          // and runs the wobble animation as a side effect.
+          void pollRef.current?.();
+        });
+        cleanup = () => {
+          channel.unbind_all();
+          client.unsubscribe(`user:${userId}`);
+          client.disconnect();
+        };
+      } catch (err) {
+        // pusher-js failed to load (likely network). Polling keeps working.
+        console.warn("[NotificationBell] pusher init failed", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [userId]);
 
   // Fire the wobble whenever unread strictly increases from its previous
   // known value. First mount establishes the baseline silently.

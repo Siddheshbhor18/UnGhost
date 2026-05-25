@@ -158,9 +158,8 @@ export default function DPDPCompliance() {
           <li>MongoDB Atlas (Mumbai) — primary database</li>
           <li>Cloudflare R2 (Mumbai) — file storage</li>
           <li>Upstash Redis (Mumbai) — session cache</li>
-          <li>Anthropic + Google Vertex AI — AI inference (no model training)</li>
-          <li>PhonePe — payments</li>
-          <li>MSG91 — SMS / OTP (India)</li>
+          <li>Groq + Google Gemini — AI inference (no model training)</li>
+          <li>PhonePe — payments (UPI / QR)</li>
           <li>Resend — transactional email</li>
         </ul>
       </Section>

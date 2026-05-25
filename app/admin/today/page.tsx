@@ -7,11 +7,14 @@ import {
   listApplications,
   listBootcamps,
   listJobs,
+  listUsers,
   countUsersByRole,
   getSkillGapHeatmap,
   maybeRunSlaSweep,
   detectTelemetryAlerts,
+  computeFinancialRollup,
 } from "@/server/store";
+import { PLAN_PRICING } from "@/shared/types";
 import { slaCountdown } from "@/shared/lib/sla";
 import {
   Activity,
@@ -35,7 +38,7 @@ export default async function AdminToday() {
   const telemetryAlerts = await detectTelemetryAlerts();
   // Replaced full listUsers("student"/"recruiter") with countDocuments — admin
   // dashboard only consumed `.length`, so the full collection scan was waste.
-  const [m, apps, jobs, bcs, studentCount, recruiterCount, heatmap] =
+  const [m, apps, jobs, bcs, studentCount, recruiterCount, heatmap, finance, students] =
     await Promise.all([
       getGlobalMetrics(),
       listApplications(),
@@ -44,6 +47,12 @@ export default async function AdminToday() {
       countUsersByRole("student"),
       countUsersByRole("recruiter"),
       getSkillGapHeatmap(),
+      // Real revenue breakdown — bootcamp + sponsorship + monthly bucket
+      // for MoM. Replaces the previous hardcoded "+18% MoM" string.
+      computeFinancialRollup(),
+      // Pull students once so we can compute conversion (signup → apply)
+      // + subscription revenue (Pro + Premium plan counts × pricing).
+      listUsers("student"),
     ]);
 
   // ── KPIs ──
@@ -56,6 +65,76 @@ export default async function AdminToday() {
     0,
   );
   const openTickets = Math.max(0, Math.floor(apps.length / 12)); // synthetic
+
+  // ── Real platform-pulse signals (replaces the "+18% MoM" literal block) ──
+  // MoM revenue change: compare the latest two months in finance.byMonth.
+  // Returns null when there aren't two months of data — surface "—" so
+  // we never lie about a trend that doesn't exist yet.
+  const byMonth = finance.byMonth ?? [];
+  const sortedMonths = [...byMonth].sort((a, b) => a.month.localeCompare(b.month));
+  const cur = sortedMonths[sortedMonths.length - 1];
+  const prev = sortedMonths[sortedMonths.length - 2];
+  const momRevenuePct: number | null =
+    cur && prev && prev.revenuePaise > 0
+      ? Math.round(
+          ((cur.revenuePaise - prev.revenuePaise) / prev.revenuePaise) * 100,
+        )
+      : null;
+
+  // Conversion: students who have at least one application / total students.
+  const studentIdsWithApps = new Set(apps.map((a) => a.studentId));
+  const conversionPct: number | null =
+    studentCount > 0
+      ? Math.round((studentIdsWithApps.size / studentCount) * 100)
+      : null;
+
+  // Subscription revenue — Pro + Premium paid users × their plan price.
+  // Premium is lifetime so counts once; Pro is monthly so this is
+  // current-month MRR. PLAN_PRICING gives us the rupee amounts.
+  const proCount = students.filter((s) => s.plan === "pro").length;
+  const premiumCount = students.filter((s) => s.plan === "premium").length;
+  const subscriptionRevenuePaise =
+    proCount * PLAN_PRICING.pro.amountINR * 100 +
+    premiumCount * PLAN_PRICING.premium.amountINR * 100;
+
+  // Revenue mix — bootcamps + sponsorships + subscriptions.
+  // When everything is zero (no cohort yet), `total` = 0 and we render "—".
+  const total =
+    finance.bootcampRevenuePaise +
+    finance.sponsorshipRevenuePaise +
+    subscriptionRevenuePaise;
+  const mix =
+    total > 0
+      ? {
+          bootcamps: Math.round(
+            (finance.bootcampRevenuePaise / total) * 100,
+          ),
+          sponsorships: Math.round(
+            (finance.sponsorshipRevenuePaise / total) * 100,
+          ),
+          subscriptions: Math.round(
+            (subscriptionRevenuePaise / total) * 100,
+          ),
+        }
+      : null;
+
+  // Top-10 → hire correlation: avg matchPct of HIRED apps vs avg of ALL
+  // apps. If "top match scores hire more often" we'd expect the hired
+  // avg to be meaningfully higher.
+  const hiredApps = apps.filter((a) => a.stage === "hired");
+  const hiredAvgMatch =
+    hiredApps.length > 0
+      ? Math.round(
+          hiredApps.reduce((s, a) => s + (a.matchPct ?? 0), 0) /
+            hiredApps.length,
+        )
+      : null;
+  const overallAvgMatch =
+    apps.length > 0
+      ? Math.round(
+          apps.reduce((s, a) => s + (a.matchPct ?? 0), 0) / apps.length,
+        )
+      : null;
 
   // ── Critical (Severity-1) ──
   // Real breach count uses the persisted slaRefundIssued flag (set by the sweep).
@@ -318,30 +397,82 @@ export default async function AdminToday() {
 
         {/* AI Insights right */}
         <aside className="lg:col-span-4 space-y-4">
+          {/* Platform Pulse — all numbers are now computed live. Where a
+              metric needs ≥2 months of data (MoM) or any data at all
+              (conversion, match-rate), we show "—" rather than fake
+              direction. Honest beats authoritative-but-wrong. */}
           <GlassCard glow className="!p-5">
             <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold flex items-center gap-1.5 mb-3">
               <Sparkles size={12} /> Platform Pulse
             </p>
             <p className="text-sm text-brand-ink leading-relaxed">
               Marketplace health:{" "}
-              <span className="text-emerald-600 font-semibold">healthy</span>. Revenue
-              up{" "}
-              <span className="font-semibold">+18%</span> MoM. Conversion from signup →
-              first application:{" "}
-              <span className="font-semibold">34%</span>. Top-10 → hire correlation
-              <span className="font-semibold"> 3.2×</span> baseline.
+              <span className="text-emerald-600 font-semibold">healthy</span>.
+              Revenue{" "}
+              {momRevenuePct !== null ? (
+                <>
+                  <span
+                    className={
+                      momRevenuePct >= 0
+                        ? "font-semibold text-emerald-600"
+                        : "font-semibold text-rose-600"
+                    }
+                  >
+                    {momRevenuePct >= 0 ? "+" : ""}
+                    {momRevenuePct}%
+                  </span>{" "}
+                  MoM.
+                </>
+              ) : (
+                <span className="font-semibold text-brand-muted">
+                  — (need 2 months of data)
+                </span>
+              )}{" "}
+              Signup → first-application conversion:{" "}
+              <span className="font-semibold">
+                {conversionPct !== null ? `${conversionPct}%` : "—"}
+              </span>
+              .{" "}
+              {hiredAvgMatch !== null && overallAvgMatch !== null ? (
+                <>
+                  Hired-app avg match{" "}
+                  <span className="font-semibold">{hiredAvgMatch}%</span> vs
+                  overall <span className="font-semibold">{overallAvgMatch}%</span>.
+                </>
+              ) : (
+                <>No hires recorded yet to compute match correlation.</>
+              )}
             </p>
           </GlassCard>
 
           <GlassCard className="!p-5">
             <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold mb-3">
-              Today's revenue mix
+              Revenue mix
             </p>
-            <ul className="space-y-2.5 text-sm">
-              <Row label="Bootcamp sales" value="62%" tone="success" />
-              <Row label="Sponsorships" value="28%" tone="brand" />
-              <Row label="Subscriptions" value="10%" tone="warn" />
-            </ul>
+            {mix ? (
+              <ul className="space-y-2.5 text-sm">
+                <Row
+                  label="Bootcamp sales"
+                  value={`${mix.bootcamps}%`}
+                  tone="success"
+                />
+                <Row
+                  label="Sponsorships"
+                  value={`${mix.sponsorships}%`}
+                  tone="brand"
+                />
+                <Row
+                  label="Subscriptions"
+                  value={`${mix.subscriptions}%`}
+                  tone="warn"
+                />
+              </ul>
+            ) : (
+              <p className="text-sm text-brand-muted">
+                No revenue recorded yet — chart appears once the first
+                paid enrolment or sponsorship lands.
+              </p>
+            )}
           </GlassCard>
 
           <GlassCard className="!p-5">

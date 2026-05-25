@@ -11,7 +11,6 @@ import {
 import { createUserWithCredentials } from "@/server/store";
 import { issueEmailVerifyToken } from "@/server/auth/email-verify-token";
 import { sendVerifyEmail } from "@/server/integrations/email";
-import { sendOtp, normalisePhone } from "@/server/integrations/sms";
 import {
   attachReferrerToUser,
   getPartnerByCode,
@@ -24,8 +23,7 @@ export const runtime = "nodejs";
 const Input = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().toLowerCase().email().max(120),
-  // Phone is optional — MSG91 OTP is retired. We still collect it for
-  // student outreach (product research), but never verify it.
+  // Phone is optional. Collected for ops/outreach only, never verified.
   phone: z.string().trim().min(7).max(20).optional().or(z.literal("")),
   password: z.string().min(8).max(72),
   role: z.enum(["student", "recruiter"]),
@@ -46,9 +44,8 @@ const Input = z.object({
 /**
  * POST /api/auth/signup
  *
- * Public endpoint. Creates a new user with plan=free, kicks off email
- * verification + phone OTP. Returns `{ userId }` plus mock-mode helpers
- * (`demoOtp`) so dev flows can complete without external services.
+ * Public endpoint. Creates a new user with plan=free and kicks off email
+ * verification. Returns `{ userId }`.
  *
  * Rate limited per IP — 5 attempts/min. Same-origin guard so external
  * scripts can't trigger signup spam from someone else's browser.
@@ -70,9 +67,10 @@ async function handler(req: Request) {
   }
 
   const passwordHash = await hashPassword(data.password);
-  // Phone is optional — pass empty string when absent so the store helper's
-  // uniqueness check skips it gracefully (`if (phone) { ... }` inside).
-  const normalisedPhone = data.phone ? normalisePhone(data.phone) : "";
+  // Phone is optional — collected for ops outreach only, no OTP verification.
+  // Pass empty string when absent so the store helper's uniqueness check
+  // skips it gracefully (`if (phone) { ... }` inside).
+  const normalisedPhone = data.phone ? data.phone.replace(/\s+/g, "") : "";
 
   const result = await createUserWithCredentials({
     email: data.email,
@@ -135,13 +133,6 @@ async function handler(req: Request) {
     });
   }
 
-  // MSG91 is retired — we don't fire an OTP. Phone is collected for outreach
-  // only and never verified. The legacy `/verify-phone` route still exists
-  // for dev but the live login flow skips it.
-  const otp = normalisedPhone
-    ? await sendOtp(normalisedPhone).catch(() => ({ channel: "mock", demoOtp: undefined }))
-    : { channel: "mock", demoOtp: undefined };
-
   await writeAuditLog({
     actorId: user.id,
     actorRole: data.role,
@@ -151,10 +142,7 @@ async function handler(req: Request) {
     summary: `Signup ${data.role} ${user.email}`,
   });
 
-  logger.info(
-    { userId: user.id, role: data.role, otpMode: otp.channel },
-    "auth.signup",
-  );
+  logger.info({ userId: user.id, role: data.role }, "auth.signup");
 
   return NextResponse.json(
     {
@@ -162,10 +150,6 @@ async function handler(req: Request) {
       userId: user.id,
       role: user.role,
       needsEmailVerify: true,
-      needsPhoneVerify: true,
-      // demoOtp is set ONLY in mock mode by the SMS adapter — present in dev,
-      // never in production.
-      demoOtp: otp.demoOtp,
     },
     { status: 201 },
   );

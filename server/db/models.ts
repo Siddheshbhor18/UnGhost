@@ -135,17 +135,21 @@ const UserSchema = withJsonTransform(
       // When true, the daily expiry cron does NOT renew Pro at planExpiresAt.
       planRenewalCancelled: { type: Boolean, default: false },
       // ── Verification ──────────────────────────────────────────────
-      // Both default false. /api/auth/signup flips them only after the
-      // user proves email + phone ownership. Login refuses if either is
-      // still false (with a "resend verification" path).
+      // Defaults false. /api/auth/signup flips it only after the user
+      // proves email ownership. Login refuses if still false (with a
+      // "resend verification" path).
       emailVerified: { type: Boolean, default: false, index: true },
       emailVerifiedAt: String,
-      phoneVerified: { type: Boolean, default: false },
-      phoneVerifiedAt: String,
       createdAt: String,
       // ── Channel-partner attribution ──────────────────────────────
       referrerPartnerId: { type: String, index: true },
       referrerCapturedAt: String,
+      // ── OAuth provenance ─────────────────────────────────────────
+      // Set to "google" | "linkedin" the first time a user signs in via
+      // that provider. Null/absent for credentials-only signups. Read-only
+      // hint for admin UI — auth decisions are still driven by Mongo
+      // presence + role, not this field.
+      oauthProvider: { type: String, default: null },
     },
     { versionKey: false },
   ),
@@ -244,6 +248,11 @@ const BootcampVideoSchema = new Schema(
     durationMin: Number,
     posterUrl: String,
     verifyPrompt: String,
+    // Playback URL. Direct file (R2/S3 .mp4/.m3u8) OR a YouTube watch/share
+    // URL. The student-side player auto-picks: YouTube embeds in an iframe,
+    // direct URLs go through HTML5 <video>. Stays null until the instructor
+    // pastes a source.
+    url: { type: String, default: null },
   },
   { _id: false },
 );

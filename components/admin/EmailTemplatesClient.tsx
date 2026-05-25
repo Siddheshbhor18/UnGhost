@@ -4,7 +4,7 @@ import { useState } from "react";
 import clsx from "clsx";
 import type { EmailTemplate } from "@/shared/types";
 import { GlassCard, GlassInput } from "@/components/glass";
-import { Save, RotateCcw, Mail } from "lucide-react";
+import { Loader2, Mail, RotateCcw, Save } from "lucide-react";
 
 export function EmailTemplatesClient({ initial }: { initial: EmailTemplate[] }) {
   const [templates, setTemplates] = useState<EmailTemplate[]>(initial);
@@ -12,6 +12,8 @@ export function EmailTemplatesClient({ initial }: { initial: EmailTemplate[] }) 
   const [draftSubject, setDraftSubject] = useState<string>(initial[0]?.subject ?? "");
   const [draftBody, setDraftBody] = useState<string>(initial[0]?.body ?? "");
   const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const selected = templates.find((t) => t.id === selectedId);
 
@@ -23,23 +25,48 @@ export function EmailTemplatesClient({ initial }: { initial: EmailTemplate[] }) 
     setDraftSubject(t.subject);
     setDraftBody(t.body);
     setDirty(false);
+    setError(null);
   }
 
-  function save() {
-    if (!selected) return;
-    setTemplates((list) =>
-      list.map((t) =>
-        t.id === selectedId
-          ? {
-              ...t,
-              subject: draftSubject,
-              body: draftBody,
-              lastEditedAt: new Date().toISOString(),
-            }
-          : t,
-      ),
-    );
-    setDirty(false);
+  async function save(): Promise<void> {
+    if (!selected || saving) return;
+    setError(null);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/email-templates/${selected.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          subject: draftSubject,
+          body: draftBody,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        lastEditedAt?: string;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(data.error ?? `Save failed (${res.status})`);
+      const lastEditedAt = data.lastEditedAt ?? new Date().toISOString();
+      // Reflect the canonical timestamp from the server into local state.
+      setTemplates((list) =>
+        list.map((t) =>
+          t.id === selectedId
+            ? {
+                ...t,
+                subject: draftSubject,
+                body: draftBody,
+                lastEditedAt,
+              }
+            : t,
+        ),
+      );
+      setDirty(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function reset() {
@@ -47,6 +74,7 @@ export function EmailTemplatesClient({ initial }: { initial: EmailTemplate[] }) 
     setDraftSubject(selected.subject);
     setDraftBody(selected.body);
     setDirty(false);
+    setError(null);
   }
 
   return (
@@ -91,23 +119,36 @@ export function EmailTemplatesClient({ initial }: { initial: EmailTemplate[] }) 
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {dirty && (
+                {dirty && !saving && (
                   <button onClick={reset} className="btn-glass text-xs">
                     <RotateCcw size={11} /> Reset
                   </button>
                 )}
                 <button
                   onClick={save}
-                  disabled={!dirty}
+                  disabled={!dirty || saving}
                   className={clsx(
                     "btn-brand text-xs",
-                    !dirty && "opacity-40 cursor-not-allowed",
+                    (!dirty || saving) && "opacity-40 cursor-not-allowed",
                   )}
                 >
-                  <Save size={11} /> Save
+                  {saving ? (
+                    <>
+                      <Loader2 size={11} className="animate-spin" /> Saving…
+                    </>
+                  ) : (
+                    <>
+                      <Save size={11} /> Save
+                    </>
+                  )}
                 </button>
               </div>
             </div>
+            {error ? (
+              <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 mb-3">
+                {error}
+              </div>
+            ) : null}
 
             <div className="space-y-3">
               <div>
@@ -166,9 +207,9 @@ export function EmailTemplatesClient({ initial }: { initial: EmailTemplate[] }) 
             </div>
 
             <p className="text-[10px] text-brand-muted mt-4">
-              Phase 1 mock-only — edits live in memory until refresh. Phase 2
-              persists to <code className="text-brand-primary">emailTemplates</code>{" "}
-              collection with audit-log entries.
+              Saves persist to the <code className="text-brand-primary">emailTemplates</code>{" "}
+              collection and audit-log immediately. The change takes effect
+              on the next transactional send — no separate publish step.
             </p>
           </>
         )}

@@ -65,7 +65,7 @@ async function patchHandler(req: Request, { params }: Ctx) {
     actorId: session.user.id,
     actorRole: "admin",
     action: "partner.updated",
-    targetType: "system",
+    targetType: "partner",
     targetId: params.id,
     summary: `Edited partner ${updated.code}`,
   });
@@ -87,7 +87,7 @@ async function deleteHandler(req: Request, { params }: Ctx) {
     actorId: session.user.id,
     actorRole: "admin",
     action: "partner.deactivated",
-    targetType: "system",
+    targetType: "partner",
     targetId: params.id,
     summary: `Deactivated partner ${updated.code}`,
   });
@@ -116,7 +116,7 @@ async function postHandler(req: Request, { params }: Ctx) {
     actorId: session.user.id,
     actorRole: "admin",
     action: "partner.token-rotated",
-    targetType: "system",
+    targetType: "partner",
     targetId: params.id,
     summary: `Rotated dashboard token for ${updated.code}`,
   });

@@ -6,23 +6,21 @@ import { RefCapture } from "@/components/attribution/RefCapture";
 import { DemoModeBadge } from "@/components/glass";
 
 /**
- * Inter — used for both body and display. The variable axis "opsz" gives us
- * "Inter Display"-equivalent letterforms at headline sizes for free.
- * If the budget ever supports it, swap `--font-inter-display` to Söhne Breit.
+ * Inter — single instance, exposes both `--font-inter` (body) and
+ * `--font-inter-display` (headlines) variables. Previously we initialised
+ * `Inter()` twice with different weight subsets, which produced a second
+ * `<link rel=preload>` + duplicate CSS rules on every page (~30 KB
+ * over-the-wire on first load, doubled font-loading shifts). Same font
+ * file at runtime — collapse the import.
+ *
+ * The widest weight set covers both body (400/500/600/700) and display
+ * (600/700/800) uses. Swap `--font-inter-display` to a paid face like
+ * Söhne Breit by initialising a second font there only.
  */
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-inter",
-  display: "swap",
-});
-
-// Same Inter, exposed as the display variable. Tailwind's font-display points
-// to this var first; swap this binding when adopting a paid display face.
-const interDisplay = Inter({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--font-inter-display",
   display: "swap",
 });
 
@@ -65,7 +63,17 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${interDisplay.variable} ${mono.variable} ${pixel.variable}`}
+      // Both --font-inter and --font-inter-display resolve to the same
+      // Inter instance via the style tag below — single network fetch,
+      // both CSS variables available to Tailwind's font-display + font-body.
+      className={`${inter.variable} ${mono.variable} ${pixel.variable}`}
+      style={
+        {
+          // Alias the display variable to the same font family. Cheaper than
+          // a second Inter() call which double-loads the .woff2.
+          ["--font-inter-display" as never]: "var(--font-inter)",
+        } as React.CSSProperties
+      }
     >
       <body>
         <Providers>{children}</Providers>

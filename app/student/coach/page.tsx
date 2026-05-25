@@ -141,6 +141,13 @@ export default async function StudentCoachPage() {
   );
 }
 
+/**
+ * QuickAction — a sidebar shortcut on /student/coach. Clicking it deep-links
+ * back to the same route with `?prompt=<label>`, which FullCoach picks up
+ * via useSearchParams on mount and auto-sends. No client component needed
+ * here — Link handles the soft-nav and FullCoach scrubs the URL on consume.
+ * Previously this was a `<button>` with no onClick = silently inert.
+ */
 function QuickAction({
   icon,
   label,
@@ -149,9 +156,12 @@ function QuickAction({
   label: string;
 }) {
   return (
-    <button className="w-full text-left text-xs font-medium text-brand-ink/85 hover:text-brand-primary flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-brand-primary/5 transition">
+    <Link
+      href={`/student/coach?prompt=${encodeURIComponent(label)}`}
+      className="w-full text-left text-xs font-medium text-brand-ink/85 hover:text-brand-primary flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-brand-primary/5 transition"
+    >
       <span className="text-brand-primary">{icon}</span>
       {label}
-    </button>
+    </Link>
   );
 }

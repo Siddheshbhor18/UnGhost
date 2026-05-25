@@ -11,3 +11,7 @@ next-env.d.ts
 # CC local config
 .claude/
 tsconfig.tsbuildinfo
+
+# Uploads
+.uploads/
+

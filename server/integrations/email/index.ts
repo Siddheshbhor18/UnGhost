@@ -177,6 +177,102 @@ export async function sendEnrollmentApproved(
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+//  SAVED-SEARCH WEEKLY DIGEST
+//  Fired by the /api/cron/saved-search-digest Vercel cron (Mon 9 AM UTC).
+//  Recruiters opt into weekly digests on the Saved Searches page; this
+//  email is the only place that promise is fulfilled.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface SavedSearchDigestMatch {
+  /** Human-readable label, e.g. candidate name or "React dev · Bengaluru". */
+  jobOrCandidateLabel: string;
+  /** Absolute or app-relative deep link to view the match. */
+  link: string;
+  /** 1-line summary of the match (skills, city, etc.). */
+  summary: string;
+  /** Which saved search produced this match (header within the email). */
+  savedSearchName?: string;
+}
+
+/** Helper: weekly digest of new matching candidates for a recruiter. */
+export async function sendSavedSearchDigest(
+  to: string,
+  vars: { name: string; matches: SavedSearchDigestMatch[] },
+): Promise<EmailResult> {
+  const { name, matches } = vars;
+  if (matches.length === 0) {
+    return { ok: false, channel: emailMode() === "live" ? "resend" : "mock", error: "no_matches" };
+  }
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const absolute = (link: string) =>
+    link.startsWith("http") ? link : `${base}${link.startsWith("/") ? "" : "/"}${link}`;
+
+  // Group by savedSearchName so multiple saved searches collapse into one email.
+  const groups = new Map<string, SavedSearchDigestMatch[]>();
+  for (const m of matches) {
+    const key = m.savedSearchName ?? "Your saved search";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(m);
+  }
+
+  const total = matches.length;
+  const subject = `${total} new ${total === 1 ? "match" : "matches"} from your saved searches this week`;
+
+  const textGroups = Array.from(groups.entries())
+    .map(([groupName, list]) => {
+      const lines = list
+        .map((m) => `  • ${m.jobOrCandidateLabel} — ${m.summary}\n    ${absolute(m.link)}`)
+        .join("\n");
+      return `${groupName} (${list.length})\n${lines}`;
+    })
+    .join("\n\n");
+
+  const text = `Hi ${name},\n\nHere's what's new on unGhost this week from your saved searches:\n\n${textGroups}\n\nReview them on your dashboard: ${base}/recruiter/saved-searches\n\n— Team unGhost`;
+
+  const htmlGroups = Array.from(groups.entries())
+    .map(([groupName, list]) => {
+      const items = list
+        .map(
+          (m) => `
+          <li style="margin:0 0 14px 0;padding:0">
+            <a href="${absolute(m.link)}" style="color:#0191FC;text-decoration:none;font-weight:600">${m.jobOrCandidateLabel}</a>
+            <div style="color:#666;font-size:13px;margin-top:2px">${m.summary}</div>
+          </li>`,
+        )
+        .join("");
+      return `
+        <div style="margin:20px 0 8px 0">
+          <p style="margin:0 0 8px 0;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#999;font-weight:600">
+            ${groupName} · ${list.length} new
+          </p>
+          <ul style="list-style:none;padding:0;margin:0">${items}</ul>
+        </div>`;
+    })
+    .join("");
+
+  const dashUrl = `${base}/recruiter/saved-searches`;
+  return sendEmail({
+    to,
+    subject,
+    text,
+    html: `
+      <div style="font-family:system-ui,sans-serif;padding:24px;max-width:600px;color:#1A1816">
+        <h2 style="margin:0 0 12px 0">${total} new ${total === 1 ? "match" : "matches"} this week</h2>
+        <p>Hi ${name},</p>
+        <p>Here's what's new on unGhost from your saved searches in the last 7 days:</p>
+        ${htmlGroups}
+        <p style="margin-top:24px">
+          <a href="${dashUrl}" style="display:inline-block;padding:12px 20px;background:#0191FC;color:#fff;border-radius:12px;text-decoration:none;font-weight:600">Open saved searches</a>
+        </p>
+        <p style="color:#666;font-size:13px;margin-top:16px">
+          You're getting this because you set one or more saved searches to <strong>weekly</strong> alerts. Change the frequency anytime from your dashboard.
+        </p>
+        <p style="color:#999;font-size:11px;margin-top:24px">— Team unGhost</p>
+      </div>`,
+  });
+}
+
 /** Helper: enrollment rejected — payment couldn't be verified. */
 export async function sendEnrollmentRejected(
   to: string,

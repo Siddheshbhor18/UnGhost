@@ -84,9 +84,11 @@ function LoginInner() {
     if (res?.error) {
       setBusy(false);
       setPhase("idle");
-      if (res.error.includes("PHONE_UNVERIFIED")) {
-        setErr("Your account needs verification. Reach out at support@unghost.in.");
-      } else if (
+      // Note: the old PHONE_UNVERIFIED branch was deleted along with the
+      // MSG91 ripout — the server can no longer throw it. If we ever
+      // reintroduce a verification gate, surface the error message via
+      // the suspended/banned branch below (single-source for soft-block).
+      if (
         res.error.toLowerCase().includes("suspended") ||
         res.error.toLowerCase().includes("banned") ||
         res.error.toLowerCase().includes("grace")

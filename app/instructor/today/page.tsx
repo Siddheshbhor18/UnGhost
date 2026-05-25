@@ -10,6 +10,7 @@ import {
 } from "@/components/glass";
 import { ActionFeedItem } from "@/components/recruiter/ActionFeedItem";
 import {
+  getInstructorTodaySignals,
   listBootcampsByInstructor,
   listUsers,
   getUserById,
@@ -43,10 +44,13 @@ export default async function InstructorToday() {
     );
   }
 
-  const [user, myBootcamps, allStudents] = await Promise.all([
+  const [user, myBootcamps, allStudents, signals] = await Promise.all([
     getUserById(session.user.id),
     listBootcampsByInstructor(session.user.id),
     listUsers("student"),
+    // Real "Needs Action Now" + content-performance signals — replaces the
+    // previous fabricated stuck-student / "14:30 drop-off" strings.
+    getInstructorTodaySignals(session.user.id),
   ]);
 
   // ── KPIs ──
@@ -86,15 +90,13 @@ export default async function InstructorToday() {
     const t = new Date(s.iso).getTime();
     return t < todayStart.getTime() + 7 * 86400_000;
   });
-  // Mock "stuck students" — pick a few enrolled students with no verified skill match
-  const stuckStudents = allStudents
-    .filter((s) => enrolledStudentIds.has(s.id))
-    .filter((s) => (s.profile?.verifiedSkills?.length ?? 0) === 0)
-    .slice(0, 3);
-  // Mock "questions from student" pulled from any enrolled student
-  const studentQuestions = allStudents
-    .filter((s) => enrolledStudentIds.has(s.id))
-    .slice(0, 2);
+  // Real signals (no more fake "stuck students with no verifiedSkills"
+  // proxy or fabricated "questions from student" — the message model
+  // doesn't exist yet for the latter).
+  const { stuckStudents, inactiveStudents, biggestDropoff } = signals;
+  // Reference allStudents so the linter doesn't flag it — kept available
+  // for future surfaces (roster preview etc.).
+  void allStudents;
 
   const hour = new Date().getHours();
   const greeting =
@@ -123,7 +125,10 @@ export default async function InstructorToday() {
               })}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Link href="/instructor/grading" className="btn-glass">
+              <BookOpen size={14} /> Grading
+            </Link>
             <Link href="/instructor/studio" className="btn-glass">
               <BookOpen size={14} /> Content Studio
             </Link>
@@ -236,36 +241,35 @@ export default async function InstructorToday() {
         <div className="grid lg:grid-cols-12 gap-6">
           {/* Center: Action feed */}
           <div className="lg:col-span-8 space-y-7">
-            {/* Needs Action Now */}
+            {/* Needs Action Now — driven by real BootcampProgress aggregates */}
             <FeedSection
               emoji="🔥"
               title="Needs Action Now"
-              subtitle="Students stuck, pending reviews, content alerts"
+              subtitle="Students stuck on skill checks or going inactive"
             >
               {stuckStudents.map((s) => (
                 <ActionFeedItem
-                  key={s.id}
+                  key={`${s.studentId}:${s.videoId}`}
                   severity="warn"
                   icon={<AlertTriangle size={18} />}
-                  title={`${s.name} stuck on skill verification`}
-                  subtitle="3 failed attempts on Module 1 quiz"
-                  href="#"
-                  cta="Help"
+                  title={`${s.studentName} stuck on a skill check`}
+                  subtitle={`${s.attempts} failed attempts · ${s.bootcampTitle}`}
+                  href={`/instructor/studio/${s.bootcampId}`}
+                  cta="Review"
                 />
               ))}
-              {studentQuestions.map((s) => (
+              {inactiveStudents.map((s) => (
                 <ActionFeedItem
-                  key={s.id}
+                  key={`inactive:${s.studentId}:${s.bootcampId}`}
                   severity="info"
-                  icon={<MessageCircle size={18} />}
-                  title={`Question from ${s.name}`}
-                  subtitle={`In ${myBootcamps[0]?.title ?? "your bootcamp"}`}
-                  meta="2 hours ago"
-                  href="#"
-                  cta="Reply"
+                  icon={<Clock size={18} />}
+                  title={`${s.studentName} hasn't progressed`}
+                  subtitle={`${s.videosWatched}/${s.totalVideos} videos · joined ${s.daysSinceJoined}d ago · ${s.bootcampTitle}`}
+                  href={`/instructor/studio/${s.bootcampId}`}
+                  cta="View"
                 />
               ))}
-              {stuckStudents.length === 0 && studentQuestions.length === 0 && (
+              {stuckStudents.length === 0 && inactiveStudents.length === 0 && (
                 <GlassCard className="text-center !py-8">
                   <CheckCircle2
                     size={24}
@@ -306,19 +310,21 @@ export default async function InstructorToday() {
               </FeedSection>
             )}
 
-            {/* Content performance */}
-            {myBootcamps.length > 0 && contentHealth < 75 && (
+            {/* Content performance — biggest video-to-video drop-off across
+                all bootcamps. Computed live, not faked. Only renders when
+                a real >25% drop is detected with a meaningful sample. */}
+            {biggestDropoff && (
               <FeedSection
                 emoji="📉"
                 title="Content Performance"
-                subtitle="AI-detected signals"
+                subtitle="Largest video drop-off across your bootcamps"
               >
                 <ActionFeedItem
                   severity="warn"
                   icon={<TrendingDown size={18} />}
-                  title={`Drop-off detected in ${myBootcamps[0]?.title}`}
-                  subtitle="42% of students paused around 14:30 in Module 2 video"
-                  href="/instructor/studio"
+                  title={`${biggestDropoff.dropoffPct}% dropped before "${biggestDropoff.videoTitle}"`}
+                  subtitle={`${biggestDropoff.watchedThis}/${biggestDropoff.watchedFromPrev} of students who watched the previous lesson continued · ${biggestDropoff.bootcampTitle}`}
+                  href={`/instructor/studio/${biggestDropoff.bootcampId}`}
                   cta="Investigate"
                 />
               </FeedSection>
@@ -327,24 +333,56 @@ export default async function InstructorToday() {
 
           {/* Right: AI Insights + Bootcamps list */}
           <aside className="lg:col-span-4 space-y-4">
+            {/* AI Insights — honest copy. The "+28% recruiter demand" line
+                that used to live here was a literal string. Until we
+                actually compute skill-demand from job-posting trends, the
+                card just summarises real signals. */}
             <GlassCard glow className="!p-5">
               <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold flex items-center gap-1.5 mb-3">
-                <Sparkles size={12} /> AI Insights
+                <Sparkles size={12} /> Cohort signal
               </p>
-              <p className="text-sm text-brand-ink leading-relaxed mb-3">
-                Your bootcamps are above platform average rating by{" "}
-                <span className="font-semibold text-emerald-600">
-                  +{Math.max(0, ((avgRating || 4.2) - 4.0) * 100).toFixed(0)}%
+              {stuckStudents.length + inactiveStudents.length === 0 &&
+              !biggestDropoff ? (
+                <p className="text-sm text-brand-ink leading-relaxed">
+                  No friction signals in the past week. Bootcamps are
+                  flowing — focus on shipping new content or running a
+                  live session to keep momentum.
+                </p>
+              ) : (
+                <p className="text-sm text-brand-ink leading-relaxed">
+                  {stuckStudents.length > 0 ? (
+                    <>
+                      <span className="font-semibold text-amber-600">
+                        {stuckStudents.length} student
+                        {stuckStudents.length === 1 ? "" : "s"}
+                      </span>{" "}
+                      stuck on skill checks.{" "}
+                    </>
+                  ) : null}
+                  {inactiveStudents.length > 0 ? (
+                    <>
+                      <span className="font-semibold text-brand-primary">
+                        {inactiveStudents.length} inactive
+                      </span>{" "}
+                      after 7+ days.{" "}
+                    </>
+                  ) : null}
+                  {biggestDropoff ? (
+                    <>
+                      Biggest drop-off:{" "}
+                      <span className="font-semibold text-rose-600">
+                        {biggestDropoff.dropoffPct}%
+                      </span>{" "}
+                      before &ldquo;{biggestDropoff.videoTitle}&rdquo;.
+                    </>
+                  ) : null}
+                </p>
+              )}
+              <p className="text-xs text-brand-muted mt-3">
+                Avg rating across your bootcamps:{" "}
+                <span className="text-brand-ink font-semibold">
+                  {avgRating ? avgRating.toFixed(2) : "—"}/5
                 </span>
-                . Recruiter demand for{" "}
-                <span className="font-semibold text-brand-primary">
-                  {myBootcamps[0]?.skill ?? "your skill"}
-                </span>{" "}
-                jumped 28% this quarter.
-              </p>
-              <p className="text-xs text-brand-muted">
-                Suggested action: open a new live cohort within 14 days to capture
-                demand.
               </p>
             </GlassCard>
 

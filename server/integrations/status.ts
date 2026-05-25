@@ -1,7 +1,6 @@
 // Unified integration-status helper. Used by /admin/integrations and by
 // the demo-mode badge.
 import { aiMode, aiProvider } from "@/server/integrations/ai";
-import { smsMode } from "@/server/integrations/sms";
 import { emailMode } from "@/server/integrations/email";
 import { paymentsMode } from "@/server/integrations/payments";
 import { realtimeMode } from "@/server/integrations/realtime";
@@ -15,7 +14,6 @@ export type IntegrationMode = "live" | "mock";
 export interface IntegrationStatus {
   id:
     | "ai"
-    | "sms"
     | "email"
     | "payments"
     | "realtime"
@@ -50,14 +48,6 @@ export function listIntegrations(): IntegrationStatus[] {
       mode: aiMode(),
       envKeys: ["GROQ_API_KEY", "GOOGLE_AI_API_KEY", "ANTHROPIC_API_KEY"],
       hint: "Priority: GROQ_API_KEY (low-latency primary) > GOOGLE_AI_API_KEY (fallback) > ANTHROPIC_API_KEY. Each provider catches its own failures and chains down.",
-    },
-    {
-      id: "sms",
-      label: "SMS / OTP",
-      provider: "MSG91",
-      mode: smsMode(),
-      envKeys: ["MSG91_AUTH_KEY", "MSG91_SENDER_ID", "MSG91_OTP_TEMPLATE_ID"],
-      hint: "Add MSG91 keys to send real OTPs and transactional SMS.",
     },
     {
       id: "redis",

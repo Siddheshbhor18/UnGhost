@@ -42,12 +42,55 @@ export function SupportClient({ initial }: { initial: SupportTicket[] }) {
   const [tickets, setTickets] = useState<SupportTicket[]>(initial);
   const [selected, setSelected] = useState<SupportTicket | null>(initial[0] ?? null);
   const [filter, setFilter] = useState<"all" | SupportTicketStatus>("all");
+  const [busyTicketId, setBusyTicketId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  function setStatus(id: string, status: SupportTicketStatus) {
+  /**
+   * Flip a ticket's status. Optimistic: local state updates immediately,
+   * server PATCH confirms in background. On failure we roll back and
+   * surface the error inline so the admin doesn't trust a phantom flip.
+   * The PATCH route is audited so the change shows up in /admin/audit.
+   */
+  async function setStatus(
+    id: string,
+    status: SupportTicketStatus,
+  ): Promise<void> {
+    const prev = tickets.find((t) => t.id === id);
+    if (!prev) return;
+    setError(null);
+    setBusyTicketId(id);
     setTickets((list) =>
-      list.map((t) => (t.id === id ? { ...t, status, updatedAt: new Date().toISOString() } : t)),
+      list.map((t) =>
+        t.id === id
+          ? { ...t, status, updatedAt: new Date().toISOString() }
+          : t,
+      ),
     );
     if (selected?.id === id) setSelected({ ...selected, status });
+    try {
+      const res = await fetch(`/api/admin/support/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? `Update failed (${res.status})`);
+      }
+    } catch (e) {
+      // Rollback optimistic update on failure.
+      setTickets((list) =>
+        list.map((t) =>
+          t.id === id
+            ? { ...t, status: prev.status, updatedAt: prev.updatedAt }
+            : t,
+        ),
+      );
+      if (selected?.id === id) setSelected({ ...selected, status: prev.status });
+      setError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setBusyTicketId(null);
+    }
   }
 
   const filtered = tickets.filter((t) => filter === "all" || t.status === filter);
@@ -162,37 +205,47 @@ export function SupportClient({ initial }: { initial: SupportTicket[] }) {
               </p>
             </div>
 
+            {error ? (
+              <div className="mt-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+                {error}
+              </div>
+            ) : null}
+
             <div className="flex items-center gap-2 mt-6 flex-wrap">
               {selected.status === "open" && (
                 <button
                   onClick={() => setStatus(selected.id, "in_progress")}
-                  className="btn-brand text-xs"
+                  disabled={busyTicketId === selected.id}
+                  className="btn-brand text-xs disabled:opacity-50"
                 >
-                  Take ticket
+                  {busyTicketId === selected.id ? "Saving…" : "Take ticket"}
                 </button>
               )}
               {selected.status === "in_progress" && (
                 <button
                   onClick={() => setStatus(selected.id, "resolved")}
-                  className="btn-brand text-xs"
+                  disabled={busyTicketId === selected.id}
+                  className="btn-brand text-xs disabled:opacity-50"
                 >
-                  Mark resolved
+                  {busyTicketId === selected.id ? "Saving…" : "Mark resolved"}
                 </button>
               )}
               {selected.status === "resolved" && (
                 <button
                   onClick={() => setStatus(selected.id, "closed")}
-                  className="btn-glass text-xs"
+                  disabled={busyTicketId === selected.id}
+                  className="btn-glass text-xs disabled:opacity-50"
                 >
-                  Close ticket
+                  {busyTicketId === selected.id ? "Saving…" : "Close ticket"}
                 </button>
               )}
               {(selected.status === "resolved" || selected.status === "closed") && (
                 <button
                   onClick={() => setStatus(selected.id, "open")}
-                  className="btn-glass text-xs"
+                  disabled={busyTicketId === selected.id}
+                  className="btn-glass text-xs disabled:opacity-50"
                 >
-                  Reopen
+                  {busyTicketId === selected.id ? "Saving…" : "Reopen"}
                 </button>
               )}
               <a
@@ -204,8 +257,10 @@ export function SupportClient({ initial }: { initial: SupportTicket[] }) {
             </div>
 
             <p className="text-[10px] text-brand-muted mt-6">
-              Phase 1 mock-only — state changes live in memory until refresh.
-              Phase 2 persists to <code className="text-brand-primary">supportTickets</code> collection.
+              Status changes persist immediately to the{" "}
+              <code className="text-brand-primary">supportTickets</code>{" "}
+              collection and are audit-logged. Email replies go via your
+              mail client (mailto link above).
             </p>
           </>
         )}

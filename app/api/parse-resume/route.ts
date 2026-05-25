@@ -6,6 +6,8 @@ import { updateStudentProfile } from "@/server/store";
 import type { StudentProfile } from "@/shared/types";
 import { requireSameOrigin } from "@/server/lib/csrf";
 import { withApiErrorTracking } from "@/server/lib/api-error";
+import { uploadObject } from "@/server/integrations/storage";
+import { logger } from "@/server/lib/logger";
 import {
   rateLimit,
   rateLimitResponse,
@@ -97,6 +99,35 @@ async function handler(req: Request) {
     // Persist to authenticated student's profile if asked
     if (persistFlag === "1") {
       if (session?.user?.id && session.user.role === "student") {
+        // Upload the actual file to storage so recruiters can later
+        // download the resume from the candidate profile page. Previously
+        // we stored a `mock://uploaded/...` placeholder URL that didn't
+        // point at anything — recruiters got a 404 on click.
+        //
+        // R2 mode: real fetch PUT to the presigned URL → public CDN URL.
+        // Mock mode: writes to `.uploads/resumes/<key>` on disk; the URL
+        // is `mock://read/<key>` which won't render in browser but at
+        // least tells us where the file lives. Flips to real R2 URLs
+        // the moment R2_* env vars are set.
+        let resumeUrl: string | undefined;
+        try {
+          const buf = Buffer.from(await file.arrayBuffer());
+          const uploaded = await uploadObject({
+            prefix: "resumes",
+            contentType: file.type || "application/pdf",
+            filename: file.name,
+            body: buf,
+          });
+          resumeUrl = uploaded.publicUrl;
+        } catch (uploadErr) {
+          // Non-fatal — the parse-and-persist still saves the structured
+          // text fields. Recruiter just won't see a downloadable link
+          // until the next upload succeeds.
+          logger.error(
+            { err: uploadErr, userId: session.user.id, fileName: file.name },
+            "resume.upload_failed",
+          );
+        }
         const patch: Partial<StudentProfile> = {
           alias: parsed.alias,
           contactEmail: parsed.contactEmail,
@@ -107,7 +138,7 @@ async function handler(req: Request) {
             id: `h_${Date.now().toString(36)}_${i}`,
             ...h,
           })),
-          resumeUrl: `mock://uploaded/${encodeURIComponent(file.name)}`,
+          ...(resumeUrl ? { resumeUrl } : {}),
         };
         await updateStudentProfile(session.user.id, patch);
       }

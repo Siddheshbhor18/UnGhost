@@ -21,6 +21,7 @@ import {
   listInMailsByStudent,
   listNotInterestedJobIds,
   listSavedJobs,
+  listUpcomingLiveForStudent,
   maybeRunSlaSweep,
 } from "@/server/store";
 import { computeMatchPct } from "@/server/lib/matching";
@@ -62,6 +63,7 @@ export default async function DashboardPage() {
     inmails,
     notInterestedIds,
     savedJobs,
+    upcomingLive,
   ] = await Promise.all([
     getUserById(session.user.id),
     listApplicationsByStudent(session.user.id),
@@ -72,6 +74,10 @@ export default async function DashboardPage() {
     listInMailsByStudent(session.user.id),
     listNotInterestedJobIds(session.user.id),
     listSavedJobs(session.user.id),
+    // Real upcoming live sessions for this student (scheduled + live).
+    // Was hardcoded `null` on DailyBriefing — students with imminent
+    // sessions saw an empty slot despite the data being live.
+    listUpcomingLiveForStudent(session.user.id),
   ]);
   // Filter out jobs the student dismissed from the feed
   const dismissed = new Set(notInterestedIds);
@@ -155,7 +161,27 @@ export default async function DashboardPage() {
           studentName={firstName}
           newMatches={newMatches}
           pendingAssessments={pendingAssessments}
-          upcomingBootcamp={null}
+          upcomingBootcamp={
+            // Surface the next live session if one is scheduled within
+            // ~48h. The store helper already filters to scheduled+live
+            // for this student's enrolled bootcamps. We only want one
+            // imminent item — DailyBriefing's copy is shaped for that.
+            upcomingLive[0]
+              ? {
+                  title: upcomingLive[0].title,
+                  date: new Date(upcomingLive[0].startsAt).toLocaleString(
+                    "en-IN",
+                    {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    },
+                  ),
+                }
+              : null
+          }
           profileCompleteness={profileCompleteness}
         />
 

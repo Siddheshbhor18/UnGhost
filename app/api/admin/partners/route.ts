@@ -59,7 +59,10 @@ async function postHandler(req: Request) {
     actorId: session.user.id,
     actorRole: "admin",
     action: "partner.created",
-    targetType: "system",
+    // Was "system" — that meant /admin/audit couldn't filter to partner
+    // actions specifically. The shared AuditLog union now includes
+    // "partner" as a valid targetType so this is the precise value.
+    targetType: "partner",
     targetId: partner.id,
     summary: `Created partner ${partner.code} (${partner.name})`,
   });

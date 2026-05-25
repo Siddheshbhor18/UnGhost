@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Send,
   Sparkles,
@@ -65,10 +66,31 @@ export function FullCoach({
     },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, busy]);
+
+  // URL-param entry point: /student/coach?prompt=<text> auto-sends the prompt
+  // on first mount. Used by:
+  //   • the sidebar Quick Actions on /student/coach
+  //   • deep-links from dashboard widgets + emails ("ask Coach about …")
+  // The prompt is consumed once + the param is scrubbed from the URL so a
+  // browser-back doesn't re-trigger the send.
+  const hasAutosent = useRef(false);
+  useEffect(() => {
+    if (hasAutosent.current) return;
+    const initialPrompt = searchParams?.get("prompt");
+    if (!initialPrompt) return;
+    hasAutosent.current = true;
+    // Strip the param from the URL before firing so a refresh doesn't loop.
+    router.replace("/student/coach", { scroll: false });
+    // Defer to the next tick so initial messages state is mounted.
+    void Promise.resolve().then(() => send(initialPrompt));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function loadConvo(id: string) {
     setActiveId(id);

@@ -1,5 +1,10 @@
 "use client";
 
+// SMS-channel reset was removed when MSG91 was retired (mid-2026). The UI
+// + the /api/otp route still exist for verify-phone signup compatibility
+// but should NOT be advertised on forgot-password — no backend completes
+// the reset over SMS, so showing the option would just lead to silent
+// failure. Email-only via Resend now.
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -7,8 +12,6 @@ import {
   CheckCircle2,
   Loader2,
   Mail,
-  MessageSquare,
-  Phone,
   Sparkles,
 } from "lucide-react";
 import {
@@ -20,10 +23,7 @@ import {
   Logo,
 } from "@/components/glass";
 
-type Channel = "email" | "sms";
-
 export default function ForgotPasswordPage() {
-  const [channel, setChannel] = useState<Channel>("email");
   const [identifier, setIdentifier] = useState("");
   const [phase, setPhase] = useState<"input" | "sending" | "sent">("input");
 
@@ -31,19 +31,11 @@ export default function ForgotPasswordPage() {
     if (!identifier.trim() || phase === "sending") return;
     setPhase("sending");
     try {
-      if (channel === "email") {
-        await fetch("/api/email/forgot-password", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email: identifier.trim() }),
-        });
-      } else {
-        await fetch("/api/otp", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ phone: identifier.trim() }),
-        });
-      }
+      await fetch("/api/email/forgot-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: identifier.trim() }),
+      });
     } catch {
       /* always show success to prevent enumeration */
     }
@@ -74,16 +66,15 @@ export default function ForgotPasswordPage() {
                 <CheckCircle2 size={28} />
               </div>
               <h1 className="font-display font-extrabold text-2xl text-brand-ink">
-                Check your{" "}
-                {channel === "email" ? "inbox" : "messages"}
+                Check your inbox
               </h1>
               <p className="text-sm text-brand-muted mt-3 leading-relaxed">
                 If an account exists for{" "}
                 <span className="font-mono font-semibold text-brand-ink">
                   {identifier}
                 </span>
-                , we sent a reset{" "}
-                {channel === "email" ? "link" : "code"}. Expires in 15 min.
+                , we sent a reset link. It expires in 1 hour and is
+                single-use.
               </p>
 
               <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 inline-flex items-start gap-2 text-left">
@@ -92,11 +83,8 @@ export default function ForgotPasswordPage() {
                   className="text-amber-700 mt-0.5 shrink-0"
                 />
                 <p className="text-[11px] text-amber-800 leading-relaxed">
-                  <strong>Demo mode:</strong>{" "}
-                  {channel === "email"
-                    ? "real impl sends via Resend"
-                    : "real impl sends via MSG91"}{" "}
-                  · the link/code is shown in the server console for now.
+                  Email goes via Resend. If it doesn&apos;t arrive in 2 min,
+                  check spam or try a different address.
                 </p>
               </div>
 
@@ -106,7 +94,7 @@ export default function ForgotPasswordPage() {
                   onClick={() => setPhase("input")}
                   className="text-brand-primary font-semibold"
                 >
-                  Try a different channel
+                  Try a different email
                 </button>
               </p>
             </div>
@@ -119,47 +107,20 @@ export default function ForgotPasswordPage() {
                 Locked out?
               </h1>
               <p className="text-sm text-brand-muted mt-2 leading-relaxed">
-                Choose how you want to reset. We&apos;ll send a one-time link
-                or code, your call.
+                Drop your email and we&apos;ll send you a single-use reset
+                link.
               </p>
 
-              {/* Channel pills */}
-              <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-brand-ink/5 mt-5">
-                <button
-                  onClick={() => setChannel("email")}
-                  className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                    channel === "email"
-                      ? "bg-white shadow-sm text-brand-ink"
-                      : "text-brand-muted hover:text-brand-ink"
-                  }`}
-                >
-                  <Mail size={13} /> Email link
-                </button>
-                <button
-                  onClick={() => setChannel("sms")}
-                  className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                    channel === "sms"
-                      ? "bg-white shadow-sm text-brand-ink"
-                      : "text-brand-muted hover:text-brand-ink"
-                  }`}
-                >
-                  <MessageSquare size={13} /> SMS code
-                </button>
-              </div>
-
-              <div className="mt-4">
+              <div className="mt-5">
                 <label className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold block mb-1.5">
-                  {channel === "email" ? "Email address" : "Phone number"}
+                  Email address
                 </label>
                 <GlassInput
-                  type={channel === "email" ? "email" : "tel"}
+                  type="email"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder={
-                    channel === "email"
-                      ? "you@email.com"
-                      : "+91 9876543210"
-                  }
+                  placeholder="you@email.com"
+                  autoFocus
                 />
               </div>
 
@@ -174,13 +135,9 @@ export default function ForgotPasswordPage() {
                   <>
                     <Loader2 size={14} className="animate-spin" /> Sending…
                   </>
-                ) : channel === "email" ? (
-                  <>
-                    <Mail size={14} /> Send reset link
-                  </>
                 ) : (
                   <>
-                    <Phone size={14} /> Send reset code
+                    <Mail size={14} /> Send reset link
                   </>
                 )}
               </GlassButton>

@@ -49,6 +49,20 @@ export interface BootcampProgress {
       strengths: string[];
       improvements: string[];
       gradedAt: string;
+      /** Set when an instructor has reviewed + (optionally) overridden the
+       *  AI grade. The original AI numbers stay in `aiGrade` for audit. */
+      reviewedByInstructorId?: string;
+      reviewedAt?: string;
+      instructorNote?: string;
+      /** Snapshot of the AI's original grade — preserved when an instructor
+       *  overrides any field above so the override is auditable. */
+      aiGrade?: {
+        totalScore: number;
+        perCriterion: Array<{ key: string; score: number; feedback: string }>;
+        strengths: string[];
+        improvements: string[];
+        gradedAt: string;
+      };
     };
     leaderboardRank?: number;
     plagiarismFlag?: boolean;
@@ -251,14 +265,15 @@ export interface User {
   /** True once email-ownership has been proven via verify-email token. */
   emailVerified?: boolean;
   emailVerifiedAt?: string;
-  /** True once phone-ownership has been proven via OTP. */
-  phoneVerified?: boolean;
-  phoneVerifiedAt?: string;
   createdAt?: string;
   /** Channel-partner attribution. Set on signup if a `?ref=<code>` was
    *  captured during the visit. Powers /admin/partners + /p/[code] stats. */
   referrerPartnerId?: string;
   referrerCapturedAt?: string;
+  /** OAuth provider used on first signin ("google" | "linkedin"). Null/absent
+   *  for credentials-only signups. Informational — auth decisions never key
+   *  off this field. */
+  oauthProvider?: "google" | "linkedin" | null;
 }
 
 /**
@@ -354,6 +369,12 @@ export interface BootcampVideo {
   durationMin: number;
   posterUrl: string;
   verifyPrompt: string;
+  /** Playback URL — either a direct video file (R2/S3 .mp4/.m3u8) or a
+   *  YouTube watch/share URL. The student "learn" player auto-routes:
+   *  YouTube URLs render in a chrome-stripped iframe, everything else
+   *  goes through an HTML5 <video> tag. Null until the instructor
+   *  pastes/uploads a source. */
+  url?: string | null;
 }
 
 export type BootcampCategory =
@@ -538,7 +559,22 @@ export interface AuditLog {
   actorRole: Role;
   /** Canonical action name: "user.suspend", "bootcamp.approve", etc. */
   action: string;
-  targetType: "user" | "bootcamp" | "job" | "application" | "company" | "message" | "system" | "sponsorship";
+  targetType:
+    | "user"
+    | "bootcamp"
+    | "job"
+    | "application"
+    | "company"
+    | "message"
+    | "system"
+    | "sponsorship"
+    // Admin-surface targets — added when /admin/campaigns, /admin/emails,
+    // /admin/support became real persistence pages.
+    | "campaign"
+    | "email_template"
+    | "support_ticket"
+    // Partner attribution flow.
+    | "partner";
   targetId: string;
   summary: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

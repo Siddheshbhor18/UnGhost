@@ -23,6 +23,7 @@ import {
   GlassNavbar,
 } from "@/components/glass";
 import {
+  computeCompanyMetrics,
   getCompanyById,
   getJobById,
   getBootcampForSkill,
@@ -72,11 +73,14 @@ export default async function MissionBrief({
   const job = await getJobById(params.id);
   if (!job) notFound();
 
-  const [co, user, allApps, allJobs] = await Promise.all([
+  const [co, user, allApps, allJobs, companyMetrics] = await Promise.all([
     getCompanyById(job.companyId),
     getUserById(session.user.id),
     listApplicationsByStudent(session.user.id),
     listJobs(),
+    // Real 90-day ghosting rate for this company. Used by the mission-
+    // brief badge + sidebar — was hardcoded `1.2%` for every job.
+    computeCompanyMetrics(job.companyId),
   ]);
   const studentSkills = user?.profile?.skills ?? [];
   const verifiedLow = new Set(
@@ -124,7 +128,12 @@ export default async function MissionBrief({
     .slice(0, 4);
 
   const tier = tierFor(matchPct);
-  const ghostingRatePct = 1.2; // placeholder; real impl pulls company.ghostingRate
+  // Real per-company ghosting rate over the trailing 90 days. Computed
+  // from this company's applications: breaches ÷ total × 100. When the
+  // company has <5 apps in the window we suppress the badge (small
+  // sample = misleading), tracked via `hasGhostingSignal`.
+  const ghostingRatePct = companyMetrics.ghostingRatePct;
+  const hasGhostingSignal = companyMetrics.applications90d >= 5;
 
   return (
     <main className="relative min-h-screen">
@@ -150,12 +159,14 @@ export default async function MissionBrief({
                     <GlassBadge tone="neutral">
                       <Building2 size={11} /> {co?.name}
                     </GlassBadge>
-                    <GlassBadge
-                      tone={ghostingRatePct > 10 ? "danger" : "success"}
-                    >
-                      <Ghost size={10} /> {ghostingRatePct.toFixed(1)}% ghost
-                      rate
-                    </GlassBadge>
+                    {hasGhostingSignal ? (
+                      <GlassBadge
+                        tone={ghostingRatePct > 10 ? "danger" : "success"}
+                      >
+                        <Ghost size={10} /> {ghostingRatePct.toFixed(1)}%
+                        ghost rate
+                      </GlassBadge>
+                    ) : null}
                     <GlassBadge tone={tier.badgeTone}>
                       Tier {tier.letter} · {tier.label}
                     </GlassBadge>
@@ -421,21 +432,37 @@ export default async function MissionBrief({
                   <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
                     Ghosting rate (90 days)
                   </p>
-                  <span
-                    className={`font-display font-bold text-lg ${
-                      ghostingRatePct > 10
-                        ? "text-rose-600"
-                        : ghostingRatePct > 5
-                        ? "text-amber-600"
-                        : "text-emerald-600"
-                    }`}
-                  >
-                    {ghostingRatePct.toFixed(1)}%
-                  </span>
+                  {hasGhostingSignal ? (
+                    <span
+                      className={`font-display font-bold text-lg ${
+                        ghostingRatePct > 10
+                          ? "text-rose-600"
+                          : ghostingRatePct > 5
+                            ? "text-amber-600"
+                            : "text-emerald-600"
+                      }`}
+                    >
+                      {ghostingRatePct.toFixed(1)}%
+                    </span>
+                  ) : (
+                    <span className="font-mono text-xs text-brand-muted">
+                      not enough data
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-brand-muted">
-                  Industry avg <span className="text-brand-ink">38%</span> · lower
-                  is better.
+                  {hasGhostingSignal ? (
+                    <>
+                      Industry avg{" "}
+                      <span className="text-brand-ink">38%</span> · lower is
+                      better.
+                    </>
+                  ) : (
+                    <>
+                      Needs ≥5 applications in the last 90 days to compute a
+                      stable rate.
+                    </>
+                  )}
                 </p>
               </div>
             </GlassCard>
@@ -519,8 +546,12 @@ export default async function MissionBrief({
                     >
                       <Target size={16} /> Take Assessment to Apply →
                     </Link>
+                    {/* Copy matches the actual flow: TOTAL_QUESTIONS=1 in
+                        app/missions/[id]/assess/page.tsx. Bump this back to
+                        "10 questions" the moment the gauntlet supports a
+                        multi-question stream. */}
                     <p className="text-[11px] text-brand-muted mt-3">
-                      ~15 mins · 10 questions · 60% to pass
+                      ~5 mins · 1 scenario · 60% to pass
                     </p>
                   </>
                 ) : (

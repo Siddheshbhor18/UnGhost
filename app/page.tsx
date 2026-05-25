@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
@@ -40,6 +41,24 @@ import {
   getGlobalMetrics,
 } from "@/server/store";
 
+// Public landing data is session-independent (same jobs/companies/metrics/
+// bootcamps for every anonymous visitor) so we cache it for 60 s across
+// requests. The session lookup + dashboard redirect below still runs
+// per-request — only the read-only data is shared.
+const getLandingData = unstable_cache(
+  async () => {
+    const [allJobs, companies, metrics, bcs] = await Promise.all([
+      listJobs(),
+      listCompanies(),
+      getGlobalMetrics(),
+      listBootcamps(),
+    ]);
+    return { allJobs, companies, metrics, bcs };
+  },
+  ["landing-data-v1"],
+  { revalidate: 60, tags: ["landing"] },
+);
+
 export default async function LandingPage() {
   // PRD: logged-in users auto-redirect to their dashboard
   const session = await getServerSession(authOptions);
@@ -48,12 +67,7 @@ export default async function LandingPage() {
   if (session?.user?.role === "admin") redirect("/admin/today");
   if (session?.user?.role === "instructor") redirect("/instructor/today");
 
-  const [allJobs, companies, metrics, bcs] = await Promise.all([
-    listJobs(),
-    listCompanies(),
-    getGlobalMetrics(),
-    listBootcamps(),
-  ]);
+  const { allJobs, companies, metrics, bcs } = await getLandingData();
   const jobs = allJobs.slice(0, 4);
   const featuredBootcamps = bcs.slice(0, 6);
 
@@ -163,7 +177,7 @@ export default async function LandingPage() {
             num="03"
             icon={<Zap size={20} />}
             title="Prove your fit"
-            copy="Take a 10-question gauntlet per role. AI grades depth, integrity, evidence."
+            copy="Take a real scenario per role. AI grades depth, integrity, evidence."
           />
           <StepCard
             num="04"

@@ -388,6 +388,26 @@ export function BootcampEditor({ bootcamp }: Props) {
                   placeholder="Skill-check prompt — what the AI grades students on."
                   disabled={isInReview}
                 />
+                {/* Video URL — paste a YouTube share link OR an R2/S3
+                    .mp4/.m3u8 URL. Auto-detected by VideoPlayer on the
+                    student side. Saves are debounced via the same
+                    whole-bootcamp save that handles title + duration. */}
+                <div className="mt-2">
+                  <label className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold block mb-1">
+                    Video URL{" "}
+                    <span className="opacity-60 lowercase normal-case">
+                      · YouTube link or direct .mp4/.m3u8
+                    </span>
+                  </label>
+                  <GlassInput
+                    value={v.url ?? ""}
+                    onChange={(e) =>
+                      updateVideo(v.id, "url", e.target.value)
+                    }
+                    placeholder="https://youtu.be/… or https://cdn.unghost.in/…/lesson.mp4"
+                    disabled={isInReview}
+                  />
+                </div>
               </div>
             ))}
           </div>

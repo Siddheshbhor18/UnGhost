@@ -196,6 +196,55 @@ export async function mockRead(key: string): Promise<Uint8Array | null> {
   }
 }
 
+/**
+ * Server-side upload — used when the file is already in-process (e.g.
+ * `/api/parse-resume` receives a multipart form). Skips the browser
+ * presign + PUT round-trip and writes directly through the adapter:
+ *
+ *   • R2 mode  → presign + same-process PUT to the signed URL (the R2
+ *                edge endpoint accepts SigV4-authenticated writes from
+ *                anywhere, not just the original browser).
+ *   • Mock mode → `mockWrite()` lands on `.uploads/` for inspection.
+ *
+ * Returns the canonical `publicUrl` to store on the user record. The
+ * caller never needs to know which mode is live.
+ */
+export async function uploadObject(input: {
+  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover";
+  contentType: string;
+  filename: string;
+  body: Uint8Array;
+}): Promise<{ publicUrl: string; key: string }> {
+  const presigned = await presignUpload({
+    prefix: input.prefix,
+    contentType: input.contentType,
+    filename: input.filename,
+  });
+
+  if (storageMode() === "mock") {
+    // Write through the disk-backed bucket so dev users can actually
+    // download the file later. The presignMock URL is a placeholder —
+    // mockRead resolves the matching key on demand.
+    await mockWrite(presigned.key, input.body);
+    return { publicUrl: presigned.publicUrl, key: presigned.key };
+  }
+
+  // R2 mode — PUT to the signed URL with the matching headers. fetch's
+  // `body` typing predates the modern Uint8Array<ArrayBuffer> overload,
+  // so we wrap in a Blob (zero-copy on Node 18+) to satisfy BodyInit.
+  const res = await fetch(presigned.uploadUrl, {
+    method: "PUT",
+    headers: presigned.headers,
+    body: new Blob([input.body as unknown as ArrayBuffer]),
+  });
+  if (!res.ok) {
+    throw new Error(
+      `R2 upload failed: HTTP ${res.status} ${res.statusText}`,
+    );
+  }
+  return { publicUrl: presigned.publicUrl, key: presigned.key };
+}
+
 /** Delete an object (works for both R2 and mock). */
 export async function deleteObject(key: string): Promise<void> {
   if (storageMode() === "mock") {
