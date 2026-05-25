@@ -34,7 +34,7 @@ async function handler(req: Request) {
   }
 
   // Decode plan + user from order id format `bill_<plan>_<userId>_<ts>`.
-  const match = /^bill_(pro|premium)_([^_]+)_/.exec(orderId);
+  const match = /^bill_(pro|premium)_(.+)_(\d+)$/.exec(orderId);
   if (!match) {
     return NextResponse.redirect(new URL("/upgrade?error=bad_order", req.url));
   }

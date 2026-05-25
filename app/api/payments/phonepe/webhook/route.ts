@@ -87,7 +87,7 @@ async function handler(req: Request) {
   }
 
   // Decode plan + userId from our orderId convention.
-  const match = /^bill_(pro|premium)_([^_]+)_/.exec(orderId);
+  const match = /^bill_(pro|premium)_(.+)_(\d+)$/.exec(orderId);
   if (!match) {
     // Not a billing order — could be a legacy bootcamp order, sponsorship,
     // or an attacker. Log and ack 200 (returning non-200 makes PhonePe retry).
