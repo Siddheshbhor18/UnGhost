@@ -81,12 +81,6 @@ export default async function LandingPage() {
       <section className="mx-auto max-w-content px-4 pt-12 md:pt-20 pb-20">
         <div className="grid lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7 space-y-6">
-            <SectionLabel
-              tone="brand"
-              icon={<Sparkles size={12} />}
-            >
-              India-first · DPDP compliant · UPI native
-            </SectionLabel>
             <h1 className="font-display font-extrabold tracking-tightest text-5xl md:text-7xl text-neutral-950 leading-[1.02] headline-twotone">
               We don&apos;t ghost.
               <br />
