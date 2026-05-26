@@ -19,7 +19,7 @@ describe("redis adapter", () => {
     it("returns 'mock' in non-production environments when Upstash variables are missing", () => {
       delete process.env.UPSTASH_REDIS_REST_URL;
       delete process.env.UPSTASH_REDIS_REST_TOKEN;
-      process.env.NODE_ENV = "development";
+      (process.env as any).NODE_ENV = "development";
       
       expect(redisMode()).toBe("mock");
     });
@@ -27,7 +27,7 @@ describe("redis adapter", () => {
     it("returns 'upstash' in non-production environments when Upstash variables are present", () => {
       process.env.UPSTASH_REDIS_REST_URL = "https://mock-redis.upstash.io";
       process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
-      process.env.NODE_ENV = "development";
+      (process.env as any).NODE_ENV = "development";
 
       expect(redisMode()).toBe("upstash");
     });
@@ -35,7 +35,7 @@ describe("redis adapter", () => {
     it("throws a fatal error in production when Upstash variables are missing", () => {
       delete process.env.UPSTASH_REDIS_REST_URL;
       delete process.env.UPSTASH_REDIS_REST_TOKEN;
-      process.env.NODE_ENV = "production";
+      (process.env as any).NODE_ENV = "production";
 
       expect(() => redisMode()).toThrowError(/Production configuration error/);
     });
@@ -43,7 +43,7 @@ describe("redis adapter", () => {
     it("returns 'upstash' in production when Upstash variables are present", () => {
       process.env.UPSTASH_REDIS_REST_URL = "https://mock-redis.upstash.io";
       process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
-      process.env.NODE_ENV = "production";
+      (process.env as any).NODE_ENV = "production";
 
       expect(redisMode()).toBe("upstash");
     });
@@ -53,7 +53,7 @@ describe("redis adapter", () => {
     it("can set and get values with TTL", async () => {
       delete process.env.UPSTASH_REDIS_REST_URL;
       delete process.env.UPSTASH_REDIS_REST_TOKEN;
-      process.env.NODE_ENV = "development";
+      (process.env as any).NODE_ENV = "development";
 
       const client = redis();
       await client.set("key1", "val1");
@@ -72,7 +72,7 @@ describe("redis adapter", () => {
     it("can delete keys", async () => {
       delete process.env.UPSTASH_REDIS_REST_URL;
       delete process.env.UPSTASH_REDIS_REST_TOKEN;
-      process.env.NODE_ENV = "development";
+      (process.env as any).NODE_ENV = "development";
 
       const client = redis();
       await client.set("k1", "v1");
@@ -87,7 +87,7 @@ describe("redis adapter", () => {
     it("can increment keys", async () => {
       delete process.env.UPSTASH_REDIS_REST_URL;
       delete process.env.UPSTASH_REDIS_REST_TOKEN;
-      process.env.NODE_ENV = "development";
+      (process.env as any).NODE_ENV = "development";
 
       const client = redis();
       expect(await client.incr("counter")).toBe(1);
@@ -98,7 +98,7 @@ describe("redis adapter", () => {
     it("can set expiry and check TTL", async () => {
       delete process.env.UPSTASH_REDIS_REST_URL;
       delete process.env.UPSTASH_REDIS_REST_TOKEN;
-      process.env.NODE_ENV = "development";
+      (process.env as any).NODE_ENV = "development";
 
       const client = redis();
       expect(await client.expire("nonexistent", 60)).toBe(0);

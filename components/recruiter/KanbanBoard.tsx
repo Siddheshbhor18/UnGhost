@@ -40,6 +40,9 @@ const LANES: Array<{ stage: Stage; label: string; accent: string }> = [
 export function KanbanBoard({ applications, jobs, students }: Props) {
   const [apps, setApps] = useState(applications);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [hiredAppName, setHiredAppName] = useState<string | null>(null);
+  const [hiredAppId, setHiredAppId] = useState<string | null>(null);
+  const [initialDrawerTab, setInitialDrawerTab] = useState<DrawerTab>("profile");
 
   const byStage = useMemo(() => {
     const m: Record<Stage, Application[]> = {
@@ -64,6 +67,13 @@ export function KanbanBoard({ applications, jobs, students }: Props) {
       body: JSON.stringify({ stage: next, outcomeNotes: notes }),
     });
     setOpenId(null);
+
+    if (next === "hired") {
+      const targetApp = apps.find((a) => a.id === id);
+      const studentName = targetApp ? students[targetApp.studentId]?.name : "the candidate";
+      setHiredAppName(studentName || "the candidate");
+      setHiredAppId(id);
+    }
   }
 
   const open = apps.find((a) => a.id === openId);
@@ -87,7 +97,10 @@ export function KanbanBoard({ applications, jobs, students }: Props) {
                     app={a}
                     job={jobs[a.jobId]}
                     student={students[a.studentId]}
-                    onOpen={() => setOpenId(a.id)}
+                    onOpen={() => {
+                      setInitialDrawerTab("profile");
+                      setOpenId(a.id);
+                    }}
                   />
                 ))}
               </AnimatePresence>
@@ -111,7 +124,70 @@ export function KanbanBoard({ applications, jobs, students }: Props) {
             allStudents={students}
             onClose={() => setOpenId(null)}
             onAdvance={(stage, notes) => advance(open.id, stage, notes)}
+            initialTab={initialDrawerTab}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Congratulations Modal */}
+      <AnimatePresence>
+        {hiredAppId && hiredAppName && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-brand-ink/40 backdrop-blur-md"
+              onClick={() => {
+                setHiredAppId(null);
+                setHiredAppName(null);
+              }}
+            />
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 350 }}
+              className="relative w-full max-w-md glass-panel p-8 text-center bg-white/95 backdrop-blur-2xl border border-white/60 shadow-glass-xl rounded-3xl"
+            >
+              <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 mb-4 animate-bounce">
+                <Sparkles size={28} />
+              </div>
+
+              <h3 className="font-display text-xl font-bold text-brand-ink mb-2">
+                Congrats on finding your ideal candidate!
+              </h3>
+              <p className="text-sm text-brand-muted mb-6">
+                Let <span className="font-semibold text-brand-primary">{hiredAppName}</span> know that they got hired.
+              </p>
+
+              <div className="flex gap-3 justify-center">
+                <GlassButton
+                  variant="brand"
+                  size="md"
+                  onClick={() => {
+                    setInitialDrawerTab("messages");
+                    setOpenId(hiredAppId);
+                    setHiredAppId(null);
+                    setHiredAppName(null);
+                  }}
+                >
+                  <MessageCircle size={14} className="mr-1.5" />
+                  Message
+                </GlassButton>
+                <GlassButton
+                  variant="glass"
+                  size="md"
+                  onClick={() => {
+                    setHiredAppId(null);
+                    setHiredAppName(null);
+                  }}
+                >
+                  I&apos;ll do it later
+                </GlassButton>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>
@@ -198,6 +274,7 @@ function ActionDrawer({
   allStudents,
   onClose,
   onAdvance,
+  initialTab = "profile",
 }: {
   app: Application;
   job?: Job;
@@ -206,8 +283,9 @@ function ActionDrawer({
   allStudents: Record<string, User>;
   onClose: () => void;
   onAdvance: (stage: Stage, notes?: string) => void;
+  initialTab?: DrawerTab;
 }) {
-  const [tab, setTab] = useState<DrawerTab>("profile");
+  const [tab, setTab] = useState<DrawerTab>(initialTab);
   const [sponsorOpen, setSponsorOpen] = useState(false);
   const [sponsorBanner, setSponsorBanner] = useState<string | null>(null);
   const next: Stage =
