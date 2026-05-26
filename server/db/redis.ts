@@ -30,9 +30,19 @@ export interface RedisLike {
 export type RedisMode = "upstash" | "mock";
 
 export function redisMode(): RedisMode {
-  return process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? "upstash"
-    : "mock";
+  const hasUrl = !!process.env.UPSTASH_REDIS_REST_URL;
+  const hasToken = !!process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (process.env.NODE_ENV === "production") {
+    if (!hasUrl || !hasToken) {
+      throw new Error(
+        `Production configuration error: Missing required Upstash Redis environment variables. ` +
+        `Fallbacks are disabled in production to prevent data inconsistency across instances.`
+      );
+    }
+  }
+
+  return hasUrl && hasToken ? "upstash" : "mock";
 }
 
 // ── Upstash adapter ─────────────────────────────────────────────────────────

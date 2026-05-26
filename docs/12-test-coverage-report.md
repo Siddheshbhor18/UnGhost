@@ -14,14 +14,15 @@ The platform enforces a strict hybrid testing architecture using two major, high
 
 ## 2. Test Suites & Coverage Summary
 
-We run a total of **11 Vitest test suites** containing **66 granular assertions** and **2 Playwright E2E spec suites**.
+We run a total of **12 Vitest test suites** containing **74 granular assertions** and **2 Playwright E2E spec suites**.
 
-### Vitest Unit & Integration Suites (66 passing assertions)
+### Vitest Unit & Integration Suites (74 passing assertions)
 | Test Suite / File | Type | Purpose | Status |
 | :--- | :--- | :--- | :--- |
 | `pricing.test.ts` | Unit | Evaluates INR pricing calculations, fractional paise round-off, GST (18%) mathematics, and order parsing patterns. | ✅ PASS (19 tests) |
 | `password.test.ts` | Unit | Evaluates bcrypt hash parameters, legacy plaintext migrations, and verification safety. | ✅ PASS (12 tests) |
 | `reset-token.test.ts` | Unit | Evaluates forgot-password lifetime verification tokens, expiry checks, and signature validations. | ✅ PASS (5 tests) |
+| `redis.test.ts` | Unit | Tests Redis client mode routing, environment fail-safes, and standard in-memory shimming operations. | ✅ PASS (8 tests) |
 | `store.test.ts` | Integration | Simulates Mongoose model persistence, support ticket creation, email template updates, and data read/writes. | ✅ PASS (5 tests) |
 | `csrf.test.ts` | Unit | Tests same-origin request headers, Referer boundaries, and CF preview host exemptions. | ✅ PASS (4 tests) |
 | `validate.test.ts` | Unit | Tests Zod schemas against incoming JSON request payloads and URL query params. | ✅ PASS (5 tests) |
@@ -43,10 +44,10 @@ We run a total of **11 Vitest test suites** containing **66 granular assertions*
 
 Through targeted utility coverage expansion, we successfully bypassed the global vitest quality thresholds:
 
-- **Statements**: **12.38%** (Threshold: 12.00%) — **PASSED** 🎉
-- **Branches**: **12.44%** (Threshold: 12.00%) — **PASSED** 🎉
-- **Functions**: **12.50%** (Threshold: 11.00%) — **PASSED** 🎉
-- **Lines**: **12.56%** (Threshold: 12.00%) — **PASSED** 🎉
+- **Statements**: **13.45%** (Threshold: 12.00%) — **PASSED** 🎉
+- **Branches**: **14.08%** (Threshold: 12.00%) — **PASSED** 🎉
+- **Functions**: **13.13%** (Threshold: 11.00%) — **PASSED** 🎉
+- **Lines**: **13.50%** (Threshold: 12.00%) — **PASSED** 🎉
 
 ---
 
