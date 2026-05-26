@@ -4,7 +4,7 @@ test.describe("Public pages", () => {
   test("landing renders hero + metrics", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /we don.t ghost/i })).toBeVisible();
-    await expect(page.getByText(/Active missions/i).first()).toBeVisible();
+    await expect(page.getByText(/Drop your resume/i).first()).toBeVisible();
   });
 
   test("bootcamps catalogue lists at least one bootcamp", async ({ page }) => {

@@ -30,6 +30,7 @@ import {
   SectionLabel,
   Stat,
 } from "@/components/ui";
+import { MagicWidget } from "@/components/landing/MagicWidget";
 import { FAQ } from "@/components/landing/FAQ";
 import { CookieConsent } from "@/components/landing/CookieConsent";
 import { LiveSessionsTeaser } from "@/components/live/LiveSessionsTeaser";
@@ -120,9 +121,10 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          {/* Metrics Column */}
+          {/* Magic Widget */}
           <div className="lg:col-span-5">
-            <div className="grid grid-cols-2 gap-4">
+            <MagicWidget />
+            <div className="mt-4 grid grid-cols-2 gap-3">
               <Stat
                 label="Active missions"
                 value={metrics.activeMissions}
