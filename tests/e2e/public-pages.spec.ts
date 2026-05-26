@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Public pages", () => {
-  test("landing renders hero + magic widget", async ({ page }) => {
+  test("landing renders hero + metrics", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /we don.t ghost/i })).toBeVisible();
-    await expect(page.getByText(/Magic Widget/i).first()).toBeVisible();
+    await expect(page.getByText(/Active missions/i).first()).toBeVisible();
   });
 
   test("bootcamps catalogue lists at least one bootcamp", async ({ page }) => {
