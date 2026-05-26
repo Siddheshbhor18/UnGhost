@@ -20,6 +20,8 @@ This folder contains the full production-readiness plan for unGhost.com. Read th
 | 05 | [CI/CD pipeline](./05-cicd-pipeline.md) | GitHub Actions, environments, PR previews, migrations, rollback |
 | 06 | [Operations and monitoring](./06-operations-monitoring.md) | Logging, alerts, on-call, runbooks, incident response, SLAs |
 | 07 | [8-week hardening roadmap](./07-roadmap.md) | Week-by-week plan to take the app from prototype to production-ready |
+| 11 | [Security audit and vulnerability review](./11-security-review-report.md) | In-depth security analysis, DPDP compliance review, and identified risks |
+| 12 | [Testing and coverage report](./12-test-coverage-report.md) | Testing architecture overview, current coverage, and coverage expansion roadmap |
 
 ## How to keep this updated
 
