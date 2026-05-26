@@ -20,15 +20,34 @@
  *   - Schema mismatches (returns 400 with the issue list)
  *   - Unknown extra fields are stripped by default
  *
- * Never returns raw zod messages to the client in production — Phase 1 keeps
- * them for DX; replace with a generic message in Sprint D Day 1.
+ * In production the schema `issues` array is suppressed — the client only
+ * sees a generic `invalid_input` error so we don't leak field-level schema
+ * details to attackers probing the API. In dev the issues are kept for DX.
  */
 import { NextResponse } from "next/server";
 import type { ZodSchema } from "zod";
 
+const isProd = process.env.NODE_ENV === "production";
+
 export type ParseResult<T> =
   | { ok: true; data: T }
   | { ok: false; response: NextResponse };
+
+function invalidInputResponse(
+  errorCode: "invalid_input" | "invalid_query",
+  issues: Array<{ path: string; message: string }>,
+): NextResponse {
+  if (isProd) {
+    return NextResponse.json(
+      {
+        error: errorCode,
+        message: "One or more fields failed validation.",
+      },
+      { status: 400 },
+    );
+  }
+  return NextResponse.json({ error: errorCode, issues }, { status: 400 });
+}
 
 /** Parse JSON body against a zod schema. Returns NextResponse on failure. */
 export async function parseBody<T>(
@@ -49,18 +68,13 @@ export async function parseBody<T>(
   }
   const result = schema.safeParse(raw);
   if (!result.success) {
+    const issues = result.error.issues.map((i) => ({
+      path: i.path.join("."),
+      message: i.message,
+    }));
     return {
       ok: false,
-      response: NextResponse.json(
-        {
-          error: "invalid_input",
-          issues: result.error.issues.map((i) => ({
-            path: i.path.join("."),
-            message: i.message,
-          })),
-        },
-        { status: 400 },
-      ),
+      response: invalidInputResponse("invalid_input", issues),
     };
   }
   return { ok: true, data: result.data };
@@ -78,18 +92,13 @@ export function parseQuery<T>(
   });
   const result = schema.safeParse(obj);
   if (!result.success) {
+    const issues = result.error.issues.map((i) => ({
+      path: i.path.join("."),
+      message: i.message,
+    }));
     return {
       ok: false,
-      response: NextResponse.json(
-        {
-          error: "invalid_query",
-          issues: result.error.issues.map((i) => ({
-            path: i.path.join("."),
-            message: i.message,
-          })),
-        },
-        { status: 400 },
-      ),
+      response: invalidInputResponse("invalid_query", issues),
     };
   }
   return { ok: true, data: result.data };

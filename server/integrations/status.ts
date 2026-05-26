@@ -7,7 +7,6 @@ import { realtimeMode } from "@/server/integrations/realtime";
 import { jobsMode } from "@/server/integrations/queue";
 import { redisMode } from "@/server/db/redis";
 import { storageMode } from "@/server/integrations/storage";
-import { videoMode } from "@/server/integrations/video";
 
 export type IntegrationMode = "live" | "mock";
 
@@ -20,7 +19,6 @@ export interface IntegrationStatus {
     | "jobs"
     | "redis"
     | "storage"
-    | "video"
     | "oauth_google"
     | "oauth_linkedin";
   label: string;
@@ -70,14 +68,6 @@ export function listIntegrations(): IntegrationStatus[] {
         "R2_PUBLIC_BASE_URL",
       ],
       hint: "Add R2 credentials to store resume PDFs, company logos, and bootcamp covers in production.",
-    },
-    {
-      id: "video",
-      label: "Live video",
-      provider: "100ms",
-      mode: videoMode() === "100ms" ? "live" : "mock",
-      envKeys: ["HMS_ACCESS_KEY", "HMS_APP_SECRET", "HMS_TEMPLATE_ID", "HMS_REGION"],
-      hint: "Add 100ms credentials to provision real video rooms for live coaching sessions.",
     },
     {
       id: "email",

@@ -28,8 +28,8 @@ const PatchInput = z.object({
  *   Instructor presses Keep — flips status pending_review → published.
  *
  * DELETE /api/instructor/recordings/[id]
- *   Instructor presses Delete — calls 100ms delete-recording API + flips
- *   status → deleted (row kept for audit, URLs stripped).
+ *   Instructor presses Delete — flips status → deleted (row kept for
+ *   audit, URLs stripped).
  */
 async function patchHandler(req: Request, { params }: Ctx) {
   const csrf = requireSameOrigin(req);

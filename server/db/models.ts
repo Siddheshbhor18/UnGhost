@@ -772,8 +772,6 @@ const LiveSessionSchema = withJsonTransform(
       startedAt: String,
       endedAt: String,
       recordingUrl: String,
-      videoRoomId: String,
-      videoProvider: String,
     },
     { versionKey: false },
   ),

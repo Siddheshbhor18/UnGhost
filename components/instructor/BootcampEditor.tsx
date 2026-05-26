@@ -422,7 +422,7 @@ export function BootcampEditor({ bootcamp }: Props) {
               Live session slots ({(draft.liveSlots ?? []).length})
             </p>
             <p className="text-xs text-brand-muted mt-0.5">
-              Module 3 of every bootcamp. 60 min via 100ms.live · min 5 RSVPs.
+              Module 3 of every bootcamp. 60 min live session · min 5 RSVPs.
             </p>
           </div>
           <GlassButton

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { parseBody, parseQuery } from "@/server/lib/validate";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { withRateLimit } from "@/server/lib/with-rate-limit";
+import { withApiErrorTracking } from "@/server/lib/api-error";
 import { consumeResetToken, peekResetToken } from "@/server/auth/reset-token";
 import { hashPassword, checkPasswordPolicy } from "@/server/auth/password";
 import { setUserPasswordHash } from "@/server/store";
@@ -23,7 +25,7 @@ export async function GET(req: Request) {
 }
 
 /** POST { token, password } → consume the token and rotate the password. */
-export async function POST(req: Request) {
+async function postHandler(req: Request) {
   const csrf = requireSameOrigin(req);
   if (csrf) return csrf;
   const parsed = await parseBody(req, ResetInput);
@@ -45,3 +47,9 @@ export async function POST(req: Request) {
   await setUserPasswordHash(userId, newHash);
   return NextResponse.json({ ok: true });
 }
+
+// 10 attempts / 10 min / ip — blunts token-guessing + reused-token replay.
+export const POST = withRateLimit(
+  { bucket: "auth.reset-password", limit: 10, windowSec: 600, by: "ip" },
+  withApiErrorTracking(postHandler),
+);

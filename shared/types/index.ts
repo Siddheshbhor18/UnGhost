@@ -762,14 +762,11 @@ export interface LiveSession {
   endedAt?: string;
   /** Quick-access URL for the legacy single-recording model. Prefer SessionRecording table. */
   recordingUrl?: string;
-  /** 100ms room id, set when the session goes live. */
-  videoRoomId?: string;
-  videoProvider?: "100ms" | "mock";
 }
 
 /**
  * Recording capture per live session. Created automatically on
- * `recording.success` webhook from 100ms (or end-of-session for mock mode).
+ * session end (instructor marks session ended → recording URL is set).
  * Instructor lands on /instructor/recordings and either:
  *   - publishes (keep on platform — students can watch async)
  *   - deletes (calls provider delete API, removes row)
@@ -806,7 +803,7 @@ export interface SessionRecording {
   publishedAt?: string;
   /** When the instructor pressed Delete. */
   deletedAt?: string;
-  provider: "100ms" | "mock";
+  provider: "youtube" | "mock";
 }
 
 export interface AICoachMemory {

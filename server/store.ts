@@ -3573,91 +3573,11 @@ export async function setLiveSessionStatus(
   await db();
   const now = new Date().toISOString();
   const set: Record<string, unknown> = { status };
-  if (status === "live") {
-    set.startedAt = now;
-    // Provision the 100ms room (or mock equivalent) on first live transition.
-    const existing = await LiveSessionModel.findById(sessionId).lean();
-    const live = existing as unknown as LiveSession | null;
-    if (live && !live.videoRoomId) {
-      const { createRoom, videoMode } = await import(
-        "@/server/integrations/video"
-      );
-      try {
-        const room = await createRoom({
-          name: live.title ?? "unGhost live",
-          description: live.description,
-        });
-        set.videoRoomId = room.roomId;
-        set.videoProvider = videoMode();
-      } catch (err) {
-        // Non-fatal — host can still rerun start to retry. Log loud.
-        // eslint-disable-next-line no-console
-        console.error("[live] room provisioning failed:", err);
-      }
-    }
-  }
+  if (status === "live") set.startedAt = now;
   if (status === "ended") set.endedAt = now;
   await LiveSessionModel.updateOne(
     { _id: sessionId, instructorId },
     { $set: set },
-  );
-
-  // On end-of-session, harvest the recording asset from the video provider
-  // and stash it in pending_review so the instructor can decide keep/delete
-  // from /instructor/recordings. Idempotent — if a row already exists we skip.
-  if (status === "ended") {
-    await maybeCaptureRecording(sessionId).catch((err) => {
-      // eslint-disable-next-line no-console
-      console.error("[live] recording capture failed:", err);
-    });
-  }
-}
-
-/**
- * Pull the recording from 100ms (or mock) and persist a `pending_review`
- * SessionRecording. Safe to call multiple times — does nothing on second
- * invocation thanks to the `sessionId` unique check.
- */
-async function maybeCaptureRecording(sessionId: string): Promise<void> {
-  const live = (await LiveSessionModel.findById(sessionId).lean()) as
-    | unknown as LiveSession
-    | null;
-  if (!live || !live.videoRoomId) return;
-  const existing = await SessionRecordingModel.findOne({ sessionId }).lean();
-  if (existing) return;
-
-  const { getRoomRecording, videoMode } = await import(
-    "@/server/integrations/video"
-  );
-  const asset = await getRoomRecording(live.videoRoomId);
-  if (!asset.ok) return;
-
-  // Free-tier sessions have no bootcamp parent — skip recording (the
-  // YouTube path handles its own recordings).
-  if (!live.bootcampId) return;
-  const bootcamp = await getBootcampById(live.bootcampId);
-  const id = genId("rec");
-  await SessionRecordingModel.create({
-    _id: id,
-    sessionId,
-    bootcampId: live.bootcampId,
-    instructorId: live.instructorId,
-    sessionTitle: live.title,
-    bootcampTitle: bootcamp?.title ?? "",
-    providerAssetId: asset.assetId,
-    playbackUrl: asset.playbackUrl,
-    thumbnailUrl: asset.thumbnailUrl,
-    durationSec: asset.durationSec,
-    sizeBytes: asset.sizeBytes,
-    status: "pending_review",
-    createdAt: new Date().toISOString(),
-    provider: videoMode() === "100ms" ? "100ms" : "mock",
-  });
-  // Convenience pointer so legacy code that reads `live.recordingUrl`
-  // still works while the recordings table is rolling out.
-  await LiveSessionModel.updateOne(
-    { _id: sessionId },
-    { $set: { recordingUrl: asset.playbackUrl } },
   );
 }
 
@@ -3730,15 +3650,6 @@ export async function deleteRecording(
   const rec = await getRecordingById(id);
   if (!rec || rec.instructorId !== instructorId) {
     return { ok: false, reason: "not_found" };
-  }
-  if (rec.providerAssetId) {
-    const { deleteRoomRecording } = await import(
-      "@/server/integrations/video"
-    );
-    const result = await deleteRoomRecording(rec.providerAssetId);
-    if (!result.ok) {
-      return { ok: false, reason: result.error ?? "provider_delete_failed" };
-    }
   }
   await SessionRecordingModel.updateOne(
     { _id: id, instructorId },

@@ -295,7 +295,7 @@ export default async function InstructorToday() {
                     severity="info"
                     icon={<Calendar size={18} />}
                     title={`Live · ${s.bootcampTitle}`}
-                    subtitle="60-min session via 100ms.live"
+                    subtitle="60-min live session"
                     meta={new Date(s.iso).toLocaleString("en-IN", {
                       weekday: "short",
                       day: "numeric",

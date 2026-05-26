@@ -20,7 +20,7 @@ import { ModerationActionCard } from "@/components/admin/ModerationActionCard";
 // DB and made the queue feel "live" when it wasn't. Real flags now only
 // arrive from:
 //   • the auto-flag write inside admin/user moderation actions
-//   • the abuse webhook receiver (see app/api/webhooks/100ms etc.)
+//   • the abuse webhook receiver
 //   • the future Inngest AI-moderation pipeline (parked until cohort 2).
 //
 // If the queue is genuinely empty, the empty state below reads as "queue

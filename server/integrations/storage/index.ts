@@ -251,5 +251,73 @@ export async function deleteObject(key: string): Promise<void> {
     await unlink(path.join(LOCAL_BUCKET, key)).catch(() => {});
     return;
   }
-  // R2 delete via SigV4 — implement when first needed (not blocking launch).
+
+  // R2 (S3-compatible) DELETE via AWS SigV4. Required for DPDP § 13 erasure —
+  // a soft-deleted user's uploaded artefacts (resumes, avatars) must be purged
+  // from object storage on hard-delete, not just dereferenced in Mongo.
+  const accountId = process.env.R2_ACCOUNT_ID!;
+  const accessKey = process.env.R2_ACCESS_KEY_ID!;
+  const secretKey = process.env.R2_SECRET_ACCESS_KEY!;
+  const bucket = process.env.R2_BUCKET!;
+  const region = "auto";
+  const service = "s3";
+  const host = `${accountId}.r2.cloudflarestorage.com`;
+
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.slice(0, 8);
+  const credential = `${accessKey}/${dateStamp}/${region}/${service}/aws4_request`;
+  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+  const emptyHash = createHash("sha256").update("").digest("hex");
+
+  const canonicalUri = `/${bucket}/${encodeURI(key)}`;
+  const canonicalHeaders =
+    `host:${host}\n` +
+    `x-amz-content-sha256:${emptyHash}\n` +
+    `x-amz-date:${amzDate}\n`;
+  const canonicalRequest = [
+    "DELETE",
+    canonicalUri,
+    "",
+    canonicalHeaders,
+    signedHeaders,
+    emptyHash,
+  ].join("\n");
+
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    `${dateStamp}/${region}/${service}/aws4_request`,
+    createHash("sha256").update(canonicalRequest).digest("hex"),
+  ].join("\n");
+
+  const kDate = hmacSha256(`AWS4${secretKey}`, dateStamp);
+  const kRegion = hmacSha256(kDate, region);
+  const kService = hmacSha256(kRegion, service);
+  const kSigning = hmacSha256(kService, "aws4_request");
+  const signature = createHmac("sha256", kSigning)
+    .update(stringToSign)
+    .digest("hex");
+
+  const authHeader =
+    `AWS4-HMAC-SHA256 Credential=${credential}, ` +
+    `SignedHeaders=${signedHeaders}, ` +
+    `Signature=${signature}`;
+
+  const res = await fetch(`https://${host}${canonicalUri}`, {
+    method: "DELETE",
+    headers: {
+      host,
+      "x-amz-date": amzDate,
+      "x-amz-content-sha256": emptyHash,
+      authorization: authHeader,
+    },
+  });
+  // S3 returns 204 on successful delete, 404 if missing. Treat 404 as idempotent
+  // success — repeated hard-deletes shouldn't throw.
+  if (!res.ok && res.status !== 404) {
+    throw new Error(
+      `R2 delete failed: HTTP ${res.status} ${res.statusText}`,
+    );
+  }
 }

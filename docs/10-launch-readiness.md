@@ -46,9 +46,7 @@ What's in the box at the end of Sprint D, what's left to insert, and how to flip
 - 3 runbooks: `rollback.md`, `incident-response.md`, `on-call.md`, `go-live.md`
 - DPDP § 11 export endpoint (`/api/account/export`) — JSON download of every artefact
 - DPDP § 13 erasure endpoint (`/api/account/delete`) — soft-delete + 30-day grace + hard-delete via SLA sweep
-- 100ms video adapter w/ HS256 token signing
-- `/api/live/[id]/join` route — issues short-lived JWT for SDK join
-- Room auto-provisioning on first `setLiveSessionStatus(..., "live")`
+- YouTube Live embed for bootcamp live sessions (zero cost)
 - k6 smoke + peak load test scripts w/ Sprint D acceptance thresholds
 
 ## What's left — only environment variables
@@ -105,12 +103,6 @@ R2_SECRET_ACCESS_KEY=...
 R2_BUCKET=unghost-uploads
 R2_PUBLIC_BASE_URL=https://uploads.unghost.com
 
-# Live video
-HMS_ACCESS_KEY=...
-HMS_APP_SECRET=...
-HMS_TEMPLATE_ID=...
-HMS_REGION=in
-
 # Observability
 SENTRY_DSN=https://...@o....ingest.sentry.io/...
 NEXT_PUBLIC_SENTRY_DSN=https://...@o....ingest.sentry.io/...
@@ -162,7 +154,6 @@ git push --tags
 - [ ] Provision Resend domain (DKIM + SPF, 14-day IP warmup)
 - [ ] Submit MSG91 DLT templates (5-10 business days)
 - [ ] Complete PhonePe merchant KYC (7-14 business days)
-- [ ] Create 100ms account + template (in region)
 - [ ] Create Pusher Channels app (cluster `ap2`)
 - [ ] Create Inngest event keys (staging + prod)
 - [ ] Add all secrets to Cloudflare env (per-environment) and GitHub Secrets

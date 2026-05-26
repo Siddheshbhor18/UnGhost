@@ -4,6 +4,8 @@ import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { parseBody } from "@/server/lib/validate";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { withRateLimit } from "@/server/lib/with-rate-limit";
+import { withApiErrorTracking } from "@/server/lib/api-error";
 import { createPayment, paymentsMode } from "@/server/integrations/payments";
 import { getUserById } from "@/server/store";
 import { PLAN_PRICING } from "@/shared/types";
@@ -26,7 +28,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
  * In mock mode, redirectUrl auto-resolves to a success URL so dev flows
  * complete without any external dependency.
  */
-export async function POST(req: Request) {
+async function postHandler(req: Request) {
   const csrf = requireSameOrigin(req);
   if (csrf) return csrf;
   const session = await getServerSession(authOptions);
@@ -65,3 +67,10 @@ export async function POST(req: Request) {
     mode: paymentsMode(),
   });
 }
+
+// 10 checkouts / 5 min / user — catches accidental double-click loops and
+// scripted abuse without hurting a real student who hits "Pay" twice.
+export const POST = withRateLimit(
+  { bucket: "billing.checkout", limit: 10, windowSec: 300, by: "user" },
+  withApiErrorTracking(postHandler),
+);

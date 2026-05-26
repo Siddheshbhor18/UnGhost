@@ -218,7 +218,7 @@ export default async function InstructorPublicProfile({
                         hour: "2-digit",
                         minute: "2-digit",
                       })}{" "}
-                      · 60-min via 100ms.live
+                      · 60-min live session
                     </p>
                   </div>
                   <Link

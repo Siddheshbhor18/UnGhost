@@ -49,8 +49,8 @@ export default async function InstructorRecordingsPage() {
               No recordings yet
             </p>
             <p className="text-sm text-brand-muted mt-2 max-w-md mx-auto">
-              When you end a live session, 100ms uploads the recording and it
-              shows up here within a minute or two.
+              When you end a live session the recording shows up here once
+              it&apos;s been processed.
             </p>
           </GlassCard>
         ) : (
