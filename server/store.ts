@@ -195,19 +195,19 @@ export async function createUserWithCredentials(
   const emailLower = input.email.trim().toLowerCase();
   const phone = input.phone.trim();
 
-  // Case-insensitive email dedupe. The ix_users_email_ci index also enforces
-  // this at the DB level, so two racing requests can't both succeed.
-  const emailHit = await UserModel.findOne({
-    email: { $regex: `^${escapeRegex(emailLower)}$`, $options: "i" },
-  }).lean();
+  // Case-insensitive email dedupe + phone dedupe in parallel. The unique
+  // index also enforces this at DB level, so two racing requests can't
+  // both succeed even if both pre-checks miss.
+  const [emailHit, phoneHit] = await Promise.all([
+    UserModel.findOne({
+      email: { $regex: `^${escapeRegex(emailLower)}$`, $options: "i" },
+    }).lean(),
+    phone
+      ? UserModel.findOne({ "profile.contactPhone": phone }).lean()
+      : Promise.resolve(null),
+  ]);
   if (emailHit) return { ok: false, reason: "email_taken" };
-
-  if (phone) {
-    const phoneHit = await UserModel.findOne({
-      "profile.contactPhone": phone,
-    }).lean();
-    if (phoneHit) return { ok: false, reason: "phone_taken" };
-  }
+  if (phoneHit) return { ok: false, reason: "phone_taken" };
 
   const now = new Date().toISOString();
   const id =

@@ -18,9 +18,12 @@ import { NextResponse } from "next/server";
 
 const ALLOWED_HOSTS = new Set<string>(
   [
-    "www.unghost.com",
-    "staging.unghost.com",
-    "unghost.com",
+    // Production domains
+    "unghost.in",
+    "www.unghost.in",
+    // Vercel preview deploys
+    "un-ghost.vercel.app",
+    // Env-driven (set on Vercel + .env.local)
     process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).host : null,
     process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL).host : null,
     // localhost / dev

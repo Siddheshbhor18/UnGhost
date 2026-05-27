@@ -123,23 +123,25 @@ async function handler(req: Request) {
     }
   }
 
-  // Issue email verify token + send link. If Redis-side rate limit trips
-  // (shouldn't on a fresh user) we still complete signup — the user can
-  // resend later.
+  // Issue email verify token. Email send is fire-and-forget (don't block
+  // the signup response on Resend API latency, which can be 500-1500ms).
+  // Audit log also fire-and-forget — non-critical for the response.
   const verify = await issueEmailVerifyToken(user.id);
   if (verify.token) {
-    await sendVerifyEmail(user.email, verify.token).catch((err) => {
+    void sendVerifyEmail(user.email, verify.token).catch((err) => {
       logger.warn({ err, userId: user.id }, "signup.email-send-failed");
     });
   }
 
-  await writeAuditLog({
+  void writeAuditLog({
     actorId: user.id,
     actorRole: data.role,
     action: "auth.signup",
     targetType: "user",
     targetId: user.id,
     summary: `Signup ${data.role} ${user.email}`,
+  }).catch(() => {
+    /* audit failure must not block signup */
   });
 
   logger.info({ userId: user.id, role: data.role }, "auth.signup");
