@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/sla-sweep",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 2 * * *"
     },
     {
       "path": "/api/cron/subscription-sweep",
