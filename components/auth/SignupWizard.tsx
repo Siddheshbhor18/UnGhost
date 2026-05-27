@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,10 +14,13 @@ import {
   ArrowLeft,
   ArrowRight,
   ChevronDown,
+  FileText,
   Lock,
   Mail,
   Phone,
+  Sparkles,
   User2,
+  X,
 } from "lucide-react";
 import { GlassCard } from "@/components/glass";
 import { getCapturedRef, clearCapturedRef } from "@/components/attribution/RefCapture";
@@ -86,6 +89,42 @@ export function SignupWizard() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [phase, setPhase] = useState<AuthHeroPhase>("idle");
+
+  // Resume continuity: pull staged resume from sessionStorage (set by
+  // MagicWidget on the landing page) and prefill name + display skills.
+  const [stagedResume, setStagedResume] = useState<{
+    fileName: string;
+    parsed?: {
+      alias?: string;
+      contactEmail?: string;
+      skills?: string[];
+    };
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("unghost:staged_resume");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      setStagedResume(parsed);
+      // Auto-prefill name + email if available, only if user hasn't typed
+      if (parsed?.parsed?.alias && !name) setName(parsed.parsed.alias);
+      if (parsed?.parsed?.contactEmail && !email)
+        setEmail(parsed.parsed.contactEmail);
+    } catch {
+      /* ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function dismissResume() {
+    setStagedResume(null);
+    try {
+      sessionStorage.removeItem("unghost:staged_resume");
+    } catch {
+      /* ignore */
+    }
+  }
 
   const pwScore = useMemo(() => scorePassword(password), [password]);
   const canContinueStep1 =
@@ -198,32 +237,65 @@ export function SignupWizard() {
   return (
     <AuthShell role={role} mode="signup" heroPhase={phase}>
       <motion.div animate={shake}>
-        <motion.div
-          className="rounded-3xl"
-          animate={
-            reduced
-              ? { boxShadow: "0 0 0px rgba(1,145,252,0)" }
-              : {
-                  boxShadow: [
-                    "0 0 0px rgba(1,145,252,0)",
-                    "0 0 28px rgba(1,145,252,0.15)",
-                    "0 0 0px rgba(1,145,252,0)",
-                  ],
-                }
-          }
-          transition={
-            reduced
-              ? { duration: 0 }
-              : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }
-          }
-        >
+        <div className="rounded-3xl">
           <GlassCard variant="strong" className="!p-6">
+            {stagedResume ? (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: EASE_OUT_SOFT }}
+                className="relative mb-4 rounded-xl border border-brand-primary/20 bg-brand-primary/[0.06] p-3 pr-9"
+              >
+                <button
+                  type="button"
+                  onClick={dismissResume}
+                  className="absolute top-2 right-2 grid place-items-center w-6 h-6 rounded-md text-brand-muted hover:text-brand-ink hover:bg-brand-ink/5 transition"
+                  aria-label="Dismiss resume continuity"
+                >
+                  <X size={12} />
+                </button>
+                <div className="flex items-start gap-2.5">
+                  <div className="shrink-0 grid place-items-center w-8 h-8 rounded-lg bg-brand-primary text-white">
+                    <FileText size={14} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-primary inline-flex items-center gap-1">
+                      <Sparkles size={10} /> Continuing from your resume
+                    </p>
+                    <p className="text-sm font-semibold text-brand-ink truncate">
+                      {stagedResume.fileName}
+                    </p>
+                    {stagedResume.parsed?.skills &&
+                    stagedResume.parsed.skills.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {stagedResume.parsed.skills.slice(0, 5).map((s) => (
+                          <span
+                            key={s}
+                            className="text-[10px] px-1.5 py-0.5 rounded-md bg-brand-primary/10 text-brand-primary font-semibold"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                        {stagedResume.parsed.skills.length > 5 ? (
+                          <span className="text-[10px] text-brand-muted">
+                            +{stagedResume.parsed.skills.length - 5} more
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
+
             <div className="mb-4">
               <h1 className="font-display font-extrabold text-2xl text-brand-ink tracking-tight">
-                Create your account
+                {stagedResume ? "Finish setting up" : "Create your account"}
               </h1>
               <p className="text-sm text-brand-muted mt-0.5">
-                One email = one role. Career switchers need a new email.
+                {stagedResume
+                  ? "We've prefilled what we could from your resume."
+                  : "One email = one role. Career switchers need a new email."}
               </p>
             </div>
 
@@ -291,7 +363,7 @@ export function SignupWizard() {
             </Link>
           </p>
           </GlassCard>
-        </motion.div>
+        </div>
       </motion.div>
     </AuthShell>
   );

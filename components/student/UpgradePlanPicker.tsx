@@ -22,28 +22,10 @@ export function UpgradePlanPicker({ currentPlan, recommended }: PickerProps) {
   const [submittingPlan, setSubmittingPlan] = useState<"pro" | "premium" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function buy(plan: "pro" | "premium") {
-    setError(null);
+  function buy(plan: "pro" | "premium") {
     setSubmittingPlan(plan);
-    try {
-      const res = await fetch("/api/billing/checkout", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ plan }),
-      });
-      const data = (await res.json()) as { redirectUrl?: string; error?: string };
-      if (!res.ok || !data.redirectUrl) {
-        setError(data.error ?? "Checkout failed. Try again.");
-        setSubmittingPlan(null);
-        return;
-      }
-      // In mock mode the server returns our own callback URL, so this still
-      // works without any external dependency.
-      window.location.href = data.redirectUrl;
-    } catch (err) {
-      setError((err as Error).message);
-      setSubmittingPlan(null);
-    }
+    // Redirect to manual QR payment page (stopgap until PhonePe KYC clears)
+    router.push(`/upgrade/pay?plan=${plan}`);
   }
 
   return (

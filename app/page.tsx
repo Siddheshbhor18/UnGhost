@@ -9,13 +9,11 @@ import {
   Briefcase,
   Clock,
   Mail,
-  Shield,
   Sparkles,
   Target,
   Twitter,
   Linkedin,
   Upload,
-  Video,
   Zap,
   Star,
   TrendingDown,
@@ -29,7 +27,9 @@ import {
   SectionLabel,
   Stat,
 } from "@/components/ui";
-import { MagicWidget } from "@/components/landing/MagicWidget";
+import { HeroDemoLoop } from "@/components/landing/HeroDemoLoop";
+import { HeroCTAs } from "@/components/landing/HeroCTAs";
+import { ScrollPrompt } from "@/components/landing/ScrollPrompt";
 import { FAQ } from "@/components/landing/FAQ";
 import { CookieConsent } from "@/components/landing/CookieConsent";
 import { LiveSessionsTeaser } from "@/components/live/LiveSessionsTeaser";
@@ -71,10 +71,9 @@ export default async function LandingPage() {
   if (session?.user?.role === "admin") redirect("/admin/today");
   if (session?.user?.role === "instructor") redirect("/instructor/today");
 
-  const { allJobs, companies, metrics, bcs } = await getLandingData();
+  const { allJobs, companies, bcs } = await getLandingData();
   const jobs = allJobs.slice(0, 4);
   const featuredBootcamps = bcs.slice(0, 6);
-  const replyRate = 100 - metrics.ghostingRatePct;
 
   return (
     <main className="relative min-h-screen" style={{ overflowX: "clip" }}>
@@ -84,7 +83,7 @@ export default async function LandingPage() {
       <CookieConsent />
 
       {/* ─────────── HERO ─────────── */}
-      <section className="mx-auto max-w-content px-4 pt-12 md:pt-20 pb-20 relative">
+      <section className="mx-auto max-w-content px-4 pt-12 md:pt-20 pb-8 relative">
         {/* Grid overlay — editorial Vercel-style backdrop */}
         <div
           aria-hidden
@@ -130,50 +129,25 @@ export default async function LandingPage() {
 
             <MotionSection
               as="div"
-              className="flex flex-wrap gap-3 pt-2"
               delay={0.75}
               y={16}
               amount={0}
             >
-              <Link href="/signup">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  trailingIcon={<ArrowRight size={16} />}
-                >
-                  Find a job
-                </Button>
-              </Link>
-              <Link href="/signup?role=recruiter">
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  leadingIcon={<Briefcase size={16} />}
-                >
-                  Hire without ghosting
-                </Button>
-              </Link>
+              <HeroCTAs />
             </MotionSection>
 
             <MotionSection
-              as="div"
-              className="flex flex-wrap gap-5 pt-5 text-body-sm text-neutral-500"
+              as="p"
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-6 text-sm text-neutral-500"
               delay={0.95}
               y={12}
               amount={0}
             >
-              <span className="inline-flex items-center gap-2">
-                <Shield size={14} className="text-brand-500" /> SLA-bound
-                recruiters
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <Target size={14} className="text-brand-500" /> AI-matched
-                missions
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <Video size={14} className="text-brand-500" /> Live + recorded
-                bootcamps
-              </span>
+              <span>24/48/72h SLA</span>
+              <span className="w-1 h-1 rounded-full bg-brand-500/60" />
+              <span>AI-graded scenarios</span>
+              <span className="w-1 h-1 rounded-full bg-brand-500/60" />
+              <span>Live bootcamps</span>
             </MotionSection>
           </div>
 
@@ -185,25 +159,10 @@ export default async function LandingPage() {
             y={0}
             amount={0}
           >
-            <MagicWidget />
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Stat
-                label="Active missions"
-                value={
-                  <CountUp to={metrics.activeMissions} format duration={1.8} />
-                }
-                tone="brand"
-                icon={<Target size={14} />}
-              />
-              <Stat
-                label="Reply rate"
-                value={<CountUp to={replyRate} suffix="%" duration={1.6} />}
-                tone="success"
-                icon={<Shield size={14} />}
-              />
-            </div>
+            <HeroDemoLoop />
           </MotionSection>
         </div>
+        <ScrollPrompt />
       </section>
 
       {/* ─────────── LIVE SESSIONS TEASER ─────────── */}

@@ -41,7 +41,7 @@ export function AuthShell({ role, mode, heroPhase = "idle", children }: Props) {
   const [from, to] = ROLE_TINTS[role];
 
   return (
-    <main className="relative h-screen overflow-hidden flex flex-col">
+    <main className="relative min-h-screen flex flex-col">
       <BackdropMesh />
       <CursorGlow />
 
@@ -67,13 +67,13 @@ export function AuthShell({ role, mode, heroPhase = "idle", children }: Props) {
         </Link>
       </header>
 
-      <div className="relative z-10 flex-1 min-h-0 grid lg:grid-cols-[minmax(0,460px)_1fr] gap-8 lg:gap-10 px-6 lg:px-10 py-4 lg:py-6 max-w-6xl w-full mx-auto items-center">
-        <div className="w-full max-w-md mx-auto lg:mx-0 h-full lg:h-auto flex items-center">
-          <div className="w-full max-h-full overflow-y-auto rounded-3xl">
-            {children}
-          </div>
+      <div className="relative z-10 flex-1 grid lg:grid-cols-[minmax(0,460px)_1fr] gap-8 lg:gap-10 px-6 lg:px-10 py-6 lg:py-10 max-w-6xl w-full mx-auto items-start lg:items-center">
+        <div className="w-full max-w-md mx-auto lg:mx-0">
+          {children}
         </div>
-        <AuthHero role={role} mode={mode} phase={heroPhase} />
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <AuthHero role={role} mode={mode} phase={heroPhase} />
+        </div>
       </div>
 
       <footer className="relative z-10 px-6 lg:px-10 pb-3 lg:pb-4 text-[10px] text-brand-muted shrink-0">

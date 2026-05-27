@@ -50,17 +50,20 @@ export default async function PaymentApprovalsPage() {
 
   const rows: QueueRow[] = submissions.map((s) => {
     const u = studentById.get(s.userId);
-    const b = bootcampById.get(s.bootcampId);
+    const isPlan = s.bootcampId.startsWith("plan:");
+    const planLabel = isPlan
+      ? `${s.bootcampId.replace("plan:", "").charAt(0).toUpperCase() + s.bootcampId.replace("plan:", "").slice(1)} Plan`
+      : null;
+    const b = isPlan ? null : bootcampById.get(s.bootcampId);
     return {
       id: String(s._id),
       studentName: u?.name ?? "(unknown)",
       studentEmail: u?.email ?? "—",
-      bootcampTitle: b?.title ?? "(deleted bootcamp)",
+      bootcampTitle: planLabel ?? b?.title ?? "(deleted bootcamp)",
       expectedAmountInPaise: s.expectedAmountInPaise,
       utr: s.utr,
       upiApp: s.upiApp,
       payerMobile: s.payerMobile,
-      // The Mongo filter only fetches these two statuses; the cast tells TS.
       status: s.status as "pending_verification" | "flagged",
       createdAt:
         s.createdAt instanceof Date

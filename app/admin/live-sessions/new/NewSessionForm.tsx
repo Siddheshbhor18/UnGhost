@@ -21,6 +21,7 @@ export function NewSessionForm() {
   const [tier, setTier] = useState<"free" | "paid">("free");
   const [startsAt, setStartsAt] = useState("");
   const [durationMin, setDurationMin] = useState(60);
+  const [streamProvider, setStreamProvider] = useState<"youtube" | "cloudflare">("youtube");
   const [youtubeVideoId, setYoutubeVideoId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +45,7 @@ export function NewSessionForm() {
           startsAt: new Date(startsAt).toISOString(),
           durationMin,
           tier,
+          streamProvider,
           youtubeVideoId: youtubeVideoId.trim() || undefined,
         }),
       });
@@ -134,16 +136,41 @@ export function NewSessionForm() {
       </Field>
 
       <Field
-        label="YouTube video ID or URL"
-        hint="Optional now — paste later from the manage page when the broadcaster goes live"
+        label="Stream provider"
+        hint="Cloudflare = signed URLs, access control. YouTube = free, public."
       >
-        <input
-          value={youtubeVideoId}
-          onChange={(e) => setYoutubeVideoId(e.target.value)}
-          placeholder="e.g. dQw4w9WgXcQ or full YouTube URL"
-          className="w-full rounded-xl border border-brand-ink/15 bg-white px-4 py-2.5 text-sm font-mono text-brand-ink focus:outline-none focus:border-brand-primary focus:shadow-[0_0_0_3px_rgba(1,145,252,0.12)] transition"
-        />
+        <div className="flex gap-2">
+          <TierPill
+            label="YouTube Live"
+            active={streamProvider === "youtube"}
+            onClick={() => setStreamProvider("youtube")}
+          />
+          <TierPill
+            label="Cloudflare Stream"
+            active={streamProvider === "cloudflare"}
+            onClick={() => setStreamProvider("cloudflare")}
+          />
+        </div>
       </Field>
+
+      {streamProvider === "youtube" ? (
+        <Field
+          label="YouTube video ID or URL"
+          hint="Optional now — paste later from the manage page when the broadcaster goes live"
+        >
+          <input
+            value={youtubeVideoId}
+            onChange={(e) => setYoutubeVideoId(e.target.value)}
+            placeholder="e.g. dQw4w9WgXcQ or full YouTube URL"
+            className="w-full rounded-xl border border-brand-ink/15 bg-white px-4 py-2.5 text-sm font-mono text-brand-ink focus:outline-none focus:border-brand-primary focus:shadow-[0_0_0_3px_rgba(1,145,252,0.12)] transition"
+          />
+        </Field>
+      ) : (
+        <p className="text-xs text-brand-muted bg-brand-ink/[0.03] rounded-xl px-4 py-3">
+          RTMP URL and stream key will be generated automatically after
+          creation. Copy them into OBS from the manage page.
+        </p>
+      )}
 
       {error ? (
         <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">

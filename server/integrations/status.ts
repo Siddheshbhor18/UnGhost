@@ -7,6 +7,7 @@ import { realtimeMode } from "@/server/integrations/realtime";
 import { jobsMode } from "@/server/integrations/queue";
 import { redisMode } from "@/server/db/redis";
 import { storageMode } from "@/server/integrations/storage";
+import { streamMode } from "@/server/integrations/stream";
 
 export type IntegrationMode = "live" | "mock";
 
@@ -19,8 +20,8 @@ export interface IntegrationStatus {
     | "jobs"
     | "redis"
     | "storage"
-    | "oauth_google"
-    | "oauth_linkedin";
+    | "stream"
+    | "oauth_google";
   label: string;
   provider: string;
   mode: IntegrationMode;
@@ -70,6 +71,19 @@ export function listIntegrations(): IntegrationStatus[] {
       hint: "Add R2 credentials to store resume PDFs, company logos, and bootcamp covers in production.",
     },
     {
+      id: "stream",
+      label: "Live streaming",
+      provider: "Cloudflare Stream",
+      mode: streamMode() === "cloudflare" ? "live" : "mock",
+      envKeys: [
+        "CLOUDFLARE_STREAM_API_TOKEN",
+        "CLOUDFLARE_STREAM_SIGNING_KEY_ID",
+        "CLOUDFLARE_STREAM_SIGNING_KEY_PEM",
+        "CLOUDFLARE_STREAM_CUSTOMER_CODE",
+      ],
+      hint: "Add Cloudflare Stream credentials for access-controlled live streaming on paid bootcamp sessions.",
+    },
+    {
       id: "email",
       label: "Email",
       provider: "Resend",
@@ -116,17 +130,6 @@ export function listIntegrations(): IntegrationStatus[] {
           : "mock",
       envKeys: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
       hint: "Add Google OAuth client to enable 'Continue with Google'.",
-    },
-    {
-      id: "oauth_linkedin",
-      label: "LinkedIn OAuth",
-      provider: "LinkedIn",
-      mode:
-        process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET
-          ? "live"
-          : "mock",
-      envKeys: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
-      hint: "Add LinkedIn OAuth client to enable 'Continue with LinkedIn'.",
     },
   ];
 }

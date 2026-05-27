@@ -3669,6 +3669,60 @@ export async function deleteLiveSession(
   await LiveSessionModel.deleteOne({ _id: sessionId, instructorId });
 }
 
+// ---------- CLOUDFLARE STREAM PROVISIONING ----------
+
+export async function provisionCloudflareStream(
+  sessionId: string,
+): Promise<{ cfLiveInputUid: string; cfRtmpUrl: string; cfStreamKey: string }> {
+  await db();
+  const session = await LiveSessionModel.findById(sessionId).lean();
+  if (!session) throw new Error("session_not_found");
+  const { createLiveInput } = await import("@/server/integrations/stream");
+  const result = await createLiveInput(session.title ?? sessionId);
+  const fields = {
+    streamProvider: "cloudflare" as const,
+    cfLiveInputUid: result.uid,
+    cfRtmpUrl: result.rtmpUrl,
+    cfStreamKey: result.streamKey,
+  };
+  await LiveSessionModel.updateOne({ _id: sessionId }, { $set: fields });
+  return fields;
+}
+
+export async function deprovisionCloudflareStream(
+  sessionId: string,
+): Promise<void> {
+  await db();
+  const session = await LiveSessionModel.findById(sessionId).lean();
+  if (!session) return;
+  const uid = (session as any).cfLiveInputUid;
+  if (uid) {
+    const { deleteLiveInput } = await import("@/server/integrations/stream");
+    await deleteLiveInput(uid);
+  }
+  await LiveSessionModel.updateOne(
+    { _id: sessionId },
+    { $set: { cfLiveInputUid: null, cfRtmpUrl: null, cfStreamKey: null } },
+  );
+}
+
+export async function generateStreamPlaybackToken(
+  sessionId: string,
+): Promise<{ token: string; playbackUrl: string; expiresIn: number } | null> {
+  await db();
+  const session = await LiveSessionModel.findById(sessionId).lean();
+  if (!session) return null;
+  const provider = (session as any).streamProvider;
+  const uid = (session as any).cfLiveInputUid;
+  if (provider !== "cloudflare" || !uid) return null;
+  const { generateSignedPlaybackToken, getPlaybackUrl } = await import(
+    "@/server/integrations/stream"
+  );
+  const ttl = 3600;
+  const token = generateSignedPlaybackToken(uid, ttl);
+  return { token, playbackUrl: getPlaybackUrl(token), expiresIn: ttl };
+}
+
 // ---------- COMPANY MODERATION ----------
 
 export async function setCompanyVerified(

@@ -4,24 +4,20 @@ import { motion, useReducedMotion } from "framer-motion";
 import { signIn } from "next-auth/react";
 
 /**
- * OAuthButtons — branded sign-in options for Google + LinkedIn. Replaces the
- * earlier plain-text "Continue with Google / LinkedIn" buttons.
+ * OAuthButtons — Google sign-in button. LinkedIn was retired pre-launch
+ * (B2C app, low ROI vs the 1-2 week LinkedIn app review).
  *
  * Behaviour:
- *   • Click → next-auth signIn(provider) with the same callbackUrl that the
+ *   • Click → next-auth signIn("google") with the same callbackUrl that the
  *     existing /login + /signup pages were using.
- *   • Buttons gracefully fail when the env keys aren't set — next-auth throws
- *     and our `.catch` surfaces the error via `onError`.
+ *   • Gracefully fails when env keys aren't set — next-auth throws and our
+ *     `.catch` surfaces the error via `onError`.
  *   • Honours prefers-reduced-motion (whileHover disabled below).
- *
- * Visual:
- *   • Google: white card, multi-colour G glyph, soft hover shadow.
- *   • LinkedIn: official #0A66C2 with white "in" mark.
  */
 interface Props {
   callbackUrl?: string;
   onError?: (msg: string) => void;
-  /** When true, render only icon-circle versions (tight layouts). */
+  /** When true, render only icon-circle version (tight layouts). */
   compact?: boolean;
 }
 
@@ -29,64 +25,38 @@ export function OAuthButtons({ callbackUrl, onError, compact }: Props) {
   const reduced = useReducedMotion();
   const hoverProps = reduced ? {} : { whileHover: { scale: 1.015 }, whileTap: { scale: 0.985 } };
 
-  async function go(provider: "google" | "linkedin") {
+  async function go() {
     try {
-      await signIn(provider, callbackUrl ? { callbackUrl } : undefined);
-    } catch (err) {
-      onError?.(
-        provider === "google"
-          ? "Google OAuth not configured. Use the email form for now."
-          : "LinkedIn OAuth not configured. Use the email form for now.",
-      );
+      await signIn("google", callbackUrl ? { callbackUrl } : undefined);
+    } catch {
+      onError?.("Google OAuth not configured. Use the email form for now.");
     }
   }
 
   if (compact) {
     return (
-      <div className="flex gap-2">
-        <motion.button
-          type="button"
-          aria-label="Continue with Google"
-          onClick={() => go("google")}
-          className="grid place-items-center w-11 h-11 rounded-xl bg-white border border-brand-ink/10 shadow-sm hover:shadow-md transition"
-          {...hoverProps}
-        >
-          <GoogleGlyph size={18} />
-        </motion.button>
-        <motion.button
-          type="button"
-          aria-label="Continue with LinkedIn"
-          onClick={() => go("linkedin")}
-          className="grid place-items-center w-11 h-11 rounded-xl bg-[#0A66C2] hover:bg-[#0959AB] text-white shadow-sm hover:shadow-md transition"
-          {...hoverProps}
-        >
-          <LinkedInGlyph size={18} />
-        </motion.button>
-      </div>
+      <motion.button
+        type="button"
+        aria-label="Continue with Google"
+        onClick={go}
+        className="grid place-items-center w-11 h-11 rounded-xl bg-white border border-brand-ink/10 shadow-sm hover:shadow-md transition"
+        {...hoverProps}
+      >
+        <GoogleGlyph size={18} />
+      </motion.button>
     );
   }
 
   return (
-    <div className="space-y-2">
-      <motion.button
-        type="button"
-        onClick={() => go("google")}
-        className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white border border-brand-ink/10 px-4 py-2.5 text-sm font-semibold text-brand-ink shadow-sm hover:shadow-md transition"
-        {...hoverProps}
-      >
-        <GoogleGlyph size={16} />
-        Continue with Google
-      </motion.button>
-      <motion.button
-        type="button"
-        onClick={() => go("linkedin")}
-        className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#0A66C2] hover:bg-[#0959AB] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:shadow-md transition"
-        {...hoverProps}
-      >
-        <LinkedInGlyph size={16} />
-        Continue with LinkedIn
-      </motion.button>
-    </div>
+    <motion.button
+      type="button"
+      onClick={go}
+      className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white border border-brand-ink/10 px-4 py-2.5 text-sm font-semibold text-brand-ink shadow-sm hover:shadow-md transition"
+      {...hoverProps}
+    >
+      <GoogleGlyph size={16} />
+      Continue with Google
+    </motion.button>
   );
 }
 
@@ -110,15 +80,6 @@ function GoogleGlyph({ size = 18 }: { size?: number }) {
         fill="#EA4335"
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A10.99 10.99 0 0 0 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
       />
-    </svg>
-  );
-}
-
-/** Stylised "in" LinkedIn glyph. */
-function LinkedInGlyph({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M20.5 2h-17A1.5 1.5 0 0 0 2 3.5v17A1.5 1.5 0 0 0 3.5 22h17a1.5 1.5 0 0 0 1.5-1.5v-17A1.5 1.5 0 0 0 20.5 2zM8 19H5v-9h3v9zM6.5 8.25A1.75 1.75 0 1 1 6.5 4.75 1.75 1.75 0 0 1 6.5 8.25zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93s-1.62.59-1.62 1.97V19h-3v-9h2.9v1.3c.3-.6 1.34-1.62 2.92-1.62 1.7 0 3.18 1.07 3.18 3.66V19z" />
     </svg>
   );
 }

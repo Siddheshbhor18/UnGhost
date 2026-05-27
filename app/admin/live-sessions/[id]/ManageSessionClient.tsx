@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
+  ClipboardCopy,
   Loader2,
   PlayCircle,
   Save,
@@ -32,6 +33,10 @@ interface Initial {
   status: string;
   youtubeVideoId: string;
   recordingUrl: string;
+  streamProvider: string;
+  cfLiveInputUid: string;
+  cfRtmpUrl: string;
+  cfStreamKey: string;
 }
 
 interface Stats {
@@ -79,6 +84,7 @@ export function ManageSessionClient({ id, roomCode, initial, stats }: Props) {
   const isLive = initial.status === "live";
   const isEnded =
     initial.status === "ended" || initial.status === "cancelled";
+  const canGoLive = Boolean(initial.youtubeVideoId);
 
   return (
     <div className="space-y-6">
@@ -89,19 +95,26 @@ export function ManageSessionClient({ id, roomCode, initial, stats }: Props) {
         <StatCard label="Chat messages" value={String(stats.messageCount)} />
       </div>
 
+      {/* Provider badge */}
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">
+          YouTube Live
+        </span>
+      </div>
+
       {/* Go Live / End controls */}
       {!isEnded ? (
         <section className="rounded-2xl bg-white border border-brand-ink/10 p-6">
           <h2 className="font-display font-bold text-brand-ink mb-1">
             Broadcast controls
           </h2>
-          <p className="text-xs text-brand-muted mb-4">
-            Step 1 — paste the YouTube video ID once the broadcaster is up on
-            YouTube. Step 2 — click <strong>Go Live</strong> to flip the public
-            page to streaming mode. Step 3 — click <strong>End session</strong>{" "}
-            when done.
-          </p>
 
+          <p className="text-xs text-brand-muted mb-4">
+            Step 1 — start an <strong>Unlisted</strong> live stream on YouTube
+            Studio and paste the video ID below. Step 2 — click{" "}
+            <strong>Go Live</strong> to flip the public page to streaming mode.
+            Step 3 — click <strong>End session</strong> when done.
+          </p>
           <label className="block mb-3">
             <span className="text-[12px] font-semibold text-brand-ink mb-1.5 block">
               YouTube video ID or share URL
@@ -134,16 +147,12 @@ export function ManageSessionClient({ id, roomCode, initial, stats }: Props) {
             {!isLive ? (
               <ActionBtn
                 onClick={() => patch({ status: "live" }, "go-live")}
-                disabled={!initial.youtubeVideoId || busy !== null}
+                disabled={!canGoLive || busy !== null}
                 spinning={busy === "go-live"}
                 icon={<PlayCircle size={14} />}
                 label="Go Live"
                 tone="brand"
-                hint={
-                  !initial.youtubeVideoId
-                    ? "Save a video ID first"
-                    : undefined
-                }
+                hint={!canGoLive ? "Save a video ID first" : undefined}
               />
             ) : (
               <ActionBtn
@@ -276,6 +285,53 @@ function ActionBtn({
       {hint ? (
         <span className="text-[10px] text-brand-muted mt-1 ml-1">{hint}</span>
       ) : null}
+    </div>
+  );
+}
+
+function CopyField({
+  label,
+  value,
+  secret,
+}: {
+  label: string;
+  value: string;
+  secret?: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [revealed, setRevealed] = useState(!secret);
+  return (
+    <div>
+      <span className="text-[12px] font-semibold text-brand-ink mb-1.5 block">
+        {label}
+      </span>
+      <div className="flex gap-2">
+        <input
+          readOnly
+          type={revealed ? "text" : "password"}
+          value={value}
+          className="flex-1 rounded-xl border border-brand-ink/15 bg-brand-ink/[0.03] px-4 py-2.5 text-sm font-mono text-brand-ink focus:outline-none transition"
+        />
+        {secret ? (
+          <button
+            onClick={() => setRevealed((r) => !r)}
+            className="rounded-xl border border-brand-ink/15 bg-white px-3 py-2.5 text-xs font-semibold text-brand-ink hover:border-brand-primary transition"
+          >
+            {revealed ? "Hide" : "Show"}
+          </button>
+        ) : null}
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
+          className="inline-flex items-center gap-1 rounded-xl border border-brand-ink/15 bg-white px-3 py-2.5 text-xs font-semibold text-brand-ink hover:border-brand-primary transition"
+        >
+          <ClipboardCopy size={12} />
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
     </div>
   );
 }

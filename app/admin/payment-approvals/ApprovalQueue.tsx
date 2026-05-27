@@ -66,7 +66,7 @@ export function ApprovalQueue({ rows }: { rows: QueueRow[] }) {
         <thead className="bg-brand-ink/[0.04] text-brand-muted text-[11px] uppercase tracking-wider font-semibold">
           <tr>
             <th className="text-left px-4 py-3">Student</th>
-            <th className="text-left px-4 py-3">Bootcamp</th>
+            <th className="text-left px-4 py-3">Plan / Bootcamp</th>
             <th className="text-right px-4 py-3">Amount</th>
             <th className="text-left px-4 py-3">UTR</th>
             <th className="text-left px-4 py-3">Submitted</th>

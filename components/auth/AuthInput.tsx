@@ -84,7 +84,7 @@ export function AuthInput({
     <div className={clsx("w-full", className)}>
       <div
         className={clsx(
-          "relative rounded-xl border bg-white/60 backdrop-blur-md transition-all duration-200",
+          "relative rounded-xl border bg-white/60 backdrop-blur-md transition-all duration-200 h-[58px]",
           focused
             ? "border-brand-primary shadow-[0_0_0_4px_rgba(1,145,252,0.12)]"
             : errorMessage
@@ -95,7 +95,7 @@ export function AuthInput({
         {leadingIcon ? (
           <span
             className={clsx(
-              "absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none transition-colors",
+              "absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none transition-colors z-10",
               focused && "text-brand-primary",
               errorMessage && "text-rose-500",
             )}
@@ -107,24 +107,31 @@ export function AuthInput({
 
         <motion.label
           htmlFor={id}
-          // Float the label inside the field at rest, push it up + shrink it
-          // once focused or filled. layoutId lets framer keep the same node
-          // visually so the transition reads as one continuous motion.
           initial={false}
           animate={
             reduced
-              ? { y: isFloating ? -10 : 0, scale: isFloating ? 0.85 : 1 }
+              ? {
+                  top: isFloating ? 8 : 28,
+                  scale: isFloating ? 0.78 : 1,
+                }
               : {
-                  y: isFloating ? -10 : 0,
-                  scale: isFloating ? 0.82 : 1,
+                  top: isFloating ? 8 : 28,
+                  scale: isFloating ? 0.78 : 1,
                   transition: { duration: 0.18, ease: [0.16, 1, 0.3, 1] },
                 }
           }
+          style={{ y: "-50%" }}
           className={clsx(
-            "absolute origin-left pointer-events-none select-none transition-colors duration-150",
+            "absolute origin-left pointer-events-none select-none transition-colors duration-150 leading-none",
             leadingIcon ? "left-10" : "left-3.5",
-            isFloating ? "top-1.5 text-[10px] font-semibold uppercase tracking-wider" : "top-1/2 -translate-y-1/2 text-sm",
-            focused ? "text-brand-primary" : errorMessage ? "text-rose-600" : "text-brand-muted",
+            isFloating
+              ? "text-[10px] font-semibold uppercase tracking-wider"
+              : "text-sm",
+            focused
+              ? "text-brand-primary"
+              : errorMessage
+                ? "text-rose-600"
+                : "text-brand-muted",
           )}
         >
           {label}
@@ -144,11 +151,10 @@ export function AuthInput({
           aria-invalid={!!errorMessage}
           aria-describedby={errorMessage ? `${id}-error` : undefined}
           className={clsx(
-            "w-full bg-transparent outline-none text-sm font-medium text-brand-ink",
+            "absolute inset-0 w-full h-full bg-transparent outline-none text-sm font-medium text-brand-ink rounded-xl leading-none",
             leadingIcon ? "pl-10" : "pl-3.5",
-            // Reserve right padding for the validation icon + any trailing node.
-            (showValidation || trailingNode) ? "pr-10" : "pr-3.5",
-            "pt-5 pb-2",
+            showValidation || trailingNode ? "pr-10" : "pr-3.5",
+            "pt-6 pb-2",
             tnum && "tnum",
           )}
           {...rest}
@@ -162,10 +168,10 @@ export function AuthInput({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.6 }}
               transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 grid place-items-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none"
               aria-hidden="true"
             >
-              <Check size={13} strokeWidth={3} />
+              <Check size={16} strokeWidth={2.5} />
             </motion.span>
           ) : null}
           {showValidation && isInvalid ? (
@@ -175,16 +181,16 @@ export function AuthInput({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.6 }}
               transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 grid place-items-center w-6 h-6 rounded-full bg-rose-100 text-rose-700"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-rose-600 pointer-events-none"
               aria-hidden="true"
             >
-              <X size={13} strokeWidth={3} />
+              <X size={16} strokeWidth={2.5} />
             </motion.span>
           ) : null}
         </AnimatePresence>
 
         {trailingNode && !showValidation ? (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2">
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
             {trailingNode}
           </span>
         ) : null}

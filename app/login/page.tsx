@@ -10,10 +10,11 @@ import {
   useAnimationControls,
   useReducedMotion,
 } from "framer-motion";
-import { ArrowRight, Lock, Mail } from "lucide-react";
+import { ArrowRight, Mail, Sparkles } from "lucide-react";
 import { GlassCard } from "@/components/glass";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { AuthInput } from "@/components/auth/AuthInput";
+import { PasswordField } from "@/components/auth/PasswordField";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { RolePicker, ROLE_PILLS, type Role } from "@/components/auth/RolePicker";
 import type { AuthHeroPhase } from "@/components/auth/AuthHero";
@@ -63,6 +64,14 @@ function LoginInner() {
     setEmail("");
   }
 
+  // Update scene phase based on form interaction
+  function handleFieldFocus() {
+    if (phase === "idle" || phase === "error") setPhase("typing");
+  }
+  function handleFieldBlur() {
+    if (phase === "typing") setPhase("idle");
+  }
+
   async function shakeError() {
     if (reduced) return;
     await shake.start({
@@ -83,7 +92,9 @@ function LoginInner() {
     });
     if (res?.error) {
       setBusy(false);
-      setPhase("idle");
+      setPhase("error");
+      // Auto-reset to idle after error animation plays
+      setTimeout(() => setPhase("idle"), 1200);
       // Note: the old PHONE_UNVERIFIED branch was deleted along with the
       // MSG91 ripout — the server can no longer throw it. If we ever
       // reintroduce a verification gate, surface the error message via
@@ -119,7 +130,8 @@ function LoginInner() {
     <AuthShell role={role} mode="signin" heroPhase={phase}>
       <DoorAnimation
         active={playDoor}
-        studentName={role === "student" ? doorName : undefined}
+        role={role}
+        studentName={doorName}
         onComplete={() => {
           router.push(dest);
           router.refresh();
@@ -140,9 +152,17 @@ function LoginInner() {
           <div className="mb-4">
             <RolePicker value={role} onChange={switchRole} variant="pills" />
             {demoForActiveRole ? (
-              <p className="text-[10px] text-brand-muted mt-2 ml-3.5">
-                Demo email · <span className="font-mono">{demoForActiveRole}</span>
-              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail(demoForActiveRole);
+                  setPassword("demo1234");
+                }}
+                className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-brand-primary/5 border border-brand-primary/15 text-[11px] font-semibold text-brand-primary hover:bg-brand-primary/10 hover:border-brand-primary/30 transition"
+              >
+                <Sparkles size={11} /> Try as {role} ·{" "}
+                <span className="font-mono opacity-80">{demoForActiveRole}</span>
+              </button>
             ) : null}
           </div>
 
@@ -157,7 +177,7 @@ function LoginInner() {
               show: { transition: { staggerChildren: reduced ? 0 : 0.04 } },
             }}
           >
-            <motion.div variants={fieldV(reduced)}>
+            <motion.div variants={fieldV(reduced)} onFocus={handleFieldFocus} onBlur={handleFieldBlur}>
               <AuthInput
                 label="Email"
                 type="email"
@@ -170,20 +190,16 @@ function LoginInner() {
               />
             </motion.div>
 
-            <motion.div variants={fieldV(reduced)}>
-              <AuthInput
-                label="Password"
-                type="password"
-                autoComplete="current-password"
-                leadingIcon={<Lock size={14} />}
+            <motion.div variants={fieldV(reduced)} onFocus={handleFieldFocus} onBlur={handleFieldBlur}>
+              <PasswordField
                 value={password}
                 onValueChange={setPassword}
-                required
+                autoComplete="current-password"
               />
               <div className="flex justify-end mt-1">
                 <Link
                   href="/forgot-password"
-                  className="text-[11px] font-semibold text-brand-primary hover:underline"
+                  className="text-sm font-semibold text-brand-primary hover:underline"
                 >
                   Forgot password?
                 </Link>

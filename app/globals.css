@@ -682,3 +682,108 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
 }
 @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ── Landing page motion atmospherics ──────────────────────────────────── */
+@keyframes problem-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.5; }
+}
+.problem-pulse {
+  animation: problem-pulse 5s ease-in-out infinite;
+}
+
+@keyframes scanline-travel {
+  0% { transform: translateY(-10vh); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(110%); opacity: 0; }
+}
+.scanline-1 {
+  top: 0;
+  animation: scanline-travel 6s linear infinite;
+}
+.scanline-2 {
+  top: 0;
+  animation: scanline-travel 6s linear infinite;
+  animation-delay: 3s;
+}
+
+@keyframes cta-glow-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+.cta-glow {
+  animation: cta-glow-pulse 4s ease-in-out infinite;
+}
+
+@keyframes pro-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.pro-float {
+  animation: pro-float 4s ease-in-out infinite;
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.pop-in {
+  animation: pop-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) backwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes sla-pulse {
+  0%, 100% { transform: scale(1); }
+  20% { transform: scale(1.08); }
+  40% { transform: scale(1); }
+}
+.sla-pulse {
+  animation: sla-pulse 1.2s ease-in-out 0.5s;
+}
+
+@keyframes cta-btn-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(1,145,252,0.4), 0 8px 24px rgba(1,145,252,0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(1,145,252,0), 0 12px 32px rgba(1,145,252,0.35); }
+}
+.cta-primary-glow {
+  display: inline-block;
+  border-radius: 14px;
+  animation: cta-btn-glow 3s ease-in-out infinite;
+}
+.cta-primary-glow:hover {
+  animation: none;
+}
+
+.social-icon {
+  transition: transform 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55), background-color 0.2s, color 0.2s;
+}
+.social-icon:hover {
+  transform: scale(1.12) rotate(8deg);
+}
+
+/* Honor reduced motion globally for landing animations */
+@media (prefers-reduced-motion: reduce) {
+  .problem-pulse,
+  .scanline-1, .scanline-2,
+  .cta-glow,
+  .pro-float,
+  .pop-in,
+  .sla-pulse,
+  .cta-primary-glow {
+    animation: none !important;
+  }
+  .social-icon:hover {
+    transform: none;
+  }
+}
+
+/* Hero primary CTA continuous shine sweep */
+@keyframes hero-shine {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(200%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-cta-primary [style*="hero-shine"] { animation: none !important; }
+}

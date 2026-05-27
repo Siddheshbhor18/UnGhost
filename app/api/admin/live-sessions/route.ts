@@ -18,6 +18,8 @@ import { authOptions } from "@/server/auth";
 import { connectMongo } from "@/server/db/mongo";
 import { LiveSessionModel } from "@/server/db/models";
 import { logger } from "@/server/lib/logger";
+import { streamMode } from "@/server/integrations/stream";
+import { provisionCloudflareStream } from "@/server/store";
 
 const inputSchema = z.object({
   title: z.string().trim().min(3).max(120),
@@ -27,6 +29,7 @@ const inputSchema = z.object({
   tier: z.enum(["free", "paid"]).default("free"),
   bootcampId: z.string().optional(),
   youtubeVideoId: z.string().trim().optional(),
+  streamProvider: z.enum(["youtube", "cloudflare"]).optional(),
 });
 
 function generateRoomCode(): string {
@@ -62,6 +65,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
+  // Auto-default: paid + CF credentials available → cloudflare, else youtube
+  const provider =
+    parsed.data.streamProvider ??
+    (parsed.data.tier === "paid" && streamMode() === "cloudflare"
+      ? "cloudflare"
+      : "youtube");
+
   await connectMongo();
   const id = `ls_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
 
@@ -79,18 +89,36 @@ export async function POST(request: Request): Promise<NextResponse> {
         tier: parsed.data.tier,
         bootcampId: parsed.data.bootcampId ?? null,
         youtubeVideoId: parsed.data.youtubeVideoId || null,
+        streamProvider: provider,
         instructorId: session.user.id,
         status: "scheduled",
         registeredStudentIds: [],
         attendedStudentIds: [],
         createdAt: new Date().toISOString(),
       });
+
+      // Auto-provision Cloudflare Stream Live Input
+      let cfData: { cfRtmpUrl: string; cfStreamKey: string } | undefined;
+      if (provider === "cloudflare") {
+        try {
+          cfData = await provisionCloudflareStream(id);
+        } catch (err) {
+          logger.error({ err, sessionId: id }, "cf_stream.provision_failed");
+        }
+      }
+
       logger.info(
-        { sessionId: id, roomCode, adminUserId: session.user.id },
+        { sessionId: id, roomCode, provider, adminUserId: session.user.id },
         "live_session.created",
       );
       return NextResponse.json(
-        { id, roomCode, url: `/live/${roomCode}` },
+        {
+          id,
+          roomCode,
+          url: `/live/${roomCode}`,
+          streamProvider: provider,
+          ...(cfData ? { cfRtmpUrl: cfData.cfRtmpUrl, cfStreamKey: cfData.cfStreamKey } : {}),
+        },
         { status: 201 },
       );
     } catch (err: unknown) {

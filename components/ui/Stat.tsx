@@ -7,8 +7,8 @@ export type StatTone = "brand" | "success" | "warning" | "danger" | "neutral";
 export interface StatProps {
   /** Label — small uppercase kicker. */
   label: string;
-  /** Headline value — auto tabular-numeral. */
-  value: string | number;
+  /** Headline value — auto tabular-numeral. Accepts ReactNode for animated counters. */
+  value: string | number | ReactNode;
   /** Optional supporting line below the value. */
   sub?: string;
   /** Optional icon (top-left corner). */

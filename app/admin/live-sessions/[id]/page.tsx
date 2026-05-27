@@ -72,6 +72,10 @@ export default async function ManageLiveSessionPage({
           status: live.status ?? "scheduled",
           youtubeVideoId: live.youtubeVideoId ?? "",
           recordingUrl: live.recordingUrl ?? "",
+          streamProvider: live.streamProvider ?? "youtube",
+          cfLiveInputUid: live.cfLiveInputUid ?? "",
+          cfRtmpUrl: live.cfRtmpUrl ?? "",
+          cfStreamKey: live.cfStreamKey ?? "",
         }}
         stats={{ attendeeCount, messageCount }}
       />

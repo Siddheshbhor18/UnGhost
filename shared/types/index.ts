@@ -574,7 +574,9 @@ export interface AuditLog {
     | "email_template"
     | "support_ticket"
     // Partner attribution flow.
-    | "partner";
+    | "partner"
+    // Video access auditing.
+    | "live_session";
   targetId: string;
   summary: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -583,7 +585,7 @@ export interface AuditLog {
   after?: any;
   reason?: string;
   createdAt: string;
-  meta?: { ip?: string; userAgent?: string };
+  meta?: Record<string, unknown>;
 }
 
 export type ModerationKind =
@@ -755,6 +757,14 @@ export interface LiveSession {
   /** YouTube Live video ID. Pasted by admin once the broadcaster goes live.
    *  Until set, the session page shows a "starting soon" placeholder. */
   youtubeVideoId?: string | null;
+  /** Which video provider powers this session. Default "youtube". */
+  streamProvider?: "youtube" | "cloudflare";
+  /** Cloudflare Stream Live Input UID. Set on creation for CF sessions. */
+  cfLiveInputUid?: string | null;
+  /** RTMP ingest URL for instructor's OBS. Admin-only — never sent to students. */
+  cfRtmpUrl?: string | null;
+  /** Stream key for RTMP auth. Admin-only — never sent to students. */
+  cfStreamKey?: string | null;
   registeredStudentIds: string[];
   attendedStudentIds: string[];
   createdAt: string;
@@ -803,7 +813,7 @@ export interface SessionRecording {
   publishedAt?: string;
   /** When the instructor pressed Delete. */
   deletedAt?: string;
-  provider: "youtube" | "mock";
+  provider: "youtube" | "cloudflare" | "mock";
 }
 
 export interface AICoachMemory {

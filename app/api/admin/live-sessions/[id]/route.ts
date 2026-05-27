@@ -22,14 +22,15 @@ import {
   LiveSessionModel,
 } from "@/server/db/models";
 import { logger } from "@/server/lib/logger";
+import { provisionCloudflareStream } from "@/server/store";
 
 const patchSchema = z.object({
   title: z.string().trim().min(3).max(120).optional(),
   description: z.string().trim().max(500).optional(),
   startsAt: z.string().min(1).optional(),
   durationMin: z.number().int().min(15).max(360).optional(),
-  // Accept the full URL or just the ID. We normalise to the 11-char ID.
   youtubeVideoId: z.string().trim().optional(),
+  streamProvider: z.enum(["youtube", "cloudflare"]).optional(),
   status: z.enum(["scheduled", "live", "ended", "cancelled"]).optional(),
   recordingUrl: z.string().url().optional(),
 });
@@ -108,6 +109,10 @@ export async function PATCH(
     }
     updates.youtubeVideoId = id;
   }
+  if (parsed.data.streamProvider !== undefined) {
+    updates.streamProvider = parsed.data.streamProvider;
+  }
+
   if (parsed.data.status !== undefined) {
     updates.status = parsed.data.status;
     if (parsed.data.status === "live") {
@@ -121,6 +126,24 @@ export async function PATCH(
   }
 
   await connectMongo();
+
+  // If switching to cloudflare and not yet provisioned, auto-provision
+  if (parsed.data.streamProvider === "cloudflare") {
+    const existing = await LiveSessionModel.findById(params.id)
+      .select("cfLiveInputUid")
+      .lean();
+    if (existing && !(existing as any).cfLiveInputUid) {
+      try {
+        const cf = await provisionCloudflareStream(params.id);
+        updates.cfLiveInputUid = cf.cfLiveInputUid;
+        updates.cfRtmpUrl = cf.cfRtmpUrl;
+        updates.cfStreamKey = cf.cfStreamKey;
+      } catch (err) {
+        logger.error({ err, sessionId: params.id }, "cf_stream.provision_failed");
+      }
+    }
+  }
+
   const result = await LiveSessionModel.updateOne(
     { _id: params.id },
     { $set: updates },

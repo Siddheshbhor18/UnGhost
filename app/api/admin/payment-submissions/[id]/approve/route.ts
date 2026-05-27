@@ -37,7 +37,9 @@ export async function POST(
     return NextResponse.json({ error: "Guard failed" }, { status: 500 });
   }
 
-  // Run the three writes in a transaction so they're atomic.
+  const isPlanPurchase = submission.bootcampId.startsWith("plan:");
+
+  // Run the writes in a transaction so they're atomic.
   const dbSession = await mongoose.startSession();
   try {
     await dbSession.withTransaction(async () => {
@@ -46,25 +48,49 @@ export async function POST(
       submission.reviewedAt = new Date();
       await submission.save({ session: dbSession });
 
-      await BootcampModel.updateOne(
-        { _id: submission.bootcampId },
-        { $addToSet: { enrolledStudentIds: submission.userId } },
-        { session: dbSession },
-      );
+      if (isPlanPurchase) {
+        // Plan subscription activation (pro/premium)
+        const planName = submission.bootcampId.replace("plan:", "") as
+          | "pro"
+          | "premium";
+        const now = new Date();
+        const updateFields: Record<string, unknown> = {
+          plan: planName,
+          planType: planName,
+          planActivatedAt: now.toISOString(),
+          lastBillingTxnId: submission.utr,
+        };
+        if (planName === "pro") {
+          // Pro = 30-day rolling
+          const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          updateFields.planExpiresAt = expires.toISOString();
+        } else {
+          // Premium = lifetime (no expiry)
+          updateFields.planExpiresAt = null;
+        }
+        await UserModel.updateOne(
+          { _id: submission.userId },
+          { $set: updateFields },
+          { session: dbSession },
+        );
+      } else {
+        // Bootcamp enrollment (existing flow)
+        await BootcampModel.updateOne(
+          { _id: submission.bootcampId },
+          { $addToSet: { enrolledStudentIds: submission.userId } },
+          { session: dbSession },
+        );
 
-      // User.profile.enrolledBootcamps — `profile` is the student subdoc
-      // field name in UserSchema (NOT "studentProfile"). Strict mode
-      // silently drops writes to unknown paths, so the typo would fail
-      // silently; verified field name against server/db/models.ts.
-      await UserModel.updateOne(
-        { _id: submission.userId },
-        {
-          $addToSet: {
-            "profile.enrolledBootcamps": submission.bootcampId,
+        await UserModel.updateOne(
+          { _id: submission.userId },
+          {
+            $addToSet: {
+              "profile.enrolledBootcamps": submission.bootcampId,
+            },
           },
-        },
-        { session: dbSession },
-      );
+          { session: dbSession },
+        );
+      }
     });
   } catch (err) {
     logger.error(
@@ -86,13 +112,19 @@ export async function POST(
     const user = await UserModel.findById(submission.userId)
       .select("name email")
       .lean();
-    const bootcamp = await BootcampModel.findById(submission.bootcampId)
-      .select("title")
-      .lean();
+
+    const itemTitle = isPlanPurchase
+      ? `unGhost ${submission.bootcampId.replace("plan:", "").charAt(0).toUpperCase() + submission.bootcampId.replace("plan:", "").slice(1)} plan`
+      : (
+          await BootcampModel.findById(submission.bootcampId)
+            .select("title")
+            .lean()
+        )?.title ?? "your bootcamp";
+
     if (user?.email) {
       sendEnrollmentApproved(user.email, {
         name: user.name ?? "Student",
-        bootcampTitle: bootcamp?.title ?? "your bootcamp",
+        bootcampTitle: itemTitle,
       }).catch((emailErr: unknown) =>
         logger.error(
           { err: emailErr, submissionId: params.id },

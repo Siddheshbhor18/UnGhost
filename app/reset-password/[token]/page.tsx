@@ -1,11 +1,30 @@
 "use client";
 
+/**
+ * /reset-password/[token] — the page the forgot-password email links to.
+ *
+ * Three phases driven by the token verification:
+ *   1. checking  — initial mount, verifying token via GET /api/auth/reset-password
+ *   2. expired   — token invalid / expired / consumed → CTA back to forgot-password
+ *   3. form      — token valid; new-password form
+ *   On submit success → done state → soft redirect to /login
+ *
+ * Password policy mirrors `checkPasswordPolicy` in server/auth/password.ts:
+ *   • 8+ chars (≤72 bytes)
+ *   • 1 uppercase
+ *   • 1 digit
+ *
+ * Uses AuthShell + AuthInput to match the new /login + /signup design.
+ */
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -13,36 +32,9 @@ import {
   Lock,
   Sparkles,
 } from "lucide-react";
-import {
-  BlobField,
-  GlassBadge,
-  GlassButton,
-  GlassCard,
-  GlassInput,
-  Logo,
-} from "@/components/glass";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthInput } from "@/components/auth/AuthInput";
 
-/**
- * /reset-password/[token] — the page the forgot-password email links to.
- *
- * Three phases, picked by what's known about the token + form state:
- *
- *   1. CHECKING  — initial mount, server is verifying the token via
- *                  GET /api/auth/reset-password?token=...
- *   2. EXPIRED   — token invalid / expired / already consumed
- *                  → message + CTA to start over at /forgot-password
- *   3. FORM      — token valid; render new-password form
- *                  → POST /api/auth/reset-password { token, password }
- *                  → on success, show "all set" toast + redirect to /login
- *
- * Password policy mirrors `checkPasswordPolicy` in server/auth/password.ts:
- *   • 8+ chars
- *   • 1 uppercase
- *   • 1 digit
- *   • ≤72 bytes (bcrypt limit)
- * We surface live policy checks below the field so the user knows what
- * they're missing before submit.
- */
 type Phase = "checking" | "expired" | "form" | "submitting" | "done";
 
 export default function ResetPasswordPage() {
@@ -56,7 +48,7 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
 
-  // Phase 1: verify the token on mount (no-consume).
+  // Verify token on mount (no-consume)
   useEffect(() => {
     let cancelled = false;
     async function check(): Promise<void> {
@@ -86,7 +78,8 @@ export default function ResetPasswordPage() {
   const matches = password.length > 0 && password === confirm;
   const canSubmit = policy.ok && matches && phase === "form";
 
-  async function submit(): Promise<void> {
+  async function submit(e?: React.FormEvent): Promise<void> {
+    e?.preventDefault();
     if (!canSubmit) return;
     setError(null);
     setPhase("submitting");
@@ -101,7 +94,6 @@ export default function ResetPasswordPage() {
           error?: string;
           reason?: string;
         };
-        // 410 means the token was consumed/expired between our peek and our POST.
         if (res.status === 410) {
           setPhase("expired");
           return;
@@ -111,7 +103,6 @@ export default function ResetPasswordPage() {
         );
       }
       setPhase("done");
-      // Soft redirect after a beat so the user reads the success state.
       setTimeout(() => router.push("/login?reset=1"), 1800);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't reset password");
@@ -120,105 +111,126 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center px-4 py-10">
-      <BlobField />
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-6">
-          <Link href="/">
-            <Logo size="md" />
-          </Link>
-        </div>
-
-        <GlassCard variant="strong" className="!p-7">
+    <AuthShell role="student" mode="signin">
+      <div className="rounded-3xl">
+        <div className="relative rounded-3xl border border-white/60 bg-white/80 backdrop-blur-2xl shadow-elev-3 p-6 md:p-7">
           <Link
             href="/login"
-            className="inline-flex items-center gap-1 text-xs text-brand-primary font-semibold mb-3"
+            className="inline-flex items-center gap-1 text-xs text-brand-primary font-semibold mb-3 hover:underline"
           >
             <ArrowLeft size={12} /> Back to sign in
           </Link>
 
-          {phase === "checking" ? (
-            <CheckingState />
-          ) : phase === "expired" ? (
-            <ExpiredState />
-          ) : phase === "done" ? (
-            <DoneState />
-          ) : (
-            <FormState
-              password={password}
-              confirm={confirm}
-              showPw={showPw}
-              error={error}
-              policy={policy}
-              matches={matches}
-              canSubmit={canSubmit}
-              submitting={phase === "submitting"}
-              onPassword={setPassword}
-              onConfirm={setConfirm}
-              onToggleShow={() => setShowPw((s) => !s)}
-              onSubmit={submit}
-            />
-          )}
-        </GlassCard>
+          <AnimatePresence mode="wait">
+            {phase === "checking" && <CheckingState key="checking" />}
+            {phase === "expired" && <ExpiredState key="expired" />}
+            {phase === "done" && <DoneState key="done" />}
+            {(phase === "form" || phase === "submitting") && (
+              <FormState
+                key="form"
+                password={password}
+                confirm={confirm}
+                showPw={showPw}
+                error={error}
+                policy={policy}
+                matches={matches}
+                canSubmit={canSubmit}
+                submitting={phase === "submitting"}
+                onPassword={setPassword}
+                onConfirm={setConfirm}
+                onToggleShow={() => setShowPw((s) => !s)}
+                onSubmit={submit}
+              />
+            )}
+          </AnimatePresence>
+        </div>
       </div>
-    </main>
+    </AuthShell>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-//  Phase panels
-// ─────────────────────────────────────────────────────────────────────────
 
 function CheckingState() {
   return (
-    <div className="text-center py-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="text-center py-8"
+    >
       <Loader2
         size={28}
         className="mx-auto animate-spin text-brand-primary mb-3"
       />
-      <p className="text-sm text-brand-muted">Verifying your reset link…</p>
-    </div>
+      <p className="text-sm text-neutral-500">Verifying your reset link…</p>
+    </motion.div>
   );
 }
 
 function ExpiredState() {
   return (
-    <div className="text-center py-4">
-      <div className="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-rose-500/15 text-rose-600 shadow-glass-lg mb-4">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="text-center py-4"
+    >
+      <motion.div
+        initial={{ scale: 0, rotate: -20 }}
+        animate={{ scale: [0, 1.15, 1], rotate: 0 }}
+        transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-rose-500/15 text-rose-600 mb-4"
+        style={{ boxShadow: "0 12px 28px rgba(220,38,38,0.18)" }}
+      >
         <AlertCircle size={28} />
-      </div>
-      <h1 className="font-display font-extrabold text-2xl text-brand-ink">
+      </motion.div>
+      <h1 className="font-display font-extrabold text-2xl text-neutral-900">
         Link expired
       </h1>
-      <p className="text-sm text-brand-muted mt-3 leading-relaxed">
-        This reset link has expired or has already been used. Reset links
-        are single-use and last 1 hour.
+      <p className="text-sm text-neutral-500 mt-3 leading-relaxed">
+        This reset link has expired or has already been used. Reset links are
+        single-use and last 1 hour.
       </p>
-      <Link href="/forgot-password" className="block mt-5">
-        <GlassButton variant="brand" fullWidth>
-          Send a new reset link
-        </GlassButton>
+      <Link
+        href="/forgot-password"
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary hover:bg-brand-primary/90 px-4 py-3 text-sm font-semibold text-white transition"
+      >
+        Send a new reset link <ArrowRight size={14} />
       </Link>
-    </div>
+    </motion.div>
   );
 }
 
 function DoneState() {
   return (
-    <div className="text-center py-4">
-      <div className="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-emerald-500 text-white shadow-glass-lg mb-4">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="text-center py-4"
+    >
+      <motion.div
+        initial={{ scale: 0, rotate: -20 }}
+        animate={{ scale: [0, 1.15, 1], rotate: 0 }}
+        transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-emerald-500 text-white mb-4"
+        style={{ boxShadow: "0 12px 28px rgba(14,159,110,0.4)" }}
+      >
         <CheckCircle2 size={28} />
-      </div>
-      <h1 className="font-display font-extrabold text-2xl text-brand-ink">
+      </motion.div>
+      <h1 className="font-display font-extrabold text-2xl text-neutral-900">
         Password updated
       </h1>
-      <p className="text-sm text-brand-muted mt-3 leading-relaxed">
+      <p className="text-sm text-neutral-500 mt-3 leading-relaxed">
         You can sign in with your new password now.
       </p>
-      <div className="mt-4 inline-flex items-center gap-1.5 text-xs text-brand-muted">
+      <div className="mt-4 inline-flex items-center gap-1.5 text-xs text-neutral-500">
         <Loader2 size={12} className="animate-spin" /> Redirecting to sign in…
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -247,47 +259,62 @@ function FormState({
   onPassword: (s: string) => void;
   onConfirm: (s: string) => void;
   onToggleShow: () => void;
-  onSubmit: () => void;
+  onSubmit: (e?: React.FormEvent) => void;
 }) {
   return (
-    <>
-      <GlassBadge tone="brand">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-brand-primary font-semibold">
         <Lock size={11} /> Choose a new password
-      </GlassBadge>
-      <h1 className="font-display font-extrabold text-2xl text-brand-ink mt-3">
+      </span>
+      <h1 className="font-display font-extrabold text-2xl text-neutral-900 mt-2">
         Set a new password
       </h1>
-      <p className="text-sm text-brand-muted mt-2 leading-relaxed">
-        Pick something you&apos;ll remember. The link is single-use, so
-        finish this in one go.
+      <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
+        Pick something you&apos;ll remember. The link is single-use, so finish
+        this in one go.
       </p>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit();
-        }}
-        className="mt-5 space-y-4"
-      >
-        <PasswordField
+      <form onSubmit={onSubmit} className="mt-5 space-y-3">
+        <AuthInput
           label="New password"
+          type={showPw ? "text" : "password"}
           value={password}
-          onChange={onPassword}
-          show={showPw}
-          onToggleShow={onToggleShow}
-          autoFocus
+          onValueChange={onPassword}
+          autoComplete="new-password"
+          maxLength={72}
+          leadingIcon={<Lock size={14} />}
+          trailingNode={
+            <button
+              type="button"
+              onClick={onToggleShow}
+              className="grid place-items-center w-7 h-7 rounded-md text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition"
+              aria-label={showPw ? "Hide password" : "Show password"}
+              tabIndex={-1}
+            >
+              {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          }
+          required
         />
-        <PasswordField
+        <AuthInput
           label="Confirm new password"
+          type={showPw ? "text" : "password"}
           value={confirm}
-          onChange={onConfirm}
-          show={showPw}
-          onToggleShow={onToggleShow}
+          onValueChange={onConfirm}
+          autoComplete="new-password"
+          maxLength={72}
+          leadingIcon={<Lock size={14} />}
+          required
         />
 
-        {/* Live policy checklist — quiet until the user starts typing */}
+        {/* Live policy checklist */}
         {password.length > 0 ? (
-          <ul className="text-[11px] space-y-1 pl-1">
+          <ul className="text-[11px] space-y-1 pl-1 pt-1">
             <PolicyRow ok={policy.length} label="8+ characters" />
             <PolicyRow ok={policy.upper} label="One uppercase letter" />
             <PolicyRow ok={policy.digit} label="One number" />
@@ -304,11 +331,10 @@ function FormState({
           </div>
         ) : null}
 
-        <GlassButton
-          variant="brand"
-          fullWidth
+        <button
           type="submit"
           disabled={!canSubmit || submitting}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-3 text-sm font-semibold text-white transition"
         >
           {submitting ? (
             <>
@@ -319,60 +345,19 @@ function FormState({
               <Sparkles size={14} /> Update password
             </>
           )}
-        </GlassButton>
+        </button>
       </form>
 
-      <p className="text-[11px] text-brand-muted text-center mt-5">
+      <p className="text-[11px] text-neutral-500 text-center mt-5">
         Wrong account?{" "}
         <Link
           href="/forgot-password"
-          className="text-brand-primary font-semibold"
+          className="text-brand-primary font-semibold hover:underline"
         >
           Start over
         </Link>
       </p>
-    </>
-  );
-}
-
-function PasswordField({
-  label,
-  value,
-  onChange,
-  show,
-  onToggleShow,
-  autoFocus,
-}: {
-  label: string;
-  value: string;
-  onChange: (s: string) => void;
-  show: boolean;
-  onToggleShow: () => void;
-  autoFocus?: boolean;
-}) {
-  return (
-    <div>
-      <label className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold flex items-center justify-between mb-1.5">
-        <span>{label}</span>
-        <button
-          type="button"
-          onClick={onToggleShow}
-          className="text-brand-primary font-semibold inline-flex items-center gap-1"
-        >
-          {show ? <EyeOff size={11} /> : <Eye size={11} />}
-          {show ? "Hide" : "Show"}
-        </button>
-      </label>
-      <GlassInput
-        type={show ? "text" : "password"}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="••••••••"
-        autoFocus={autoFocus}
-        autoComplete="new-password"
-        maxLength={72}
-      />
-    </div>
+    </motion.div>
   );
 }
 
@@ -380,24 +365,20 @@ function PolicyRow({ ok, label }: { ok: boolean; label: string }) {
   return (
     <li
       className={`inline-flex items-center gap-1.5 ${
-        ok ? "text-emerald-700" : "text-brand-muted"
+        ok ? "text-emerald-700" : "text-neutral-500"
       }`}
     >
       {ok ? (
         <CheckCircle2 size={11} className="text-emerald-600" />
       ) : (
-        <span className="inline-block w-[11px] h-[11px] rounded-full border border-brand-muted/40" />
+        <span className="inline-block w-[11px] h-[11px] rounded-full border border-neutral-300" />
       )}
       <span>{label}</span>
     </li>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-//  Client-side policy. Mirrors server/auth/password.ts checkPasswordPolicy
-//  so the field can pre-flag failures, but the server is still the source
-//  of truth — server re-validates on POST.
-// ─────────────────────────────────────────────────────────────────────────
+// Mirrors server/auth/password.ts checkPasswordPolicy
 function checkPolicy(password: string) {
   const length = password.length >= 8 && password.length <= 72;
   const upper = /[A-Z]/.test(password);

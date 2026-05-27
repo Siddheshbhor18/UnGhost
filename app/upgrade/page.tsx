@@ -75,7 +75,7 @@ export default async function UpgradePage({ searchParams }: Props) {
 
         <div className="mt-14 text-center">
           <p className="text-body-xs text-neutral-500 mb-3">
-            GST 18% inclusive · UPI / Card / NetBanking via PhonePe · All sales final.
+            GST 18% inclusive · UPI payment · All sales final.
           </p>
           <Link
             href="/refund-policy"

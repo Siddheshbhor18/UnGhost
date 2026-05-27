@@ -766,6 +766,10 @@ const LiveSessionSchema = withJsonTransform(
       // YouTube Live video ID. Admin pastes it once the broadcaster is up.
       // Until set, the /live/[code] page shows "starting soon" instead of the iframe.
       youtubeVideoId: { type: String, default: null },
+      streamProvider: { type: String, default: "youtube" },
+      cfLiveInputUid: { type: String, default: null },
+      cfRtmpUrl: { type: String, default: null },
+      cfStreamKey: { type: String, default: null },
       registeredStudentIds: [String],
       attendedStudentIds: [String],
       createdAt: { type: String, index: true },

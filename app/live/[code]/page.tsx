@@ -15,6 +15,7 @@ import { authOptions } from "@/server/auth";
 import { connectMongo } from "@/server/db/mongo";
 import { LiveSessionModel } from "@/server/db/models";
 import { LiveChat } from "@/components/live/LiveChat";
+import { SecureYouTubePlayer } from "@/components/live/SecureYouTubePlayer";
 import { BlobField, GlassCard } from "@/components/glass";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +76,7 @@ export default async function LiveRoomPage({ params }: Ctx) {
         tier: live.tier,
       }}
       currentUserId={String(session.user.id)}
+      currentUserEmail={session.user.email ?? ""}
       currentUserName={session.user.name ?? "You"}
       isAdmin={session.user.role === "admin"}
       roomCode={params.code}
@@ -99,6 +101,7 @@ interface YTViewProps {
     tier?: string;
   };
   currentUserId: string;
+  currentUserEmail: string;
   currentUserName: string;
   isAdmin: boolean;
   roomCode: string;
@@ -107,21 +110,23 @@ interface YTViewProps {
 function YouTubeLiveView({
   live,
   currentUserId,
+  currentUserEmail,
+  currentUserName,
   isAdmin,
   roomCode,
 }: YTViewProps) {
   const isInstructor = currentUserId === live.instructorId;
   const isModerator = isAdmin || isInstructor;
   const isEnded = live.status === "ended" || live.status === "cancelled";
-  const hasVideoId = Boolean(live.youtubeVideoId);
-  const hasRecording = Boolean(live.recordingUrl || (isEnded && hasVideoId));
+  const hasStream = Boolean(live.youtubeVideoId);
+  const hasRecording = Boolean(live.recordingUrl || (isEnded && hasStream));
 
   const variant: "live" | "soon" | "ended-recording" | "ended-no-recording" =
     isEnded
       ? hasRecording
         ? "ended-recording"
         : "ended-no-recording"
-      : hasVideoId
+      : hasStream
         ? "live"
         : "soon";
 
@@ -176,7 +181,13 @@ function YouTubeLiveView({
         <div className="grid lg:grid-cols-[1fr_360px] gap-4 lg:h-[calc(100vh-220px)]">
           <div className="rounded-2xl overflow-hidden border border-brand-ink/10 bg-brand-ink/95 aspect-video lg:aspect-auto min-h-[360px]">
             {variant === "live" || variant === "ended-recording" ? (
-              <YouTubeFrame videoId={live.youtubeVideoId!} />
+              <SecureYouTubePlayer
+                sessionId={live._id}
+                userEmail={currentUserEmail}
+                userId={currentUserId}
+                userName={currentUserName}
+                tier={(live.tier as "free" | "paid") ?? "free"}
+              />
             ) : variant === "soon" ? (
               <StartingSoonPanel
                 title={live.title}
@@ -199,22 +210,6 @@ function YouTubeLiveView({
         </div>
       </main>
     </div>
-  );
-}
-
-/** Chrome-stripped YouTube embed. youtube-nocookie domain = no tracking
- *  cookies set until the user actually presses play. modestbranding=1 +
- *  rel=0 strip the YouTube logo + post-roll suggested videos. */
-function YouTubeFrame({ videoId }: { videoId: string }) {
-  const src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&modestbranding=1&rel=0&controls=1&fs=1&playsinline=1`;
-  return (
-    <iframe
-      src={src}
-      title="Live stream"
-      allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-      allowFullScreen
-      className="w-full h-full border-0"
-    />
   );
 }
 

@@ -46,7 +46,7 @@ What's in the box at the end of Sprint D, what's left to insert, and how to flip
 - 3 runbooks: `rollback.md`, `incident-response.md`, `on-call.md`, `go-live.md`
 - DPDP § 11 export endpoint (`/api/account/export`) — JSON download of every artefact
 - DPDP § 13 erasure endpoint (`/api/account/delete`) — soft-delete + 30-day grace + hard-delete via SLA sweep
-- YouTube Live embed for bootcamp live sessions (zero cost)
+- Dual live-streaming: YouTube Live (free sessions) + Cloudflare Stream (paid, signed playback tokens)
 - k6 smoke + peak load test scripts w/ Sprint D acceptance thresholds
 
 ## What's left — only environment variables

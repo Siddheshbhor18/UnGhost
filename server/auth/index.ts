@@ -1,7 +1,6 @@
 import type { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import LinkedInProvider from "next-auth/providers/linkedin";
 import {
   getUserByEmail,
   setUserPasswordHash,
@@ -144,14 +143,6 @@ export const authOptions: AuthOptions = {
           }),
         ]
       : []),
-    ...(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET
-      ? [
-          LinkedInProvider({
-            clientId: process.env.LINKEDIN_CLIENT_ID,
-            clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
-          }),
-        ]
-      : []),
   ],
   pages: {
     signIn: "/login",
@@ -159,7 +150,7 @@ export const authOptions: AuthOptions = {
   callbacks: {
     /**
      * Runs on every sign-in attempt — credentials AND OAuth. For OAuth
-     * (Google / LinkedIn), the provider hands us a verified email + profile
+     * (Google), the provider hands us a verified email + profile
      * but does NOT create a Mongo row. Without a row, downstream JWT lacks
      * `id`/`role`, and every `/api/student/*` etc. 401s on first OAuth login.
      *
@@ -172,7 +163,7 @@ export const authOptions: AuthOptions = {
      */
     async signIn({ user, account }) {
       const provider = account?.provider;
-      if (provider !== "google" && provider !== "linkedin") {
+      if (provider !== "google") {
         // Credentials, email-link, etc. — authorize() already set id+role.
         return true;
       }
