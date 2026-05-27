@@ -30,8 +30,16 @@ import {
 import { HeroDemoLoop } from "@/components/landing/HeroDemoLoop";
 import { HeroCTAs } from "@/components/landing/HeroCTAs";
 import { ScrollPrompt } from "@/components/landing/ScrollPrompt";
-import { FAQ } from "@/components/landing/FAQ";
-import { CookieConsent } from "@/components/landing/CookieConsent";
+import dynamic from "next/dynamic";
+// Below-fold — lazy-load to keep initial bundle small
+const FAQ = dynamic(() =>
+  import("@/components/landing/FAQ").then((m) => ({ default: m.FAQ })),
+);
+const CookieConsent = dynamic(() =>
+  import("@/components/landing/CookieConsent").then((m) => ({
+    default: m.CookieConsent,
+  })),
+);
 import { LiveSessionsTeaser } from "@/components/live/LiveSessionsTeaser";
 import {
   MotionSection,
@@ -50,6 +58,10 @@ import {
   getGlobalMetrics,
 } from "@/server/store";
 
+// ISR — cache landing HTML for 5 min. Background revalidation means visitors
+// after the first 5 min still get instant HTML, refresh happens silently.
+export const revalidate = 300;
+
 const getLandingData = unstable_cache(
   async () => {
     const [allJobs, companies, metrics, bcs] = await Promise.all([
@@ -61,7 +73,7 @@ const getLandingData = unstable_cache(
     return { allJobs, companies, metrics, bcs };
   },
   ["landing-data-v1"],
-  { revalidate: 60, tags: ["landing"] },
+  { revalidate: 300, tags: ["landing"] },
 );
 
 export default async function LandingPage() {
