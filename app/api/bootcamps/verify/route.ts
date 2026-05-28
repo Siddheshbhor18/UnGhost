@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import { getBootcampById, markSkillVerified } from "@/server/store";
 import { depthScore } from "@/server/lib/matching";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "auth" }, { status: 401 });
   const { bootcampId, response } = await req.json();

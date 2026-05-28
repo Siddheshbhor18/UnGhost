@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import {
   getSupportTicketById,
   getUserByEmail,
@@ -36,6 +37,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
 ): Promise<NextResponse> {
+  const csrf = requireSameOrigin(request);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -49,7 +49,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const guard = await adminLoadSubmission(params.id);
+  const guard = await adminLoadSubmission(params.id, req);
   if (guard.errorResponse) return guard.errorResponse;
   const { adminUserId, submission } = guard;
   if (!submission || !adminUserId) {

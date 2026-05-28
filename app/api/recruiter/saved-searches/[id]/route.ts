@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import {
   deleteSavedSearch,
   updateSavedSearchFrequency,
@@ -20,6 +21,8 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || session.user.role !== "recruiter") {
     return NextResponse.json({ error: "recruiters only" }, { status: 403 });
@@ -45,6 +48,8 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
+  const csrf = requireSameOrigin(_req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || session.user.role !== "recruiter") {
     return NextResponse.json({ error: "recruiters only" }, { status: 403 });

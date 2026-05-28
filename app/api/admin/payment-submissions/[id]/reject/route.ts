@@ -52,7 +52,7 @@ export async function POST(
     );
   }
 
-  const guard = await adminLoadSubmission(params.id);
+  const guard = await adminLoadSubmission(params.id, req);
   if (guard.errorResponse) return guard.errorResponse;
   const { adminUserId, submission } = guard;
   if (!submission || !adminUserId) {
@@ -69,11 +69,15 @@ export async function POST(
       await submission.save({ session: dbSession });
 
       // Free the seat — the student is no longer holding it.
-      await BootcampModel.updateOne(
-        { _id: submission.bootcampId },
-        { $inc: { currentSubmissionCount: -1 } },
-        { session: dbSession },
-      );
+      // Plan purchases (bootcampId = "plan:pro" etc.) don't have a real
+      // bootcamp document, so skip the decrement to avoid corrupting counters.
+      if (!submission.bootcampId.startsWith("plan:")) {
+        await BootcampModel.updateOne(
+          { _id: submission.bootcampId },
+          { $inc: { currentSubmissionCount: -1 } },
+          { session: dbSession },
+        );
+      }
     });
   } catch (err) {
     logger.error(

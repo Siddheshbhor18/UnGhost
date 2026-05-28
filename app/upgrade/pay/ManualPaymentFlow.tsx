@@ -11,7 +11,8 @@
  * already exists in /admin/payment-approvals.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
@@ -73,10 +74,16 @@ export function ManualPaymentFlow({
   const canProceedToPay = name.trim().length >= 2 && /^\d{10}$/.test(phone);
   const canSubmit = transactionId.trim().length >= 4 && upiApp;
 
-  // Generate QR code URL using a UPI deep link
+  // Generate QR code client-side — no third-party API call, no UPI data leakage.
   const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${amountINR}&cu=INR&tn=${encodeURIComponent(`unGhost ${planLabel} plan`)}`;
-  // Use a QR code API to render the UPI link
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(upiLink)}`;
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    QRCode.toDataURL(upiLink, { width: 280, margin: 2 }).then((url) => {
+      if (!cancelled) setQrDataUrl(url);
+    });
+    return () => { cancelled = true; };
+  }, [upiLink]);
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -201,14 +208,20 @@ export function ManualPaymentFlow({
                   <QrCode size={13} /> Scan to pay ₹{amountINR.toLocaleString("en-IN")}
                 </p>
                 <div className="inline-block rounded-2xl border-2 border-neutral-200 p-3 bg-white">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={qrUrl}
-                    alt="UPI QR Code"
-                    width={240}
-                    height={240}
-                    className="rounded-lg"
-                  />
+                  {qrDataUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={qrDataUrl}
+                      alt="UPI QR Code"
+                      width={240}
+                      height={240}
+                      className="rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-[240px] h-[240px] grid place-items-center">
+                      <Loader2 size={24} className="animate-spin text-neutral-400" />
+                    </div>
+                  )}
                 </div>
                 <p className="text-[11px] text-neutral-500 mt-3">
                   Or pay manually to UPI ID:

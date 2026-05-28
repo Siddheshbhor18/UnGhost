@@ -12,6 +12,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import { connectMongo } from "@/server/db/mongo";
 import {
   LiveSessionMessageModel,
@@ -23,6 +24,8 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { code: string; msgId: string } },
 ): Promise<NextResponse> {
+  const csrf = requireSameOrigin(_req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

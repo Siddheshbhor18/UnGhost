@@ -18,6 +18,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import {
   applyInstructorGradeOverride,
   getBootcampById,
@@ -48,6 +49,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: { studentId: string; bootcampId: string } },
 ): Promise<NextResponse> {
+  const csrf = requireSameOrigin(request);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });

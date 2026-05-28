@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import {
   getBootcampById,
   getBootcampProgress,
@@ -36,6 +37,8 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || session.user.role !== "student") {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

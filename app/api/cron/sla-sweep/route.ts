@@ -51,8 +51,3 @@ export async function POST(req: Request) {
   const result = await runSlaSweep();
   return NextResponse.json({ ok: true, ...result });
 }
-
-// Also accept GET for easy admin manual trigger from the browser.
-export async function GET(req: Request) {
-  return POST(req);
-}

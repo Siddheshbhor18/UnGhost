@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import {
   getBootcampById,
   updateBootcamp,
@@ -44,6 +45,8 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || session.user.role !== "instructor") {
     return NextResponse.json({ error: "instructors only" }, { status: 403 });

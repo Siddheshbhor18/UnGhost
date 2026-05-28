@@ -59,7 +59,7 @@ export async function sendEmail(input: SendEmailInput): Promise<EmailResult> {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM ?? "unGhost <noreply@unghost.com>",
+        from: process.env.RESEND_FROM ?? "unGhost <noreply@unghost.in>",
         to: Array.isArray(input.to) ? input.to : [input.to],
         subject: input.subject,
         text: input.text,

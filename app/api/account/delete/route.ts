@@ -16,7 +16,9 @@ import {
 export const runtime = "nodejs";
 
 const Input = z.object({
-  password: z.string().min(1).max(72),
+  // Password is required for credentials users but optional for OAuth-only
+  // users who have no passwordHash (they proved identity via OAuth session).
+  password: z.string().min(1).max(72).optional(),
   reason: z.string().max(500).optional(),
 });
 
@@ -53,9 +55,19 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
-  const ok = (await verifyPassword(parsed.data.password, user.passwordHash)).ok;
-  if (!ok) {
-    return NextResponse.json({ error: "wrong_password" }, { status: 401 });
+
+  // OAuth-only users (Google sign-in, no password set) skip the password
+  // check — they're already authenticated via their OAuth session. Hybrid
+  // users who later set a password still need to confirm it.
+  const isOAuthOnly = !!(user as any).oauthProvider && !user.passwordHash;
+  if (!isOAuthOnly) {
+    if (!parsed.data.password) {
+      return NextResponse.json({ error: "password_required" }, { status: 400 });
+    }
+    const ok = (await verifyPassword(parsed.data.password, user.passwordHash)).ok;
+    if (!ok) {
+      return NextResponse.json({ error: "wrong_password" }, { status: 401 });
+    }
   }
 
   await softDeleteUser(session.user.id, parsed.data.reason);

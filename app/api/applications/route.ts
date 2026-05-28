@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   createApplication,
   getJobById,
@@ -17,6 +20,14 @@ import { getAI } from "@/server/integrations/ai";
 
 export const runtime = "nodejs";
 
+const ApplyInput = z.object({
+  jobId: z.string().min(1).max(64),
+  response: z.string().max(10000).optional(),
+  tabSwitches: z.number().int().min(0).max(1000).optional(),
+  pasteAttempts: z.number().int().min(0).max(1000).optional(),
+  timeTakenSec: z.number().min(0).max(86400).optional(),
+});
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json([], { status: 200 });
@@ -25,13 +36,19 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "student") {
     return NextResponse.json({ error: "students only" }, { status: 403 });
   }
-  const b = await req.json();
-  const job = await getJobById(b.jobId);
-  const user = await getUserById(session.user.id);
+  const parsed = await parseBody(req, ApplyInput);
+  if (!parsed.ok) return parsed.response;
+  const b = parsed.data;
+  const [job, user] = await Promise.all([
+    getJobById(b.jobId),
+    getUserById(session.user.id),
+  ]);
   if (!job || !user?.profile) {
     return NextResponse.json({ error: "invalid input" }, { status: 400 });
   }

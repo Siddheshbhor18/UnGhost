@@ -89,6 +89,7 @@ export function BootcampDetailClient({
   }
 
   const v = bc.videos[activeVideo];
+  const hasVideo = !!v;
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-6 pb-16 space-y-5">
@@ -172,12 +173,20 @@ export function BootcampDetailClient({
         <div className="lg:col-span-2 space-y-4">
           <GlassCard className="p-5">
             <div className="relative aspect-video rounded-2xl bg-brand-gradient overflow-hidden flex items-center justify-center text-white">
-              {enrolled ? (
+              {enrolled && hasVideo ? (
                 <div className="text-center">
                   <PlayCircle className="mx-auto opacity-90" size={72} />
                   <p className="font-display font-bold mt-3">{v.title}</p>
                   <p className="text-xs opacity-80 mt-1">
                     {v.durationMin} min · playback simulated
+                  </p>
+                </div>
+              ) : enrolled ? (
+                <div className="text-center">
+                  <PlayCircle className="mx-auto opacity-90" size={72} />
+                  <p className="font-display font-bold mt-3">Modules coming soon</p>
+                  <p className="text-xs opacity-80 mt-1">
+                    Instructor hasn't uploaded videos yet.
                   </p>
                 </div>
               ) : (
@@ -224,7 +233,7 @@ export function BootcampDetailClient({
             </div>
           </GlassCard>
 
-          {enrolled && (
+          {enrolled && hasVideo && (
             <GlassCard className="p-6 border border-brand-primary/20">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary mb-2">
                 Skill verify gate

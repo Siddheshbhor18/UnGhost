@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import {
   getApplicationById,
   updateApplicationFields,
@@ -27,6 +28,8 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user || session.user.role !== "student") {
     return NextResponse.json({ error: "students only" }, { status: 403 });

@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { signIn, getSession } from "next-auth/react";
+import { signIn, getSession, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -44,6 +44,13 @@ function LoginInner() {
   const reduced = useReducedMotion();
   const shake = useAnimationControls();
   const nextParam = params.get("next");
+  const { data: sessionData, status: sessionStatus } = useSession();
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return;
+    const r = (sessionData?.user as any)?.role as Role | undefined;
+    const dest = nextParam ?? (r ? HREF_BY_ROLE[r] : "/dashboard");
+    router.replace(dest);
+  }, [sessionStatus, sessionData, nextParam, router]);
 
   const [role, setRole] = useState<Role>("student");
   const [email, setEmail] = useState("");
@@ -239,7 +246,10 @@ function LoginInner() {
             <span className="h-px bg-brand-ink/10 flex-1" />
           </div>
 
-          <OAuthButtons callbackUrl={dest !== "/" ? dest : undefined} onError={setErr} />
+          <OAuthButtons
+            callbackUrl={nextParam ?? HREF_BY_ROLE[role]}
+            onError={setErr}
+          />
 
           <p className="mt-5 text-center text-[11px] text-brand-muted">
             New here?{" "}

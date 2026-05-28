@@ -100,4 +100,3 @@ async function handler(req: Request) {
 }
 
 export const POST = withApiErrorTracking(handler);
-export const GET = handler;

@@ -30,7 +30,7 @@ export async function POST(
   _req: Request,
   { params }: { params: { id: string } },
 ): Promise<NextResponse> {
-  const guard = await adminLoadSubmission(params.id);
+  const guard = await adminLoadSubmission(params.id, _req);
   if (guard.errorResponse) return guard.errorResponse;
   const { adminUserId, submission } = guard;
   if (!submission || !adminUserId) {

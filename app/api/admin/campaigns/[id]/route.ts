@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import {
   deleteCampaign,
   listCampaigns,
@@ -55,6 +56,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
 ): Promise<NextResponse> {
+  const csrf = requireSameOrigin(request);
+  if (csrf) return csrf;
   const auth = await gate();
   if (auth.err) return auth.err;
 
@@ -107,6 +110,8 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } },
 ): Promise<NextResponse> {
+  const csrf = requireSameOrigin(_req);
+  if (csrf) return csrf;
   const auth = await gate();
   if (auth.err) return auth.err;
 

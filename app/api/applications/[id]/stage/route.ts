@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import {
   getApplicationById,
   getJobById,
@@ -54,6 +55,8 @@ const STAGE_COPY: Record<
 };
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session || session.user.role === "student") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });

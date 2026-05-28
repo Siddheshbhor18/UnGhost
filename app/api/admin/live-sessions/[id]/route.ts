@@ -15,6 +15,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import { connectMongo } from "@/server/db/mongo";
 import {
   LiveSessionAttendeeModel,
@@ -67,6 +68,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
 ): Promise<NextResponse> {
+  const csrf = requireSameOrigin(request);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -168,6 +171,8 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } },
 ): Promise<NextResponse> {
+  const csrf = requireSameOrigin(_req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

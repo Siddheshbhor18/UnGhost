@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   motion,
-  AnimatePresence,
   useAnimationControls,
   useReducedMotion,
   LayoutGroup,
@@ -64,10 +64,23 @@ const COUNTRIES = [
 
 const EASE_OUT_SOFT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
+const HREF_BY_ROLE_SIGNUP: Record<string, string> = {
+  student: "/dashboard",
+  recruiter: "/recruiter/command",
+  instructor: "/instructor/today",
+  admin: "/admin/today",
+};
+
 export function SignupWizard() {
   const router = useRouter();
   const reduced = useReducedMotion();
   const shake = useAnimationControls();
+  const { data: sessionData, status: sessionStatus } = useSession();
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return;
+    const r = (sessionData?.user as any)?.role as string | undefined;
+    router.replace(r ? HREF_BY_ROLE_SIGNUP[r] ?? "/dashboard" : "/dashboard");
+  }, [sessionStatus, sessionData, router]);
 
   // Step machine — 1 (who) → 2 (secure). We never go beyond 2; success
   // redirects to /verify-phone.
@@ -301,44 +314,42 @@ export function SignupWizard() {
 
             <StepIndicator step={step} />
 
-          <AnimatePresence mode="wait" initial={false}>
-            {step === 1 ? (
-              <StepOne
-                key="step1"
-                role={role}
-                setRole={setRole}
-                name={name}
-                setName={setName}
-                email={email}
-                setEmail={setEmail}
-                country={country}
-                setCountry={setCountry}
-                phone={phone}
-                setPhone={setPhone}
-                onNext={next}
-                canContinue={canContinueStep1}
-                reduced={!!reduced}
-              />
-            ) : (
-              <StepTwo
-                key="step2"
-                password={password}
-                setPassword={setPassword}
-                acceptTos={acceptTos}
-                setAcceptTos={setAcceptTos}
-                acceptService={acceptService}
-                setAcceptService={setAcceptService}
-                acceptMarketing={acceptMarketing}
-                setAcceptMarketing={setAcceptMarketing}
-                onSubmit={submit}
-                onBack={back}
-                busy={busy}
-                err={err}
-                canSubmit={canSubmit}
-                reduced={!!reduced}
-              />
-            )}
-          </AnimatePresence>
+          {step === 1 ? (
+            <StepOne
+              key="step1"
+              role={role}
+              setRole={setRole}
+              name={name}
+              setName={setName}
+              email={email}
+              setEmail={setEmail}
+              country={country}
+              setCountry={setCountry}
+              phone={phone}
+              setPhone={setPhone}
+              onNext={next}
+              canContinue={canContinueStep1}
+              reduced={!!reduced}
+            />
+          ) : (
+            <StepTwo
+              key="step2"
+              password={password}
+              setPassword={setPassword}
+              acceptTos={acceptTos}
+              setAcceptTos={setAcceptTos}
+              acceptService={acceptService}
+              setAcceptService={setAcceptService}
+              acceptMarketing={acceptMarketing}
+              setAcceptMarketing={setAcceptMarketing}
+              onSubmit={submit}
+              onBack={back}
+              busy={busy}
+              err={err}
+              canSubmit={canSubmit}
+              reduced={!!reduced}
+            />
+          )}
 
           {step === 1 ? (
             <>
@@ -349,7 +360,7 @@ export function SignupWizard() {
                 </span>
                 <span className="h-px bg-brand-ink/10 flex-1" />
               </div>
-              <OAuthButtons onError={setErr} />
+              <OAuthButtons callbackUrl="/dashboard" onError={setErr} />
             </>
           ) : null}
 

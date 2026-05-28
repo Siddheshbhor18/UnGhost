@@ -11,14 +11,14 @@ const CSP = [
   "default-src 'self'",
   // 'unsafe-eval' kept on for Next dev runtime + some Sentry source maps.
   // In prod a stricter set is possible once we switch to nonce-based CSP.
-  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.sentry-cdn.com https://browser.sentry-cdn.com",
+  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.sentry-cdn.com https://browser.sentry-cdn.com https://www.youtube.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.sentry.io https://*.pusher.com wss://*.pusher.com https://api.phonepe.com https://api-preprod.phonepe.com https://*.100ms.live wss://*.100ms.live https://*.cloudflare.com",
+  "connect-src 'self' https://*.sentry.io https://*.pusher.com wss://*.pusher.com https://api.phonepe.com https://api-preprod.phonepe.com https://*.100ms.live wss://*.100ms.live https://*.cloudflare.com https://www.youtube.com",
   "media-src 'self' blob:",
   // PhonePe may bounce through a hosted checkout. Allow it as a frame source.
-  "frame-src 'self' https://*.phonepe.com",
+  "frame-src 'self' https://*.phonepe.com https://www.youtube.com",
   // Block our app being embedded anywhere — defeats clickjacking.
   "frame-ancestors 'none'",
   "form-action 'self'",

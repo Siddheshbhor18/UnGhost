@@ -32,6 +32,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import { connectMongo } from "@/server/db/mongo";
 import { BootcampModel, PaymentSubmissionModel } from "@/server/db/models";
 import { computeTotalPaise } from "@/server/payments/pricing";
@@ -69,6 +70,8 @@ interface SubmitResult {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const csrf = requireSameOrigin(request);
+  if (csrf) return csrf;
   // 1. Auth
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {

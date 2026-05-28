@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import { saveJob, unsaveJob } from "@/server/store";
 
 export const runtime = "nodejs";
@@ -9,6 +10,8 @@ export async function POST(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
+  const csrf = requireSameOrigin(_req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || session.user.role !== "student") {
     return NextResponse.json({ error: "students only" }, { status: 403 });
@@ -21,6 +24,8 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
+  const csrf = requireSameOrigin(_req);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || session.user.role !== "student") {
     return NextResponse.json({ error: "students only" }, { status: 403 });

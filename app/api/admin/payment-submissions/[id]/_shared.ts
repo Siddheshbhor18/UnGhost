@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import type { HydratedDocument } from "mongoose";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import { connectMongo } from "@/server/db/mongo";
 import {
   PaymentSubmissionModel,
@@ -33,7 +34,12 @@ export interface GuardResult {
  */
 export async function adminLoadSubmission(
   submissionId: string,
+  req?: Request,
 ): Promise<GuardResult> {
+  if (req) {
+    const csrf = requireSameOrigin(req);
+    if (csrf) return { errorResponse: csrf };
+  }
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return {

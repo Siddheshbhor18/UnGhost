@@ -15,6 +15,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { randomBytes, randomUUID } from "crypto";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import { connectMongo } from "@/server/db/mongo";
 import { LiveSessionModel } from "@/server/db/models";
 import { logger } from "@/server/lib/logger";
@@ -43,6 +44,8 @@ function generateRoomCode(): string {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const csrf = requireSameOrigin(request);
+  if (csrf) return csrf;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

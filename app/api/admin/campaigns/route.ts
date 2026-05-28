@@ -15,6 +15,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { authOptions } from "@/server/auth";
+import { requireSameOrigin } from "@/server/lib/csrf";
 import { listCampaigns, upsertCampaign, writeAuditLog } from "@/server/store";
 import { logger } from "@/server/lib/logger";
 
@@ -68,6 +69,8 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const csrf = requireSameOrigin(request);
+  if (csrf) return csrf;
   const auth = await assertAdmin();
   if (auth.err) return auth.err;
 
