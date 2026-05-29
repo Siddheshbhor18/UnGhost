@@ -4,6 +4,7 @@ import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
 import {
   getApplicationById,
+  getJobById,
   updateApplicationFields,
 } from "@/server/store";
 
@@ -17,10 +18,26 @@ export async function GET(
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const app = await getApplicationById(params.id);
   if (!app) return NextResponse.json({ error: "not found" }, { status: 404 });
-  // Student can only see own apps; recruiters / admins can see any
-  if (session.user.role === "student" && app.studentId !== session.user.id) {
+
+  // Ownership: a student sees only their own apps; a recruiter sees only apps
+  // to their own jobs; admins see everything. Without the recruiter scope,
+  // any recruiter could read any application by ID — candidate PII +
+  // assessment responses leak across recruiters (IDOR).
+  const role = session.user.role;
+  if (role === "student") {
+    if (app.studentId !== session.user.id) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+  } else if (role === "recruiter") {
+    const job = await getJobById(app.jobId);
+    if (!job || job.recruiterId !== session.user.id) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+  } else if (role !== "admin") {
+    // instructors / any other role have no business reading applications
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+
   return NextResponse.json(app);
 }
 
