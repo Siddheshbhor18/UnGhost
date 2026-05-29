@@ -11,9 +11,8 @@ import { ShieldCheck, KeyRound } from "lucide-react";
 
 export default function AdminLogin() {
   const router = useRouter();
-  const [email, setEmail] = useState("root@noghost.test");
-  const [password, setPassword] = useState("demo");
-  const [otp, setOtp] = useState("000000");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -24,14 +23,13 @@ export default function AdminLogin() {
     const res = await signIn("credentials", { email, password, redirect: false });
     setBusy(false);
     if (res?.error) {
-      setErr("Wrong credentials. Demo: root@noghost.test / demo");
+      // Generic message — never echo valid credentials back to the screen.
+      setErr("Wrong email or password.");
       return;
     }
-    if (otp !== "000000") {
-      setErr("Mock 2FA: enter 000000");
-      return;
-    }
-    router.push("/admin/metrics");
+    // The admin area is gated server-side by role in app/admin/layout.tsx;
+    // a non-admin who authenticates here is redirected away there.
+    router.push("/admin/today");
     router.refresh();
   }
 
@@ -45,20 +43,16 @@ export default function AdminLogin() {
           <Badge tone="yellow" className="mb-2"><ShieldCheck size={10} /> ADMIN AUTH</Badge>
           <h1 className="font-pixel text-xl text-neon-yellow neon-text mb-1">Sensei Terminal</h1>
           <p className="font-mono text-xs text-ink-muted mb-6">
-            Instructor + platform admin. Mock 2FA: <span className="text-neon-green">000000</span>
+            Instructor + platform admin sign-in.
           </p>
           <form onSubmit={submit} className="space-y-3">
             <div>
-              <label className="font-pixel text-[10px] text-ink-muted">ADMIN ID</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="pixel-input w-full mt-1" />
+              <label htmlFor="admin-email" className="font-pixel text-[10px] text-ink-muted">ADMIN ID</label>
+              <input id="admin-email" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="pixel-input w-full mt-1" />
             </div>
             <div>
-              <label className="font-pixel text-[10px] text-ink-muted">SECURE KEY</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="pixel-input w-full mt-1" />
-            </div>
-            <div>
-              <label className="font-pixel text-[10px] text-ink-muted">2FA · 6 DIGITS</label>
-              <input value={otp} onChange={(e) => setOtp(e.target.value)} maxLength={6} className="pixel-input w-full mt-1 tracking-[0.4em] text-center" />
+              <label htmlFor="admin-password" className="font-pixel text-[10px] text-ink-muted">SECURE KEY</label>
+              <input id="admin-password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="pixel-input w-full mt-1" />
             </div>
             {err && <p className="font-mono text-xs text-neon-red border border-neon-red px-3 py-2">{err}</p>}
             <PixelButton type="submit" variant="yellow" size="lg" block disabled={busy}>
