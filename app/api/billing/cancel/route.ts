@@ -56,7 +56,7 @@ async function handler(req: Request) {
     ok: true,
     plan: user.plan,
     planExpiresAt: user.planExpiresAt,
-    message: `Your Pro plan stays active until ${user.planExpiresAt ?? "expiry"}. After that you'll move to Free.`,
+    message: `Your paid plan stays active until ${user.planExpiresAt ?? "expiry"}. After that you'll move to Free.`,
   });
 }
 
