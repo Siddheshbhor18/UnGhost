@@ -148,7 +148,7 @@ function presignR2(
  * in our DB (e.g. on the user.resumeUrl field).
  */
 export async function presignUpload(input: {
-  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover";
+  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover" | "bootcamp-video";
   contentType: string;
   filename?: string;
 }): Promise<PresignedUpload> {
@@ -174,6 +174,14 @@ function extFromContentType(ct: string): string {
       return ".svg";
     case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
       return ".docx";
+    case "video/mp4":
+      return ".mp4";
+    case "video/webm":
+      return ".webm";
+    case "video/quicktime":
+      return ".mov";
+    case "application/vnd.apple.mpegurl":
+      return ".m3u8";
     default:
       return "";
   }
@@ -210,7 +218,7 @@ export async function mockRead(key: string): Promise<Uint8Array | null> {
  * caller never needs to know which mode is live.
  */
 export async function uploadObject(input: {
-  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover";
+  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover" | "bootcamp-video";
   contentType: string;
   filename: string;
   body: Uint8Array;

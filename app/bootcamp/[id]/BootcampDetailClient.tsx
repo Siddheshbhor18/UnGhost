@@ -26,10 +26,21 @@ import {
 import type { Bootcamp, SessionRecording } from "@/shared/types";
 import clsx from "clsx";
 
+interface LiveSessionLite {
+  id: string;
+  title: string;
+  startsAt: string;
+  durationMin: number;
+  status: "scheduled" | "live" | "ended" | "cancelled";
+  roomCode: string;
+  registeredCount: number;
+}
+
 interface Props {
   bootcamp: Bootcamp;
   initialEnrolled: boolean;
   recordings: SessionRecording[];
+  liveSessions?: LiveSessionLite[];
 }
 
 /**
@@ -41,6 +52,7 @@ export function BootcampDetailClient({
   bootcamp: bc,
   initialEnrolled,
   recordings,
+  liveSessions = [],
 }: Props) {
   const router = useRouter();
   const [enrolled, setEnrolled] = useState(initialEnrolled);
@@ -55,7 +67,6 @@ export function BootcampDetailClient({
     message: string;
     skill?: string;
   } | null>(null);
-  const [slot, setSlot] = useState<string | null>(null);
 
   async function enrolNow() {
     setEnrolError(null);
@@ -274,36 +285,66 @@ export function BootcampDetailClient({
         <aside className="space-y-4">
           <GlassCard className="p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary mb-2 inline-flex items-center gap-1.5">
-              <Calendar size={12} /> Live alignment
+              <Calendar size={12} /> Live workshops
             </p>
-            <p className="text-sm text-brand-muted mb-3">
-              Pick a slot to RSVP. Capped at 25 students.
-            </p>
-            <div className="space-y-2">
-              {bc.liveSlots.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSlot(s)}
-                  disabled={!enrolled}
-                  className={clsx(
-                    "w-full text-left rounded-xl px-3 py-2.5 border text-sm transition",
-                    slot === s
-                      ? "border-brand-primary bg-brand-primary/5 text-brand-ink"
-                      : "border-brand-ink/10 text-brand-ink/80 hover:border-brand-primary/40",
-                    !enrolled && "opacity-50 cursor-not-allowed",
-                  )}
-                >
-                  {new Date(s).toLocaleString("en-IN", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </button>
-              ))}
-            </div>
-            {slot && (
-              <GlassButton variant="brand" size="sm" fullWidth className="mt-3">
-                RSVP for live session
-              </GlassButton>
+            {liveSessions.length === 0 ? (
+              <p className="text-sm text-brand-muted">
+                No upcoming sessions yet. The instructor will schedule one soon.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {liveSessions.map((s) => {
+                  const isLive = s.status === "live";
+                  const startsIn =
+                    new Date(s.startsAt).getTime() - Date.now();
+                  const joinable =
+                    isLive || (startsIn > 0 && startsIn < 15 * 60_000);
+                  return (
+                    <li
+                      key={s.id}
+                      className={clsx(
+                        "rounded-xl border px-3 py-2.5",
+                        isLive
+                          ? "border-rose-500/30 bg-rose-500/5"
+                          : "border-brand-ink/10",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-brand-ink line-clamp-1">
+                            {s.title}
+                          </p>
+                          <p className="text-[11px] text-brand-muted mt-0.5">
+                            {new Date(s.startsAt).toLocaleString("en-IN", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}{" "}
+                            · {s.durationMin}m
+                          </p>
+                        </div>
+                        {isLive && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase text-rose-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                            Live
+                          </span>
+                        )}
+                      </div>
+                      {enrolled && joinable ? (
+                        <a
+                          href={`/live/${s.roomCode}`}
+                          className="mt-2 inline-flex items-center justify-center gap-1.5 w-full rounded-lg bg-brand-primary text-white px-3 py-1.5 text-xs font-semibold hover:bg-brand-primary/90"
+                        >
+                          {isLive ? "Join live room" : "Open room"}
+                        </a>
+                      ) : !enrolled ? (
+                        <p className="text-[10px] text-brand-muted mt-2">
+                          Enrol to join.
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </GlassCard>
 

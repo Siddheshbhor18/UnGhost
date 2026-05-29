@@ -3,7 +3,7 @@
     "id": "bc_ai_genai",
     "skill": "Generative AI",
     "category": "ai",
-    "title": "Generative AI for Builders \u2014 From Prompt to Production",
+    "title": "Generative AI for Builders — From Prompt to Production",
     "description": "Move past prompt-fiddling. Architect retrieval, evals, guardrails, and cost controls for AI features that ship and stay shipped.",
     "priceINR": 4999,
     "durationWeeks": 4,
@@ -14,21 +14,24 @@
         "title": "The Builder's Mental Model for LLMs",
         "durationMin": 22,
         "posterUrl": "/seed-avatars/bc-llm-1.svg",
-        "verifyPrompt": "Explain in your own words why an LLM is not a database, and give one product decision that flows from that distinction."
+        "verifyPrompt": "Explain in your own words why an LLM is not a database, and give one product decision that flows from that distinction.",
+        "url": "https://www.youtube.com/watch?v=zjkBMFhNj_g"
       },
       {
         "id": "v2",
         "title": "Retrieval-Augmented Generation, Honestly",
         "durationMin": 28,
         "posterUrl": "/seed-avatars/bc-llm-2.svg",
-        "verifyPrompt": "Describe a citation gate for a customer-support agent over a 50k-doc base. What gets a human in the loop?"
+        "verifyPrompt": "Describe a citation gate for a customer-support agent over a 50k-doc base. What gets a human in the loop?",
+        "url": "https://www.youtube.com/watch?v=kCc8FmEb1nY"
       },
       {
         "id": "v3",
         "title": "Evals That Actually Catch Regressions",
         "durationMin": 26,
         "posterUrl": "/seed-avatars/bc-llm-1.svg",
-        "verifyPrompt": "Design an eval set for a summarization feature. What three metrics and what failure modes are they catching?"
+        "verifyPrompt": "Design an eval set for a summarization feature. What three metrics and what failure modes are they catching?",
+        "url": "https://www.youtube.com/watch?v=wjZofJX0v4M"
       }
     ],
     "liveSlots": [
@@ -58,14 +61,16 @@
         "title": "Prompts Are Specs, Not Magic",
         "durationMin": 18,
         "posterUrl": "/seed-avatars/bc-llm-2.svg",
-        "verifyPrompt": "Take a vague user request and rewrite it as a prompt spec with constraints, examples, and acceptance criteria."
+        "verifyPrompt": "Take a vague user request and rewrite it as a prompt spec with constraints, examples, and acceptance criteria.",
+        "url": "https://www.youtube.com/watch?v=wjZofJX0v4M"
       },
       {
         "id": "v2",
         "title": "Versioning & Rolling Back Prompts in Prod",
         "durationMin": 21,
         "posterUrl": "/seed-avatars/bc-llm-1.svg",
-        "verifyPrompt": "Sketch a prompt-versioning workflow your team would actually use. What triggers a rollback?"
+        "verifyPrompt": "Sketch a prompt-versioning workflow your team would actually use. What triggers a rollback?",
+        "url": "https://www.youtube.com/watch?v=zjkBMFhNj_g"
       }
     ],
     "liveSlots": [
@@ -80,7 +85,7 @@
     "id": "bc_ds_python",
     "skill": "Python for Data Science",
     "category": "data_science",
-    "title": "Applied Data Science \u2014 Python, Pandas, and the Job",
+    "title": "Applied Data Science — Python, Pandas, and the Job",
     "description": "The 80/20 of data work in industry: clean messy data fast, frame the question right, communicate the answer.",
     "priceINR": 3999,
     "durationWeeks": 4,
@@ -91,21 +96,24 @@
         "title": "Reading a Real-World Dataset Without Crying",
         "durationMin": 24,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Given a CSV with mixed types, missing rows, and a malformed date column, outline your first 30 minutes of work."
+        "verifyPrompt": "Given a CSV with mixed types, missing rows, and a malformed date column, outline your first 30 minutes of work.",
+        "url": "https://www.youtube.com/watch?v=ZyhVh-qRZPA"
       },
       {
         "id": "v2",
         "title": "From Question to Chart in One Notebook",
         "durationMin": 27,
         "posterUrl": "/seed-avatars/bc-ds-2.svg",
-        "verifyPrompt": "Pick a question your team actually asks every week. Sketch the chart you would build and the columns you need."
+        "verifyPrompt": "Pick a question your team actually asks every week. Sketch the chart you would build and the columns you need.",
+        "url": "https://www.youtube.com/watch?v=UO98lJQ3QGI"
       },
       {
         "id": "v3",
         "title": "Stakeholder-Proof Analysis Reports",
         "durationMin": 19,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Write the one-paragraph TL;DR of an analysis where the result contradicts what leadership expected."
+        "verifyPrompt": "Write the one-paragraph TL;DR of an analysis where the result contradicts what leadership expected.",
+        "url": "https://www.youtube.com/watch?v=8EMW7io4rSI"
       }
     ],
     "liveSlots": [
@@ -122,7 +130,7 @@
     "id": "bc_ds_ml",
     "skill": "Practical Machine Learning",
     "category": "data_science",
-    "title": "Practical ML \u2014 Models You Can Defend in a Meeting",
+    "title": "Practical ML — Models You Can Defend in a Meeting",
     "description": "Pick the right model, validate it honestly, and explain it to a non-technical decision-maker without losing the room.",
     "priceINR": 5499,
     "durationWeeks": 5,
@@ -133,14 +141,16 @@
         "title": "Why Most ML Projects Die in Pilot",
         "durationMin": 23,
         "posterUrl": "/seed-avatars/bc-ds-2.svg",
-        "verifyPrompt": "Name three non-technical reasons an ML project fails to ship. Pick the one you've personally seen happen and explain why."
+        "verifyPrompt": "Name three non-technical reasons an ML project fails to ship. Pick the one you've personally seen happen and explain why.",
+        "url": "https://www.youtube.com/watch?v=aircAruvnKk"
       },
       {
         "id": "v2",
         "title": "Honest Validation: Beyond Train/Test Split",
         "durationMin": 29,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Describe a validation strategy for a churn model trained on six months of data. What about time leakage?"
+        "verifyPrompt": "Describe a validation strategy for a churn model trained on six months of data. What about time leakage?",
+        "url": "https://www.youtube.com/watch?v=fSytzGwwBVw"
       }
     ],
     "liveSlots": [
@@ -154,7 +164,7 @@
     "id": "bc_mkt_growth",
     "skill": "Growth Marketing",
     "category": "marketing",
-    "title": "Growth Marketing \u2014 Loops, Channels, and the Spreadsheet That Matters",
+    "title": "Growth Marketing — Loops, Channels, and the Spreadsheet That Matters",
     "description": "Build a growth model for your product, find the channel that actually scales, and stop measuring vanity metrics.",
     "priceINR": 3499,
     "durationWeeks": 3,
@@ -165,21 +175,24 @@
         "title": "Funnels Lie. Loops Don't.",
         "durationMin": 20,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Sketch the primary growth loop of a product you use daily. Name the input, the action, and the compounding output."
+        "verifyPrompt": "Sketch the primary growth loop of a product you use daily. Name the input, the action, and the compounding output.",
+        "url": "https://www.youtube.com/watch?v=n_yHZ_vKjno"
       },
       {
         "id": "v2",
         "title": "Channel-Product Fit, Not Just PMF",
         "durationMin": 24,
         "posterUrl": "/seed-avatars/bc-ds-2.svg",
-        "verifyPrompt": "Pick a startup you admire. Argue which one channel they actually depend on, with one piece of evidence."
+        "verifyPrompt": "Pick a startup you admire. Argue which one channel they actually depend on, with one piece of evidence.",
+        "url": "https://www.youtube.com/watch?v=n_yHZ_vKjno"
       },
       {
         "id": "v3",
         "title": "Building a Defensible Growth Model in Sheets",
         "durationMin": 26,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Outline the columns and assumptions of a 12-month growth model. Which assumption would scare you the most if wrong?"
+        "verifyPrompt": "Outline the columns and assumptions of a 12-month growth model. Which assumption would scare you the most if wrong?",
+        "url": "https://www.youtube.com/watch?v=n_yHZ_vKjno"
       }
     ],
     "liveSlots": [
@@ -196,7 +209,7 @@
     "id": "bc_mkt_perf",
     "skill": "Performance Marketing",
     "category": "marketing",
-    "title": "Performance Marketing \u2014 Paid Channels Without Wasting Budget",
+    "title": "Performance Marketing — Paid Channels Without Wasting Budget",
     "description": "Meta, Google, and the ROAS math behind them. Set up clean tracking, write ads that work in 2026, and read the dashboard like an operator.",
     "priceINR": 2999,
     "durationWeeks": 3,
@@ -207,14 +220,16 @@
         "title": "ROAS, MER, and What Your Agency Won't Tell You",
         "durationMin": 22,
         "posterUrl": "/seed-avatars/bc-ds-2.svg",
-        "verifyPrompt": "Define ROAS and MER. Which one would you optimize toward for a DTC brand in month 3, and why?"
+        "verifyPrompt": "Define ROAS and MER. Which one would you optimize toward for a DTC brand in month 3, and why?",
+        "url": "https://www.youtube.com/watch?v=aircAruvnKk"
       },
       {
         "id": "v2",
         "title": "Creative Iteration as a System",
         "durationMin": 19,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Lay out a weekly creative-testing cadence for a small team. How many variants and what kills a losing ad?"
+        "verifyPrompt": "Lay out a weekly creative-testing cadence for a small team. How many variants and what kills a losing ad?",
+        "url": "https://www.youtube.com/watch?v=aircAruvnKk"
       }
     ],
     "liveSlots": [
@@ -228,7 +243,7 @@
     "id": "bc_fin_fpna",
     "skill": "FP&A Fundamentals",
     "category": "finance",
-    "title": "FP&A Fundamentals \u2014 The Operator's Toolkit",
+    "title": "FP&A Fundamentals — The Operator's Toolkit",
     "description": "Build the three-statement model, run a budget vs actuals review, and translate finance for non-finance teams.",
     "priceINR": 4499,
     "durationWeeks": 4,
@@ -239,14 +254,16 @@
         "title": "The Three Statements, Connected",
         "durationMin": 25,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "If revenue goes up but cash goes down in the same quarter, name two non-fraudulent reasons and which statement reveals each."
+        "verifyPrompt": "If revenue goes up but cash goes down in the same quarter, name two non-fraudulent reasons and which statement reveals each.",
+        "url": "https://www.youtube.com/watch?v=aircAruvnKk"
       },
       {
         "id": "v2",
         "title": "Running a Real Budget vs Actuals Review",
         "durationMin": 21,
         "posterUrl": "/seed-avatars/bc-ds-2.svg",
-        "verifyPrompt": "You're 30% over on one line item. Walk through your first five questions before you escalate."
+        "verifyPrompt": "You're 30% over on one line item. Walk through your first five questions before you escalate.",
+        "url": "https://www.youtube.com/watch?v=aircAruvnKk"
       }
     ],
     "liveSlots": [
@@ -261,7 +278,7 @@
     "id": "bc_fin_equity",
     "skill": "Equity Research",
     "category": "finance",
-    "title": "Equity Research \u2014 Reading a Company Like an Analyst",
+    "title": "Equity Research — Reading a Company Like an Analyst",
     "description": "Crack a 10-K in 90 minutes. Build a defendable DCF. Write the one-page pitch a portfolio manager will actually read.",
     "priceINR": 5999,
     "durationWeeks": 5,
@@ -272,14 +289,16 @@
         "title": "The 90-Minute 10-K",
         "durationMin": 28,
         "posterUrl": "/seed-avatars/bc-ds-2.svg",
-        "verifyPrompt": "Pick a public company. List the three numbers you'd extract first from the 10-K and what each one tells you."
+        "verifyPrompt": "Pick a public company. List the three numbers you'd extract first from the 10-K and what each one tells you.",
+        "url": "https://www.youtube.com/watch?v=aircAruvnKk"
       },
       {
         "id": "v2",
         "title": "DCF Without Self-Deception",
         "durationMin": 31,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Identify the two assumptions in any DCF that swing valuation the most. How would you sanity-check each?"
+        "verifyPrompt": "Identify the two assumptions in any DCF that swing valuation the most. How would you sanity-check each?",
+        "url": "https://www.youtube.com/watch?v=aircAruvnKk"
       }
     ],
     "liveSlots": [
@@ -293,7 +312,7 @@
     "id": "bc_sales_b2b",
     "skill": "B2B Sales",
     "category": "sales",
-    "title": "B2B Sales \u2014 From First Call to Signed Contract",
+    "title": "B2B Sales — From First Call to Signed Contract",
     "description": "Run a real discovery call, qualify with MEDDIC, handle the procurement gauntlet, and close without discounting your way to a 'yes'.",
     "priceINR": 3999,
     "durationWeeks": 3,
@@ -304,21 +323,24 @@
         "title": "Discovery That Doesn't Sound Like Discovery",
         "durationMin": 23,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Write three open-ended discovery questions for a $50k ARR SaaS deal. Why each one beats a yes/no version."
+        "verifyPrompt": "Write three open-ended discovery questions for a $50k ARR SaaS deal. Why each one beats a yes/no version.",
+        "url": "https://www.youtube.com/watch?v=MEjUSJq-Yhg"
       },
       {
         "id": "v2",
         "title": "Qualifying with MEDDIC, Practically",
         "durationMin": 26,
         "posterUrl": "/seed-avatars/bc-ds-2.svg",
-        "verifyPrompt": "Pick a deal you've heard about. Score it on MEDDIC. Which letter is weakest and how would you strengthen it this week?"
+        "verifyPrompt": "Pick a deal you've heard about. Score it on MEDDIC. Which letter is weakest and how would you strengthen it this week?",
+        "url": "https://www.youtube.com/watch?v=MEjUSJq-Yhg"
       },
       {
         "id": "v3",
         "title": "Handling Procurement Without Folding",
         "durationMin": 20,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Procurement asks for a 20% discount. List three non-price levers you could pull instead and which one you'd lead with."
+        "verifyPrompt": "Procurement asks for a 20% discount. List three non-price levers you could pull instead and which one you'd lead with.",
+        "url": "https://www.youtube.com/watch?v=MEjUSJq-Yhg"
       }
     ],
     "liveSlots": [
@@ -335,7 +357,7 @@
     "id": "bc_sales_ae",
     "skill": "Account Executive Skills",
     "category": "sales",
-    "title": "AE Bootcamp \u2014 Running a Real Pipeline",
+    "title": "AE Bootcamp — Running a Real Pipeline",
     "description": "From SDR-handoff to closed-won: territory planning, forecasting, mutual close plans, and the daily ritual of a top-performing AE.",
     "priceINR": 3499,
     "durationWeeks": 3,
@@ -346,14 +368,16 @@
         "title": "Reading a Pipeline Honestly",
         "durationMin": 22,
         "posterUrl": "/seed-avatars/bc-ds-2.svg",
-        "verifyPrompt": "Why is a 4x pipeline coverage number meaningless on its own? What two cuts do you actually need to trust it?"
+        "verifyPrompt": "Why is a 4x pipeline coverage number meaningless on its own? What two cuts do you actually need to trust it?",
+        "url": "https://www.youtube.com/watch?v=MEjUSJq-Yhg"
       },
       {
         "id": "v2",
         "title": "The Mutual Close Plan, In Practice",
         "durationMin": 18,
         "posterUrl": "/seed-avatars/bc-ds-1.svg",
-        "verifyPrompt": "Sketch a mutual close plan for a 6-week sales cycle. Which two milestones would you absolutely not skip?"
+        "verifyPrompt": "Sketch a mutual close plan for a 6-week sales cycle. Which two milestones would you absolutely not skip?",
+        "url": "https://www.youtube.com/watch?v=MEjUSJq-Yhg"
       }
     ],
     "liveSlots": [

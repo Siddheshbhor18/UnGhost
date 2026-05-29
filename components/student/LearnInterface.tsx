@@ -23,10 +23,20 @@ import { VideoPlayer } from "@/components/bootcamp/VideoPlayer";
 import type { Bootcamp, BootcampProgress, BootcampVideo } from "@/shared/types";
 import type { SkillCheckQuestion } from "@/shared/types/ai";
 
+interface UpcomingLive {
+  id: string;
+  title: string;
+  startsAt: string;
+  durationMin: number;
+  status: "scheduled" | "live" | "ended" | "cancelled";
+  roomCode: string;
+}
+
 interface Props {
   bootcamp: Bootcamp;
   instructorName: string;
   initialProgress: BootcampProgress;
+  upcomingLive?: UpcomingLive[];
 }
 
 type ContentTab = "overview" | "transcript" | "notes";
@@ -90,7 +100,10 @@ export function LearnInterface({
   bootcamp,
   instructorName,
   initialProgress,
+  upcomingLive = [],
 }: Props) {
+  const nextLive = upcomingLive[0];
+  const liveNow = upcomingLive.find((s) => s.status === "live");
   // Treat each video as a sub-module. Unlock pattern: must pass previous video's
   // skill-check (or be first lesson). Live session and assignment unlock once
   // all video skill-checks pass.
@@ -234,21 +247,43 @@ export function LearnInterface({
             Module 2 — Live + Assignment
           </p>
           <div className="space-y-1">
-            <div className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs ${
-              allChecksDone ? "text-brand-ink" : "text-brand-muted"
-            }`}>
-              {allChecksDone ? (
+            {liveNow ? (
+              <Link
+                href={`/live/${liveNow.roomCode}`}
+                className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-rose-700 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/15 transition"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                <span className="flex-1 font-semibold">Live now — join</span>
+              </Link>
+            ) : nextLive ? (
+              <Link
+                href={`/live/${nextLive.roomCode}`}
+                className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-brand-ink hover:bg-white/40 transition"
+              >
                 <Video size={11} className="text-brand-primary" />
-              ) : (
-                <Lock size={11} />
-              )}
-              <span className="flex-1">Live workshop</span>
-              {bootcamp.liveSlots.length > 0 && (
-                <span className="text-[10px]">
-                  {bootcamp.liveSlots.length} slot{bootcamp.liveSlots.length === 1 ? "" : "s"}
+                <span className="flex-1 line-clamp-1">{nextLive.title}</span>
+                <span className="text-[10px] text-brand-muted">
+                  {new Date(nextLive.startsAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                  })}
                 </span>
-              )}
-            </div>
+              </Link>
+            ) : (
+              <div
+                className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs ${
+                  allChecksDone ? "text-brand-ink" : "text-brand-muted"
+                }`}
+              >
+                {allChecksDone ? (
+                  <Video size={11} className="text-brand-primary" />
+                ) : (
+                  <Lock size={11} />
+                )}
+                <span className="flex-1">Live workshop</span>
+                <span className="text-[10px]">Not scheduled</span>
+              </div>
+            )}
             <Link
               href={
                 allChecksDone

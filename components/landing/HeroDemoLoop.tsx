@@ -15,7 +15,10 @@
  *   4  Reply received  (2.2s)  — chat bubble + green SLA-met
  *
  * Skill→job continuity: "React" appears as a chip in Frame 1, then is
- * highlighted in the Razorpay match card in Frames 2 and 3.
+ * highlighted in the top match card in Frames 2 and 3.
+ *
+ * Company names here are ILLUSTRATIVE placeholders, not real customers.
+ * A "Demo" pill on the frame strip tells the visitor so — no fake social proof.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -39,23 +42,24 @@ const FRAME_MS = 2200;
 const TOTAL_FRAMES = 5;
 
 const SKILLS = ["React", "TypeScript", "Product", "Figma", "Node.js"];
+// Illustrative placeholders — not real companies. See file header.
 const JOBS = [
   {
-    co: "Razorpay",
+    co: "Northwind",
     role: "Senior Product Engineer",
     match: 92,
     sla: 24,
     skills: ["React", "Node", "PG"],
   },
   {
-    co: "Cred",
+    co: "Lumen Labs",
     role: "Frontend Lead",
     match: 87,
     sla: 48,
     skills: ["React", "TS", "Next"],
   },
   {
-    co: "Postman",
+    co: "Vector",
     role: "Staff PM",
     match: 81,
     sla: 72,
@@ -101,18 +105,21 @@ export function HeroDemoLoop() {
       className="relative flex items-center justify-center"
       style={{ minHeight: 460 }}
     >
-      {/* Centered dot indicator strip — top */}
-      <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 flex gap-1.5">
-        {Array.from({ length: TOTAL_FRAMES }).map((_, i) => (
-          <span
-            key={i}
-            className={`block h-1 rounded-full transition-all duration-500 ${
-              i === frame
-                ? "w-6 bg-brand-500"
-                : "w-1 bg-brand-500/25"
-            }`}
-          />
-        ))}
+      {/* Centered dot indicator strip + honest "Demo" tag — top */}
+      <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
+        <div className="flex gap-1.5">
+          {Array.from({ length: TOTAL_FRAMES }).map((_, i) => (
+            <span
+              key={i}
+              className={`block h-1 rounded-full transition-all duration-500 ${
+                i === frame ? "w-6 bg-brand-500" : "w-1 bg-brand-500/25"
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-neutral-400">
+          Demo
+        </span>
       </div>
 
       <div className="relative w-full">
@@ -333,7 +340,7 @@ function FrameSLA() {
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-base font-bold text-neutral-900">Razorpay</p>
+            <p className="text-base font-bold text-neutral-900">Northwind</p>
             <p className="text-xs text-neutral-500 mt-0.5">
               Senior Product Engineer · Bangalore
             </p>
@@ -391,7 +398,7 @@ function FrameReply() {
       exit="exit"
       className="flex flex-col gap-3"
     >
-      <p className="text-xs text-neutral-500 px-1">Razorpay · 3h ago</p>
+      <p className="text-xs text-neutral-500 px-1">Northwind · 3h ago</p>
       <div
         className={`${tileGlass} p-4`}
         style={{ rotate: "0.4deg" }}
@@ -403,7 +410,7 @@ function FrameReply() {
           className="flex items-start gap-3"
         >
           <div className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center text-white text-sm font-bold">
-            RZ
+            NW
           </div>
           <div className="flex-1">
             <div className="rounded-2xl rounded-tl-sm bg-neutral-100 px-3.5 py-2.5">

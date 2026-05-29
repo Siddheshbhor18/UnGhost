@@ -3569,16 +3569,63 @@ export async function setLiveSessionStatus(
   sessionId: string,
   instructorId: string,
   status: LiveSessionStatus,
+  extra?: { recordingUrl?: string },
 ): Promise<void> {
   await db();
   const now = new Date().toISOString();
   const set: Record<string, unknown> = { status };
   if (status === "live") set.startedAt = now;
   if (status === "ended") set.endedAt = now;
+  if (extra?.recordingUrl) set.recordingUrl = extra.recordingUrl;
   await LiveSessionModel.updateOne(
     { _id: sessionId, instructorId },
     { $set: set },
   );
+}
+
+/**
+ * Instructor sets / updates the YouTube video ID for an active live session.
+ * Accepts either a bare 11-char video ID or any YouTube URL — extracts the ID.
+ * Returns the resolved ID, or null when input couldn't be parsed.
+ */
+export async function setLiveSessionStream(
+  sessionId: string,
+  instructorId: string,
+  rawIdOrUrl: string,
+): Promise<string | null> {
+  const id = extractYouTubeIdLoose(rawIdOrUrl);
+  if (!id) return null;
+  await db();
+  await LiveSessionModel.updateOne(
+    { _id: sessionId, instructorId },
+    { $set: { youtubeVideoId: id } },
+  );
+  return id;
+}
+
+function extractYouTubeIdLoose(raw: string): string | null {
+  const t = raw.trim();
+  if (/^[\w-]{11}$/.test(t)) return t;
+  try {
+    const u = new URL(t);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") {
+      const id = u.pathname.slice(1).split("/")[0];
+      return /^[\w-]{11}$/.test(id) ? id : null;
+    }
+    if (host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com") {
+      const v = u.searchParams.get("v");
+      if (v && /^[\w-]{11}$/.test(v)) return v;
+      const parts = u.pathname.split("/").filter(Boolean);
+      const idx = parts.findIndex((p) => ["embed", "shorts", "live", "v"].includes(p));
+      if (idx >= 0 && parts[idx + 1] && /^[\w-]{11}$/.test(parts[idx + 1])) {
+        return parts[idx + 1];
+      }
+    }
+  } catch {
+    /* not a URL */
+  }
+  return null;
 }
 
 // ---------- SESSION RECORDINGS ----------

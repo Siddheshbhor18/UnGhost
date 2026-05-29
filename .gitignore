@@ -12,6 +12,10 @@ next-env.d.ts
 .claude/
 tsconfig.tsbuildinfo
 
+# Installed design skills (local tooling, not product code)
+.agents/
+skills-lock.json
+
 # Uploads
 .uploads/
 

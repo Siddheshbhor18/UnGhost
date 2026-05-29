@@ -5,6 +5,7 @@ import {
   getBootcampById,
   getBootcampProgress,
   getUserById,
+  listLiveSessionsByBootcamp,
 } from "@/server/store";
 import { BlobField, GlassNavbar, GlassBadge } from "@/components/glass";
 import { LearnInterface } from "@/components/student/LearnInterface";
@@ -30,6 +31,21 @@ export default async function LearnPage({
   if (!bootcamp.enrolledStudentIds.includes(session.user.id)) {
     redirect(`/bootcamp/${params.id}`);
   }
+  const liveSessions = await listLiveSessionsByBootcamp(params.id);
+  const upcomingLive = liveSessions
+    .filter((s) => s.status === "scheduled" || s.status === "live")
+    .sort(
+      (a, b) =>
+        new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    )
+    .map((s) => ({
+      id: s.id,
+      title: s.title ?? "Live session",
+      startsAt: s.startsAt,
+      durationMin: s.durationMin,
+      status: s.status,
+      roomCode: s.roomCode,
+    }));
   const existing = await getBootcampProgress(session.user.id, params.id);
   const progress: BootcampProgress = existing ?? {
     bootcampId: params.id,
@@ -60,6 +76,7 @@ export default async function LearnPage({
           bootcamp={bootcamp}
           instructorName={instructor?.name ?? "Instructor"}
           initialProgress={progress}
+          upcomingLive={upcomingLive}
         />
       </div>
     </main>

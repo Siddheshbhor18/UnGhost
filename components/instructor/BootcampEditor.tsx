@@ -14,6 +14,7 @@ import {
   Rocket,
   Save,
   Send,
+  Upload,
   Video as VideoIcon,
   X,
 } from "lucide-react";
@@ -128,6 +129,76 @@ export function BootcampEditor({ bootcamp }: Props) {
       "videos",
       (draft.videos ?? []).filter((v) => v.id !== id),
     );
+  }
+
+  /**
+   * Per-video upload state. Maps video id → progress 0-100 OR "done" OR error.
+   * Tracks active XHRs so we can cancel on unmount (though rare in practice).
+   */
+  const [uploadState, setUploadState] = useState<
+    Record<string, { pct: number; err?: string }>
+  >({});
+
+  async function uploadVideoFile(videoId: string, file: File) {
+    setUploadState((s) => ({ ...s, [videoId]: { pct: 0 } }));
+    try {
+      // 1. Ask server for a presigned URL.
+      const presignRes = await fetch("/api/instructor/upload-video", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contentType: file.type,
+          filename: file.name,
+          sizeBytes: file.size,
+        }),
+      });
+      if (!presignRes.ok) {
+        const data = await presignRes.json().catch(() => ({}));
+        throw new Error(data.error ?? `presign failed (${presignRes.status})`);
+      }
+      const { uploadUrl, publicUrl, headers } = (await presignRes.json()) as {
+        uploadUrl: string;
+        publicUrl: string;
+        headers: Record<string, string>;
+      };
+
+      // 2. PUT the file. XHR (not fetch) so we get upload progress events.
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl);
+        for (const [k, v] of Object.entries(headers)) {
+          xhr.setRequestHeader(k, v);
+        }
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setUploadState((s) => ({ ...s, [videoId]: { pct } }));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`upload HTTP ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error("network error"));
+        xhr.send(file);
+      });
+
+      // 3. Save the resulting URL onto the lesson — triggers the autosave.
+      updateVideo(videoId, "url", publicUrl);
+      setUploadState((s) => ({ ...s, [videoId]: { pct: 100 } }));
+      setTimeout(() => {
+        setUploadState((s) => {
+          const next = { ...s };
+          delete next[videoId];
+          return next;
+        });
+      }, 1200);
+    } catch (err) {
+      setUploadState((s) => ({
+        ...s,
+        [videoId]: { pct: 0, err: (err as Error).message },
+      }));
+    }
   }
 
   function addLiveSlot() {
@@ -396,7 +467,7 @@ export function BootcampEditor({ bootcamp }: Props) {
                   <label className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold block mb-1">
                     Video URL{" "}
                     <span className="opacity-60 lowercase normal-case">
-                      · YouTube link or direct .mp4/.m3u8
+                      · paste a YouTube link, or upload below
                     </span>
                   </label>
                   <GlassInput
@@ -404,9 +475,61 @@ export function BootcampEditor({ bootcamp }: Props) {
                     onChange={(e) =>
                       updateVideo(v.id, "url", e.target.value)
                     }
-                    placeholder="https://youtu.be/… or https://cdn.unghost.in/…/lesson.mp4"
+                    placeholder="https://youtu.be/… or upload an .mp4"
                     disabled={isInReview}
                   />
+
+                  {/* File upload — proxies to R2 in prod, local disk in dev */}
+                  <div className="mt-2 flex items-center gap-2">
+                    <label
+                      className={`inline-flex items-center gap-1.5 rounded-lg border border-brand-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink cursor-pointer hover:border-brand-primary ${
+                        isInReview || uploadState[v.id]?.pct > 0
+                          ? "opacity-50 pointer-events-none"
+                          : ""
+                      }`}
+                    >
+                      <Upload size={12} />
+                      Upload file
+                      <input
+                        type="file"
+                        accept="video/mp4,video/webm,video/quicktime,application/vnd.apple.mpegurl"
+                        className="hidden"
+                        disabled={isInReview}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void uploadVideoFile(v.id, f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    {uploadState[v.id]?.pct > 0 &&
+                    uploadState[v.id]?.pct < 100 ? (
+                      <div className="flex-1 flex items-center gap-2">
+                        <div className="flex-1 h-1.5 rounded-full bg-brand-ink/10 overflow-hidden">
+                          <div
+                            className="h-full bg-brand-primary transition-all"
+                            style={{ width: `${uploadState[v.id].pct}%` }}
+                          />
+                        </div>
+                        <span className="text-[11px] text-brand-muted tnum">
+                          {uploadState[v.id].pct}%
+                        </span>
+                      </div>
+                    ) : null}
+                    {uploadState[v.id]?.pct === 100 ? (
+                      <span className="text-[11px] text-emerald-600 font-semibold inline-flex items-center gap-1">
+                        <CheckCircle2 size={11} /> Uploaded
+                      </span>
+                    ) : null}
+                    {uploadState[v.id]?.err ? (
+                      <span className="text-[11px] text-rose-600 font-semibold">
+                        {uploadState[v.id].err}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-[10px] text-brand-muted mt-1">
+                    Max 500 MB · mp4, webm, mov, m3u8
+                  </p>
                 </div>
               </div>
             ))}

@@ -16,6 +16,7 @@ import { connectMongo } from "@/server/db/mongo";
 import { LiveSessionModel } from "@/server/db/models";
 import { LiveChat } from "@/components/live/LiveChat";
 import { SecureYouTubePlayer } from "@/components/live/SecureYouTubePlayer";
+import { InstructorRoomPanel } from "@/components/live/InstructorRoomPanel";
 import { BlobField, GlassCard } from "@/components/glass";
 
 export const dynamic = "force-dynamic";
@@ -177,6 +178,14 @@ function YouTubeLiveView({
             </p>
           ) : null}
         </div>
+
+        {isInstructor ? (
+          <InstructorRoomPanel
+            sessionId={live._id}
+            currentYoutubeVideoId={live.youtubeVideoId}
+            status={live.status}
+          />
+        ) : null}
 
         <div className="grid lg:grid-cols-[1fr_360px] gap-4 lg:h-[calc(100vh-220px)]">
           <div className="rounded-2xl overflow-hidden border border-brand-ink/10 bg-brand-ink/95 aspect-video lg:aspect-auto min-h-[360px]">
