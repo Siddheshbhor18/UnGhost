@@ -25,11 +25,17 @@ export interface RoleOption {
   demoEmail?: string;
 }
 
+// Demo "Try as…" credentials are dev-only. In a production build NODE_ENV is
+// statically "production", so this is `false` and the minifier eliminates the
+// branch — the demo emails never reach the shipped bundle. This stops the
+// public login from advertising the admin account email (and demo passwords).
+const DEMO_LOGINS = process.env.NODE_ENV !== "production";
+
 const DEFAULT_FOUR: RoleOption[] = [
-  { id: "student", label: "Student", icon: <User2 size={14} />, demoEmail: "alice@demo.test" },
-  { id: "recruiter", label: "Recruiter", icon: <ShieldCheck size={14} />, demoEmail: "hr@stark.test" },
-  { id: "instructor", label: "Instructor", icon: <BookOpen size={14} />, demoEmail: "cristian@instructor.test" },
-  { id: "admin", label: "Admin", icon: <GraduationCap size={14} />, demoEmail: "root@noghost.test" },
+  { id: "student", label: "Student", icon: <User2 size={14} />, demoEmail: DEMO_LOGINS ? "alice@demo.test" : undefined },
+  { id: "recruiter", label: "Recruiter", icon: <ShieldCheck size={14} />, demoEmail: DEMO_LOGINS ? "hr@stark.test" : undefined },
+  { id: "instructor", label: "Instructor", icon: <BookOpen size={14} />, demoEmail: DEMO_LOGINS ? "cristian@instructor.test" : undefined },
+  { id: "admin", label: "Admin", icon: <GraduationCap size={14} />, demoEmail: DEMO_LOGINS ? "root@noghost.test" : undefined },
 ];
 
 const SIGNUP_TWO: RoleOption[] = [
