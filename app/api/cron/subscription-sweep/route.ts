@@ -50,9 +50,9 @@ async function handler(req: Request) {
       userId,
       kind: "plan_activated",
       priority: "high",
-      title: "Your Pro plan has expired",
-      body: "You're now on Free (2 lifetime applications). Renew Pro for 5/month + AI Coach.",
-      link: "/upgrade?to=pro",
+      title: "Your paid plan has expired",
+      body: "You're now on Free (2 lifetime applications). Go Premium for unlimited applications + AI Coach.",
+      link: "/upgrade?to=premium",
     });
     await writeAuditLog({
       actorId: userId,
@@ -73,9 +73,9 @@ async function handler(req: Request) {
       userId: user.id,
       kind: "system",
       priority: "normal",
-      title: "Pro plan expiring soon",
-      body: `Your Pro plan ends ${user.planExpiresAt ?? "soon"}. Renew now to keep your applications + AI Coach.`,
-      link: "/upgrade?to=pro",
+      title: "Paid plan expiring soon",
+      body: `Your paid plan ends ${user.planExpiresAt ?? "soon"}. Renew now to keep your applications + AI Coach.`,
+      link: "/upgrade?to=premium",
     });
   }
 

@@ -81,8 +81,8 @@ export async function POST(req: Request) {
         windowKind: quota.windowKind,
         message:
           quota.reason === "trial_exhausted"
-            ? `You've used all ${quota.cap} free applications. Upgrade to Pro for 5/month or Premium for unlimited.`
-            : `You've used all ${quota.cap} Pro applications this month. Upgrade to Premium for unlimited, or wait for the window to refresh.`,
+            ? `You've used all ${quota.cap} free applications. Go Premium for unlimited applications.`
+            : `You've used all ${quota.cap} applications for this window. Go Premium for unlimited, or wait for the window to refresh.`,
       },
       { status: 402 },
     );
