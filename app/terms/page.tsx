@@ -15,7 +15,8 @@ export default function TermsOfService() {
       <Section title="1. The deal in one sentence">
         <p className="text-base">
           unGhost matches you to jobs / bootcamps · recruiters commit to public
-          SLAs · miss the SLA, your application credit refunds · misuse the
+          SLAs · miss the SLA, your application slot is returned (it won't count
+          against your limit) · misuse the
           platform, your account gets suspended or banned.
         </p>
       </Section>
@@ -48,7 +49,11 @@ export default function TermsOfService() {
           it for an application:
         </p>
         <ul className="list-disc list-inside space-y-1.5">
-          <li>Your application credit is refunded automatically.</li>
+          <li>
+            Your application slot is returned automatically — it won&apos;t
+            count against your limit. (No money changes hands; applications are
+            credits, not paid fees.)
+          </li>
           <li>Their public Ghosting Rate increments.</li>
           <li>
             Persistent breaches → visibility throttling → posting suspension.

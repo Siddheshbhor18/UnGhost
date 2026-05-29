@@ -65,8 +65,14 @@ export async function checkApplyQuota(user: User): Promise<ApplyQuotaResult> {
   }
 
   if (limits.applicationCap.kind === "trial") {
-    // Lifetime count — every application the student has ever submitted.
-    const used = await ApplicationModel.countDocuments({ studentId: user.id });
+    // Lifetime count — every application the student has ever submitted,
+    // EXCEPT ones returned after an SLA breach (those credits go back to the
+    // student, so they must not count against the cap — matches the UI which
+    // filters `!a.slaRefundIssued`).
+    const used = await ApplicationModel.countDocuments({
+      studentId: user.id,
+      slaRefundIssued: { $ne: true },
+    });
     const cap = limits.applicationCap.count;
     const remaining = Math.max(0, cap - used);
     return {
@@ -83,6 +89,7 @@ export async function checkApplyQuota(user: User): Promise<ApplyQuotaResult> {
   const used = await ApplicationModel.countDocuments({
     studentId: user.id,
     createdAt: { $gte: since },
+    slaRefundIssued: { $ne: true },
   });
   const cap = limits.applicationCap.count;
   const remaining = Math.max(0, cap - used);
