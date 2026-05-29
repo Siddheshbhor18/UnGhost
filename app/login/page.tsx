@@ -158,7 +158,7 @@ function LoginInner() {
 
           <div className="mb-4">
             <RolePicker value={role} onChange={switchRole} variant="pills" />
-            {demoForActiveRole ? (
+            {process.env.NODE_ENV !== "production" && demoForActiveRole ? (
               <button
                 type="button"
                 onClick={() => {
