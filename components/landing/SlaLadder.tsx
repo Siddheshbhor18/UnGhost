@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SlaLadder — the landing page's centerpiece. The SLA-or-refund mechanic
+ * SlaLadder — the landing page's centerpiece. The SLA-or-slot-returned mechanic
  * rendered as a vertical countdown timeline: scrolling through it IS the
  * countdown. A scroll-linked fill line (transform: scaleY, never height)
  * draws down the rail as the section enters view. Reduced motion → the line
@@ -21,7 +21,7 @@ const NODES = [
   {
     hrs: "24h",
     label: "Priority",
-    copy: "Fast-track roles. The recruiter answers within a day — or your application credit is refunded.",
+    copy: "Fast-track roles. The recruiter answers within a day — or your application slot is returned, free of charge.",
     dot: "bg-error",
     text: "text-error",
   },

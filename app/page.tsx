@@ -139,7 +139,8 @@ export default async function LandingPage() {
               </span>
               <ArrowRight size={16} className="text-error shrink-0" aria-hidden />
               <span className="text-body-sm text-neutral-600">
-                Miss the window, your application credit is refunded.
+                Miss the window, your application slot is returned — it
+                won&apos;t count against your limit.
               </span>
             </MotionSection>
 
@@ -204,8 +205,8 @@ export default async function LandingPage() {
       >
         <SectionHeader
           eyebrow="The guarantee"
-          title="Reply or refund. No exceptions."
-          subtitle="Every recruiter picks a response window before a role goes live. The clock is public. Miss it and the student's application credit returns automatically."
+          title="Reply, or your slot comes back."
+          subtitle="Every recruiter picks a response window before a role goes live. The clock is public. Miss it and the student's application slot is returned automatically — it won't count against their limit."
         />
         <div className="mt-14 max-w-2xl">
           <SlaLadder />
@@ -255,7 +256,7 @@ export default async function LandingPage() {
                   num: "04",
                   icon: <CheckCircle2 size={18} />,
                   title: "Hear back, on the clock",
-                  copy: "Recruiters reply within 24/48/72 hours or your application credit is refunded.",
+                  copy: "Recruiters reply within 24/48/72 hours, or your application slot is returned — it won't count against your limit.",
                 },
               ] as const
             ).map((step) => (
@@ -299,7 +300,7 @@ export default async function LandingPage() {
             <ul className="space-y-3 text-body-sm text-neutral-700 mb-8 flex-grow">
               {[
                 "AI-matched jobs, not keyword spam",
-                "Free credit refund if a recruiter ghosts",
+                "Your slot returned if a recruiter ghosts",
                 "AI Career Coach with cross-session memory",
                 "Bootcamps with Verified Skill badges",
                 "Top-10 leaderboard featured to recruiters",
@@ -419,7 +420,7 @@ export default async function LandingPage() {
                 features={[
                   "2 applications (lifetime trial)",
                   "Browse all bootcamps + jobs",
-                  "Refunds on recruiter ghost",
+                  "Slot returned on recruiter ghost",
                   "Upgrade anytime",
                 ]}
                 cta="Start free"
@@ -441,7 +442,7 @@ export default async function LandingPage() {
                   "Unlimited applications",
                   "AI Coach + Q&A forever",
                   "Every bootcamp included",
-                  "Priority refund queue",
+                  "Priority support queue",
                 ]}
                 cta="Go Premium"
                 href="/upgrade?to=premium"
