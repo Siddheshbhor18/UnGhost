@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
 import {
@@ -9,6 +10,18 @@ import {
   updateApplicationStage,
 } from "@/server/store";
 import type { Stage } from "@/shared/types";
+
+const StageInput = z.object({
+  stage: z.enum([
+    "new_matches",
+    "under_review",
+    "interview",
+    "offer",
+    "hired",
+    "rejected",
+  ]),
+  outcomeNotes: z.string().trim().max(2000).optional(),
+});
 
 export const runtime = "nodejs";
 
@@ -58,16 +71,48 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const csrf = requireSameOrigin(req);
   if (csrf) return csrf;
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role === "student") {
+  // Only recruiters and admins move applications through stages. Instructors
+  // and students are not part of this workflow.
+  if (
+    !session ||
+    (session.user.role !== "recruiter" && session.user.role !== "admin")
+  ) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const { stage, outcomeNotes } = await req.json();
-  const app = await updateApplicationStage(params.id, stage as Stage, outcomeNotes);
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
+  }
+  const parsed = StageInput.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "invalid input" },
+      { status: 400 },
+    );
+  }
+  const { stage, outcomeNotes } = parsed.data;
+
+  // Load the application + its job up front so we can enforce ownership
+  // BEFORE mutating anything. A recruiter may only act on applications that
+  // belong to a job they own (job.recruiterId === their id). Admins bypass
+  // the ownership gate. Without this check any authenticated recruiter could
+  // advance / reject / hire another recruiter's candidates (IDOR).
+  const existing = await getApplicationById(params.id);
+  if (!existing) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const job = await getJobById(existing.jobId);
+  if (!job) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (session.user.role === "recruiter" && job.recruiterId !== session.user.id) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  const app = await updateApplicationStage(params.id, stage, outcomeNotes);
   if (!app) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // Notify the student of the stage transition.
-  const job = await getJobById(app.jobId);
-  const copy = STAGE_COPY[stage as Stage];
+  const copy = STAGE_COPY[stage];
   if (copy && job) {
     await notify({
       userId: app.studentId,
