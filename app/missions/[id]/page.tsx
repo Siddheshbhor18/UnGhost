@@ -105,7 +105,7 @@ export default async function MissionBrief({
   const canApply = completeness.pct >= APPLY_THRESHOLD;
 
   // Quota
-  // SLA-breached apps get their slot refunded
+  // SLA-breached apps get their slot returned (won't count against the cap)
   const applicationsUsed = allApps.filter((a) => !a.slaRefundIssued).length;
   const quotaTight = applicationsUsed >= FREE_APP_LIMIT - 1;
   const quotaUsedPct = Math.min(
@@ -405,9 +405,9 @@ export default async function MissionBrief({
               <p className="text-xs text-brand-muted mt-3">
                 Each stage has its own SLA. Miss any of them →{" "}
                 <span className="text-brand-primary font-semibold">
-                  application credit refunded
+                  application slot returned
                 </span>{" "}
-                + recruiter ghost-rated.
+                (won&apos;t count against your limit) + recruiter ghost-rated.
               </p>
             </GlassCard>
 
@@ -674,7 +674,8 @@ export default async function MissionBrief({
                   <span className="text-emerald-700 font-semibold">
                     {job.slaHours} hours
                   </span>{" "}
-                  per pipeline stage. Miss it → your credit refunded.
+                  per pipeline stage. Miss it → your application slot is
+                  returned (won&apos;t count against your limit).
                 </p>
               </GlassCard>
             </div>

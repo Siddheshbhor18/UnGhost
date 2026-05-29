@@ -80,8 +80,9 @@ export default function AboutPage() {
             </p>
             <p>
               unGhost flips the marketplace: every recruiter signs a public
-              SLA. Miss it, the candidate&apos;s application credit refunds,
-              and the recruiter&apos;s public ghost-rate increments. Reputation,
+              SLA. Miss it, the candidate&apos;s application slot is returned
+              (it won&apos;t count against their limit), and the
+              recruiter&apos;s public ghost-rate increments. Reputation,
               built in.
             </p>
           </div>

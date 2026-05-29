@@ -2109,7 +2109,7 @@ export async function runSlaSweep(): Promise<SlaSweepResult> {
             slaRefundIssued: true,
             outcomeNotes:
               (a.outcomeNotes ? `${a.outcomeNotes} · ` : "") +
-              "Recruiter ghosted — SLA breached, credit refunded",
+              "Recruiter ghosted — SLA breached, application slot returned (won't count against your limit)",
           },
         },
       );
@@ -2125,10 +2125,10 @@ export async function runSlaSweep(): Promise<SlaSweepResult> {
         userId: a.studentId,
         kind: "sla_breached",
         priority: "high",
-        title: `Recruiter ghosted — your credit is refunded`,
+        title: `Recruiter ghosted — your application slot is back`,
         body: `${company?.name ?? "The company"} missed their ${
           job?.slaHours ?? 48
-        }h SLA on ${job?.title ?? "your application"}. AI Coach has similar missions queued.`,
+        }h SLA on ${job?.title ?? "your application"}. This one won't count against your limit. AI Coach has similar missions queued.`,
         link: `/student/applications/${a.id}`,
         actorLabel: company?.name,
         actionRequired: true,
@@ -2140,7 +2140,7 @@ export async function runSlaSweep(): Promise<SlaSweepResult> {
           kind: "sla_breached",
           priority: "critical",
           title: `SLA breached on ${job?.title ?? "an application"}`,
-          body: `Your ghosting rate just incremented. Candidate's credit was refunded automatically.`,
+          body: `Your ghosting rate just incremented. The candidate's application slot was returned automatically.`,
           link: `/recruiter/today`,
         });
       }

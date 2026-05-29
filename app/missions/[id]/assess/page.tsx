@@ -272,9 +272,9 @@ export default function AssessmentPage() {
               <strong className="text-brand-ink">Heads up:</strong> tab switches
               and paste attempts are flagged on your integrity score (recruiter
               sees this). One pause allowed per assessment. Your application
-              slot is{" "}
+              slot is only returned if a recruiter{" "}
               <span className="text-emerald-700 font-semibold">
-                refunded on fail
+                misses their SLA
               </span>
               .
             </p>
@@ -570,9 +570,8 @@ export default function AssessmentPage() {
               Not quite — but you&apos;re closer than you think.
             </h1>
             <p className="text-sm text-brand-muted mt-3">
-              Your application slot was{" "}
-              <span className="text-emerald-700 font-semibold">refunded</span>{" "}
-              — failure doesn&apos;t burn quota. Here&apos;s the path forward.
+              This attempt counted, but the gap is small. Here&apos;s the path
+              forward to clear the bar next time.
             </p>
           </div>
 

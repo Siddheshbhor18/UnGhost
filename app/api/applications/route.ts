@@ -139,7 +139,7 @@ export async function POST(req: Request) {
         : `Assessment didn't pass · ${grade.score}/100`,
       body: passed
         ? `Submitted to ${job.title}. Recruiter has the SLA clock ticking.`
-        : "Your application slot was refunded. The Path Forward has bootcamp recs.",
+        : "The Path Forward has bootcamp recs to close the gap before your next attempt.",
       link: `/student/applications/${app.id}`,
     });
     // Notify recruiter of new application
