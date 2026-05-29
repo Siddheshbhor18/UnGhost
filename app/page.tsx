@@ -10,11 +10,8 @@ import {
   Linkedin,
   Upload,
   Zap,
-  TrendingDown,
   CheckCircle2,
   BadgeCheck,
-  MessageSquare,
-  Award,
 } from "lucide-react";
 import { GlassNavbar, Logo } from "@/components/glass";
 import {
@@ -22,8 +19,10 @@ import {
   Button,
   Card,
   SectionLabel,
+  TierBadge,
 } from "@/components/ui";
 import { HeroDemoLoop } from "@/components/landing/HeroDemoLoop";
+import { SlaLadder } from "@/components/landing/SlaLadder";
 import { HeroCTAs } from "@/components/landing/HeroCTAs";
 import { ScrollPrompt } from "@/components/landing/ScrollPrompt";
 import dynamic from "next/dynamic";
@@ -116,31 +115,42 @@ export default async function LandingPage() {
               amount={0}
             >
               India&apos;s first hiring platform where HR actually responds.
-              Every recruiter commits to a public SLA. Miss it, your
-              application is refunded.
+              Every recruiter commits to a public response window before a role
+              goes live.
+            </MotionSection>
+
+            {/* SLA proof-chip row — the 5-second comprehension element */}
+            <MotionSection
+              as="div"
+              className="flex flex-wrap items-center gap-x-3 gap-y-2"
+              delay={0.62}
+              y={12}
+              amount={0}
+            >
+              <span className="flex items-center gap-1.5">
+                {["24h", "48h", "72h"].map((h) => (
+                  <span
+                    key={h}
+                    className="tnum font-display font-bold text-body-sm text-neutral-900 rounded-lg bg-neutral-0 ring-1 ring-neutral-200 shadow-elev-1 px-2.5 py-1"
+                  >
+                    {h}
+                  </span>
+                ))}
+              </span>
+              <ArrowRight size={16} className="text-error shrink-0" aria-hidden />
+              <span className="text-body-sm text-neutral-600">
+                Miss the window, your application slot is returned — it
+                won&apos;t count against your limit.
+              </span>
             </MotionSection>
 
             <MotionSection
               as="div"
-              delay={0.75}
+              delay={0.78}
               y={16}
               amount={0}
             >
               <HeroCTAs />
-            </MotionSection>
-
-            <MotionSection
-              as="p"
-              className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-6 text-sm text-neutral-500"
-              delay={0.95}
-              y={12}
-              amount={0}
-            >
-              <span>24/48/72h SLA</span>
-              <span className="w-1 h-1 rounded-full bg-brand-500/60" />
-              <span>AI-graded scenarios</span>
-              <span className="w-1 h-1 rounded-full bg-brand-500/60" />
-              <span>Live bootcamps</span>
             </MotionSection>
           </div>
 
@@ -161,6 +171,46 @@ export default async function LandingPage() {
       {/* ─────────── LIVE SESSIONS TEASER ─────────── */}
       <MotionSection amount={0.3}>
         <LiveSessionsTeaser />
+      </MotionSection>
+
+      {/* ─────────── THE VOID — full-bleed dark beat, still ─────────── */}
+      <MotionSection className="bg-neutral-950 text-white" amount={0.2}>
+        <div className="mx-auto max-w-content px-4 py-24 md:py-32 text-center">
+          <h2 className="font-display font-extrabold text-display-xl md:text-6xl text-white max-w-3xl mx-auto mb-5 tracking-tightest leading-[1.05]">
+            <RevealText
+              segments={[
+                "You apply. ",
+                <span className="text-white/40" key="void">
+                  Then nothing.
+                </span>,
+              ]}
+              stagger={0.06}
+              motionStyle="tween"
+              trigger="view"
+              amount={0.4}
+            />
+          </h2>
+          <p className="text-body-md text-white/70 max-w-2xl mx-auto leading-relaxed">
+            Job boards optimise for volume, not replies. Applications vanish
+            with no deadline, no accountability, and no one who owes you an
+            answer. So we changed who pays for the silence.
+          </p>
+        </div>
+      </MotionSection>
+
+      {/* ─────────── THE SLA CLOCK — vertical ladder (centerpiece) ─────────── */}
+      <MotionSection
+        className="mx-auto max-w-content px-4 py-20 md:py-28"
+        amount={0.15}
+      >
+        <SectionHeader
+          eyebrow="The guarantee"
+          title="Reply, or your slot comes back."
+          subtitle="Every recruiter picks a response window before a role goes live. The clock is public. Miss it and the student's application slot is returned automatically — it won't count against their limit."
+        />
+        <div className="mt-14 max-w-2xl">
+          <SlaLadder />
+        </div>
       </MotionSection>
 
       {/* ─────────── HOW IT WORKS ─────────── */}
@@ -194,19 +244,19 @@ export default async function LandingPage() {
                   num: "02",
                   icon: <Target size={18} />,
                   title: "Get matched",
-                  copy: "Vector search ranks jobs against your skills, experience, trajectory. Tier A to D.",
+                  copy: "Vector search ranks every open role against your skills, experience and trajectory.",
                 },
                 {
                   num: "03",
                   icon: <Zap size={18} />,
                   title: "Prove your fit",
-                  copy: "Take a real scenario per role. AI grades depth, integrity, evidence.",
+                  copy: "Take a real scenario per role. AI grades depth, integrity and evidence — not buzzwords.",
                 },
                 {
                   num: "04",
                   icon: <CheckCircle2 size={18} />,
-                  title: "Hear back, guaranteed",
-                  copy: "Recruiters reply in 24/48/72 hours or your application credit is refunded.",
+                  title: "Hear back, on the clock",
+                  copy: "Recruiters reply within 24/48/72 hours, or your application slot is returned — it won't count against your limit.",
                 },
               ] as const
             ).map((step) => (
@@ -216,125 +266,16 @@ export default async function LandingPage() {
             ))}
           </StaggerGrid>
         </div>
-      </MotionSection>
-
-      {/* ─────────── THE PROBLEM ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-20"
-        amount={0.2}
-      >
-        <div className="rounded-2xl bg-neutral-950 text-white px-8 py-16 md:py-20 text-center relative overflow-hidden">
-          {/* Animated red pulse gradient */}
-          <div
-            aria-hidden
-            className="absolute inset-0 problem-pulse"
-            style={{
-              background:
-                "radial-gradient(800px 400px at 50% 0%, rgba(220,38,38,0.25), transparent 60%)",
-            }}
-          />
-          {/* Travelling scanlines */}
-          <div aria-hidden className="absolute inset-0 overflow-hidden">
-            <div className="scanline-1 absolute left-0 right-0 h-px bg-white/10" />
-            <div className="scanline-2 absolute left-0 right-0 h-px bg-white/8" />
-          </div>
-
-          <div className="relative">
-            <SectionLabel className="!text-error mb-5 justify-center">
-              <TrendingDown size={12} /> The problem
-            </SectionLabel>
-            <h2 className="font-display font-extrabold text-display-xl md:text-6xl text-white max-w-3xl mx-auto mb-5 tracking-tightest leading-[1.05]">
-              <RevealText
-                segments={[
-                  "You apply. ",
-                  <span className="text-white/40" key="void">
-                    Then nothing.
-                  </span>,
-                ]}
-                stagger={0.06}
-                motionStyle="tween"
-                trigger="view"
-                amount={0.3}
-              />
-            </h2>
-            <p className="text-body-md text-white/70 max-w-2xl mx-auto leading-relaxed">
-              Job boards optimise for volume, not replies. Applications vanish
-              into a void with no deadline and no accountability. We made
-              ghosting cost the recruiter, not you: every role carries a
-              response deadline, and if it&apos;s missed, your application
-              credit comes back.
-            </p>
-          </div>
-        </div>
-      </MotionSection>
-
-      {/* ─────────── THE SLA MECHANIC ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-20"
-        amount={0.15}
-      >
-        <SectionHeader
-          eyebrow="The guarantee"
-          title="Reply or refund. No exceptions."
-          subtitle="Every recruiter picks a response window before a role goes live. The clock is public. Miss it and your application credit returns automatically."
-        />
-        <div className="mt-14 relative">
-          {/* Horizontal countdown rail */}
-          <div
-            aria-hidden
-            className="absolute left-0 right-0 top-[1.15rem] h-0.5 rounded-full bg-gradient-to-r from-error/40 via-warning/40 to-info/40"
-          />
-          <StaggerGrid
-            className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-12"
-            stagger={0.1}
-          >
-            {(
-              [
-                {
-                  hrs: "24h",
-                  label: "Priority",
-                  copy: "Fast-track roles. A recruiter answers within a day or the credit is back.",
-                  dot: "bg-error",
-                  text: "text-error",
-                },
-                {
-                  hrs: "48h",
-                  label: "Standard",
-                  copy: "The default commitment. Two business days, tracked against a public clock.",
-                  dot: "bg-warning",
-                  text: "text-warning",
-                },
-                {
-                  hrs: "72h",
-                  label: "Extended",
-                  copy: "High-volume roles. Longer window, same hard guarantee at the end of it.",
-                  dot: "bg-info",
-                  text: "text-info",
-                },
-              ] as const
-            ).map((t) => (
-              <StaggerItem key={t.hrs}>
-                <div className="relative pt-12">
-                  <span
-                    className={`absolute top-0 left-0 grid place-items-center w-9 h-9 rounded-full bg-neutral-0 shadow-elev-2 ring-1 ring-neutral-200`}
-                  >
-                    <span className={`w-2.5 h-2.5 rounded-full ${t.dot}`} />
-                  </span>
-                  <div className="flex items-baseline gap-3">
-                    <span
-                      className={`font-display font-extrabold text-display-lg tnum leading-none ${t.text}`}
-                    >
-                      {t.hrs}
-                    </span>
-                    <span className="section-label">{t.label}</span>
-                  </div>
-                  <p className="text-body-sm text-neutral-500 leading-relaxed mt-3 max-w-[34ch]">
-                    {t.copy}
-                  </p>
-                </div>
-              </StaggerItem>
-            ))}
-          </StaggerGrid>
+        {/* Tier strip — honest grading detail, no invented match % */}
+        <div className="mt-12 flex flex-wrap items-center gap-x-3 gap-y-2 text-body-sm text-neutral-500">
+          <span>Every candidate is ranked by fit:</span>
+          <span className="flex items-center gap-1.5">
+            <TierBadge tier="A" />
+            <TierBadge tier="B" />
+            <TierBadge tier="C" />
+            <TierBadge tier="D" />
+          </span>
+          <span>— recruiters see the tier, never a made-up match score.</span>
         </div>
       </MotionSection>
 
@@ -359,7 +300,7 @@ export default async function LandingPage() {
             <ul className="space-y-3 text-body-sm text-neutral-700 mb-8 flex-grow">
               {[
                 "AI-matched jobs, not keyword spam",
-                "Free credit refund if a recruiter ghosts",
+                "Your slot returned if a recruiter ghosts",
                 "AI Career Coach with cross-session memory",
                 "Bootcamps with Verified Skill badges",
                 "Top-10 leaderboard featured to recruiters",
@@ -430,10 +371,13 @@ export default async function LandingPage() {
       >
         <SectionHeader
           title="Close the gap before you apply."
-          subtitle="Recorded modules, a live workshop, and an AI-graded assignment. Pass and you earn a Verified Skill badge recruiters can filter on. First tracks launching with our cohort:"
+          subtitle="Recorded modules, a live workshop, and an AI-graded assignment. Pass and you earn a Verified Skill badge recruiters can filter on."
         />
+        <Badge tone="warning" className="mt-6">
+          Planned — launching with our first cohort
+        </Badge>
         <StaggerGrid
-          className="mt-10 flex flex-wrap gap-3"
+          className="mt-6 flex flex-wrap gap-3"
           stagger={0.05}
         >
           {PLANNED_TRACKS.map((track) => (
@@ -448,72 +392,6 @@ export default async function LandingPage() {
         <p className="text-body-sm text-neutral-500 mt-5">
           More tracks added as recruiters tell us what they&apos;re hiring for.
         </p>
-      </MotionSection>
-
-      {/* ─────────── THE OUTCOME ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-20"
-        amount={0.15}
-      >
-        <div className="rounded-2xl bg-brand-50/60 ring-1 ring-brand-100 px-8 py-14 md:px-12 md:py-16">
-          <div className="max-w-3xl">
-            <h2 className="font-display font-extrabold text-display-lg md:text-5xl text-neutral-950 tracking-tighter leading-[1.06]">
-              You&apos;re here to get hired.{" "}
-              <span className="text-brand-600">Not to apply into silence.</span>
-            </h2>
-            <p className="text-body-md text-neutral-600 mt-4 leading-relaxed max-w-2xl">
-              unGhost isn&apos;t a bigger job board. Every role carries a
-              response deadline and an AI-graded proof step, so your application
-              ends in a real reply — and the ones that fit, in a real interview.
-            </p>
-          </div>
-
-          <div className="mt-10 grid sm:grid-cols-3 gap-y-8 sm:gap-y-0 sm:divide-x divide-brand-100">
-            {(
-              [
-                {
-                  icon: <MessageSquare size={18} />,
-                  title: "A reply, guaranteed",
-                  copy: "Recruiters answer inside their SLA or your application credit comes back. No silence.",
-                },
-                {
-                  icon: <Award size={18} />,
-                  title: "Proof over keywords",
-                  copy: "Skill scenarios graded by AI for depth and integrity, then shown to recruiters.",
-                },
-                {
-                  icon: <Target size={18} />,
-                  title: "Interviews that count",
-                  copy: "Matched to roles you actually fit, ranked Tier A to D — not blasted into a void.",
-                },
-              ] as const
-            ).map((o, i) => (
-              <div key={o.title} className={i === 0 ? "sm:pr-8" : "sm:px-8"}>
-                <span className="grid place-items-center w-11 h-11 rounded-xl bg-neutral-0 text-brand-500 shadow-elev-2 ring-1 ring-brand-100 mb-4">
-                  {o.icon}
-                </span>
-                <h3 className="font-display font-bold text-lg text-neutral-900 mb-1.5 tracking-tight">
-                  {o.title}
-                </h3>
-                <p className="text-body-sm text-neutral-600 leading-relaxed max-w-[34ch]">
-                  {o.copy}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10">
-            <Link href="/signup">
-              <Button
-                variant="primary"
-                size="md"
-                trailingIcon={<ArrowRight size={14} />}
-              >
-                Get started free
-              </Button>
-            </Link>
-          </div>
-        </div>
       </MotionSection>
 
       {/* ─────────── PRICING ─────────── */}
@@ -542,7 +420,7 @@ export default async function LandingPage() {
                 features={[
                   "2 applications (lifetime trial)",
                   "Browse all bootcamps + jobs",
-                  "Refunds on recruiter ghost",
+                  "Slot returned on recruiter ghost",
                   "Upgrade anytime",
                 ]}
                 cta="Start free"
@@ -564,7 +442,7 @@ export default async function LandingPage() {
                   "Unlimited applications",
                   "AI Coach + Q&A forever",
                   "Every bootcamp included",
-                  "Priority refund queue",
+                  "Priority support queue",
                 ]}
                 cta="Go Premium"
                 href="/upgrade?to=premium"
@@ -596,15 +474,6 @@ export default async function LandingPage() {
         y={32}
       >
         <div className="relative">
-          {/* Radial glow behind card */}
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 cta-glow"
-            style={{
-              background:
-                "radial-gradient(600px 300px at 50% 50%, rgba(1,145,252,0.18), transparent 70%)",
-            }}
-          />
           <Card
             surface="glass-tinted"
             className="!py-14 !px-8 text-center !rounded-2xl relative overflow-hidden"
@@ -620,9 +489,10 @@ export default async function LandingPage() {
               }}
             />
             <div className="relative">
-              <SectionLabel tone="brand" className="mb-5 justify-center">
-                The promise
-              </SectionLabel>
+              {/* Spine resolves: the clock is met */}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 ring-1 ring-success/30 text-success px-3 py-1 text-body-xs font-bold mb-5">
+                <CheckCircle2 size={13} /> SLA met
+              </span>
               <h3 className="font-display font-extrabold text-display-xl text-neutral-950 mb-5 leading-tight tracking-tightest headline-twotone">
                 <RevealText
                   segments={[
@@ -643,7 +513,7 @@ export default async function LandingPage() {
                 Symmetry, built in.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
-                <Link href="/signup" className="cta-primary-glow">
+                <Link href="/signup">
                   <Button
                     variant="primary"
                     size="lg"
@@ -863,7 +733,7 @@ function PriceCard({
   return (
     <Card
       selected={highlight}
-      className={`!p-8 h-full ${highlight ? "shadow-elev-4 pro-float" : ""}`}
+      className={`!p-8 h-full ${highlight ? "shadow-elev-4" : ""}`}
     >
       {highlight && (
         <Badge tone="info" className="mb-3 pop-in">
