@@ -61,6 +61,7 @@ const ticketIds = ids(DEFAULT_SUPPORT_TICKETS as never);
 async function backupAll(dir: string) {
   fs.mkdirSync(dir, { recursive: true });
   const db = mongoose.connection.db;
+  if (!db) throw new Error("[cleanup] no active mongo connection");
   const colls = await db.listCollections().toArray();
   for (const c of colls) {
     const docs = await db.collection(c.name).find({}).toArray();
