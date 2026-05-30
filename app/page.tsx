@@ -50,16 +50,11 @@ import {
 // Planned bootcamp tracks — launching with the first cohort. Static by design:
 // no fake catalog data until real bootcamps go live.
 const PLANNED_TRACKS = [
-  "Generative AI for Builders",
-  "Prompt Engineering for Product Teams",
-  "Applied Data Science (Python + Pandas)",
-  "Practical Machine Learning",
-  "Growth Marketing",
-  "Performance Marketing",
-  "FP&A Fundamentals",
-  "Equity Research",
-  "B2B Sales",
-  "Account Executive (AE) Bootcamp",
+  "AI",
+  "Marketing",
+  "Sales",
+  "Entrepreneurship",
+  "Freelancing",
 ];
 
 export default async function LandingPage() {
