@@ -50,14 +50,16 @@ import {
 // Planned bootcamp tracks — launching with the first cohort. Static by design:
 // no fake catalog data until real bootcamps go live.
 const PLANNED_TRACKS = [
-  "Frontend Engineering (React)",
-  "Backend Engineering (Node.js)",
-  "Data Analytics (SQL + Python)",
-  "Data Science & ML",
-  "Product Management",
-  "UI/UX Design",
-  "DevOps & Cloud (AWS)",
-  "Digital Marketing",
+  "Generative AI for Builders",
+  "Prompt Engineering for Product Teams",
+  "Applied Data Science (Python + Pandas)",
+  "Practical Machine Learning",
+  "Growth Marketing",
+  "Performance Marketing",
+  "FP&A Fundamentals",
+  "Equity Research",
+  "B2B Sales",
+  "Account Executive (AE) Bootcamp",
 ];
 
 export default async function LandingPage() {
@@ -195,6 +197,18 @@ export default async function LandingPage() {
             with no deadline, no accountability, and no one who owes you an
             answer. So we changed who pays for the silence.
           </p>
+
+          <div className="mt-16 max-w-2xl mx-auto">
+            <h3 className="font-display font-bold text-display-md md:text-3xl text-white mb-4 tracking-tight">
+              Ghosting isn&apos;t just rude. It&apos;s a broken process.
+            </h3>
+            <p className="text-body-md text-white/70 leading-relaxed">
+              Whether you&apos;re a student waiting weeks for feedback that
+              never came, or a recruiter who lost a top candidate overnight —
+              the hiring process is failing both sides. It&apos;s time to call
+              it out, and fix it.
+            </p>
+          </div>
         </div>
       </MotionSection>
 

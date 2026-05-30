@@ -111,7 +111,7 @@ export function HeroCTAs() {
             className="inline-flex items-center gap-2 rounded-xl bg-white text-neutral-900 font-semibold text-base px-6 py-3.5 border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50 transition-all active:scale-[0.98]"
           >
             <Briefcase size={16} />
-            Hire without ghosting
+            Hire
           </button>
         </Link>
       </MagneticButton>
