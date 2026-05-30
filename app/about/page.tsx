@@ -111,19 +111,18 @@ export default function AboutPage() {
           </ul>
         </GlassCard>
 
-        {/* Numbers */}
+        {/* What we measure */}
         <GlassCard className="mb-5">
           <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold mb-3">
-            Numbers that matter
+            What we&apos;ll hold ourselves to
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Stat label="Avg recruiter response" value="8h" tone="success" />
-            <Stat label="Platform ghost-rate" value="1.2%" tone="success" />
-            <Stat label="Industry average" value="38%" tone="danger" />
-            <Stat label="Top-10 → Hire multiplier" value="3.2×" tone="brand" />
-          </div>
-          <p className="text-[11px] text-brand-muted mt-3">
-            Updated weekly from live platform data. Source: the entire database.
+          <p className="text-sm text-brand-ink/85 leading-relaxed">
+            We&apos;re pre-launch, so we won&apos;t quote platform numbers we
+            haven&apos;t earned yet. The commitment is simple and public:
+            recruiters pick a response window — 24, 48, or 72 hours — and every
+            recruiter&apos;s ghosting rate is visible on their profile. Once
+            cohorts are live, these stats publish here straight from real
+            platform data — no rounding, no spin.
           </p>
         </GlassCard>
 
@@ -170,8 +169,8 @@ export default function AboutPage() {
             Want to use the platform?
           </h3>
           <p className="text-sm text-brand-muted mt-2 mb-5">
-            Free to start. 5 applications/month. AI Coach. Refunds when
-            recruiters ghost.
+            Free to start. AI Coach included. Your application slot comes back
+            if a recruiter ghosts.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             <Link href="/signup" className="btn-brand">
@@ -205,32 +204,5 @@ export default function AboutPage() {
         </p>
       </div>
     </main>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: "brand" | "success" | "warn" | "danger";
-}) {
-  const cls =
-    tone === "success"
-      ? "text-emerald-600"
-      : tone === "warn"
-      ? "text-amber-600"
-      : tone === "danger"
-      ? "text-rose-600"
-      : "text-brand-primary";
-  return (
-    <div className="bg-white/40 rounded-xl border border-brand-ink/5 p-3 text-center">
-      <p className="text-[9px] uppercase tracking-wider text-brand-muted font-semibold">
-        {label}
-      </p>
-      <p className={`font-display text-2xl font-bold mt-1 ${cls}`}>{value}</p>
-    </div>
   );
 }
