@@ -10,6 +10,7 @@ import {
 } from "@/server/auth/password";
 import { createUserWithCredentials } from "@/server/store";
 import { issueEmailVerifyToken } from "@/server/auth/email-verify-token";
+import { isFreeEmailDomain } from "@/server/lib/email-domain";
 import { sendVerifyEmail } from "@/server/integrations/email";
 import {
   attachReferrerToUser,
@@ -57,6 +58,21 @@ async function handler(req: Request) {
   const parsed = await parseBody(req, Input);
   if (!parsed.ok) return parsed.response;
   const data = parsed.data;
+
+  // Recruiter anti-abuse: recruiters post jobs that reach every student
+  // instantly, so we gate recruiter signup to a *work* email (company-owned
+  // domain). Free/personal/disposable providers are rejected. Students are
+  // unaffected — they can sign up with any valid email.
+  if (data.role === "recruiter" && isFreeEmailDomain(data.email)) {
+    return NextResponse.json(
+      {
+        error: "work_email_required",
+        message:
+          "Recruiter accounts need a work email on your company's domain. Personal or free email addresses aren't accepted.",
+      },
+      { status: 400 },
+    );
+  }
 
   const policy = checkPasswordPolicy(data.password);
   if (!policy.ok) {
