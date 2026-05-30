@@ -16,6 +16,7 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
   const [jdText, setJdText] = useState("");
   const [parsing, setParsing] = useState(false);
   const [launching, setLaunching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
@@ -54,7 +55,8 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
 
   async function deploy() {
     setLaunching(true);
-    await fetch("/api/jobs", {
+    setError(null);
+    const res = await fetch("/api/jobs", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -70,8 +72,29 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
         salaryMax,
       }),
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const map: Record<string, string> = {
+        not_your_company:
+          "This company isn't linked to your account. Contact ops@unghost.in.",
+        company_suspended:
+          "This company is suspended and can't post jobs right now.",
+        company_not_found: "Company not found.",
+        no_account: "Your account couldn't be verified. Sign in again.",
+      };
+      setError(map[body?.error] ?? "Couldn't post the job. Please try again.");
+      setLaunching(false);
+      return;
+    }
+    const body = await res.json().catch(() => ({}));
     await new Promise((r) => setTimeout(r, 900));
-    router.push("/recruiter/command");
+    // Held for approval (unverified company / non-matching work email) → tell
+    // the recruiter it's pending instead of pretending it's live.
+    router.push(
+      body?.pendingApproval
+        ? "/recruiter/command?pending=1"
+        : "/recruiter/command",
+    );
   }
 
   return (
@@ -220,6 +243,9 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
         </div>
       </GlassCard>
 
+      {error && (
+        <p className="mb-3 text-sm text-red-500 text-right">{error}</p>
+      )}
       <div className="flex justify-end">
         <GlassButton
           variant="brand"

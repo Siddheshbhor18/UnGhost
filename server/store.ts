@@ -790,14 +790,18 @@ export async function getJobById(id: string): Promise<Job | undefined> {
 }
 
 export async function createJob(
-  j: Omit<Job, "id" | "createdAt" | "active">,
+  j: Omit<Job, "id" | "createdAt" | "active"> & { active?: boolean },
 ): Promise<Job> {
   await db();
+  // `active` controls whether the job is visible to students. Default true for
+  // back-compat, but callers (the jobs API) pass false to hold a job for admin
+  // approval when the recruiter isn't verified against the company domain.
+  const { active = true, ...rest } = j;
   const job: Job = {
-    ...j,
+    ...rest,
     id: genId("job"),
     createdAt: new Date().toISOString(),
-    active: true,
+    active,
   };
   await JobModel.create({ ...(job as any), _id: job.id });
   await invalidate("jobs:active", "jobs:active:lite");

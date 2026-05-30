@@ -4,7 +4,17 @@ import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
 import { parseBody } from "@/server/lib/validate";
-import { createJob, listJobs } from "@/server/store";
+import { withRateLimit } from "@/server/lib/with-rate-limit";
+import { withApiErrorTracking } from "@/server/lib/api-error";
+import { emailMatchesCompanyDomain } from "@/server/lib/email-domain";
+import {
+  createJob,
+  listJobs,
+  getCompanyById,
+  getUserById,
+  writeAuditLog,
+} from "@/server/store";
+import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -25,7 +35,7 @@ export async function GET() {
   return NextResponse.json(await listJobs());
 }
 
-export async function POST(req: Request) {
+async function handler(req: Request) {
   const csrf = requireSameOrigin(req);
   if (csrf) return csrf;
   const session = await getServerSession(authOptions);
@@ -35,6 +45,50 @@ export async function POST(req: Request) {
   const parsed = await parseBody(req, CreateJobInput);
   if (!parsed.ok) return parsed.response;
   const b = parsed.data;
+
+  // Ownership check (real security gate): a recruiter may only post jobs under
+  // a company they belong to. Previously any recruiter could pass any
+  // companyId. We accept the link either way it's stored — the user's assigned
+  // companyId, or membership on the company's recruiterIds list.
+  const [user, company] = await Promise.all([
+    getUserById(session.user.id),
+    getCompanyById(b.companyId),
+  ]);
+  if (!user) {
+    return NextResponse.json({ error: "no_account" }, { status: 403 });
+  }
+  if (!company) {
+    return NextResponse.json({ error: "company_not_found" }, { status: 404 });
+  }
+  const ownsCompany =
+    user.companyId === company.id ||
+    (company.recruiterIds ?? []).includes(user.id);
+  if (!ownsCompany) {
+    logger.warn(
+      { userId: user.id, companyId: b.companyId },
+      "jobs.create-ownership-denied",
+    );
+    return NextResponse.json(
+      { error: "not_your_company" },
+      { status: 403 },
+    );
+  }
+
+  // Suspended companies can't post at all.
+  if (company.status === "suspended") {
+    return NextResponse.json(
+      { error: "company_suspended" },
+      { status: 403 },
+    );
+  }
+
+  // Hybrid go-live: a verified company, or a recruiter whose work email matches
+  // the company's registered domain, publishes instantly. Everyone else is
+  // held (active:false) for admin approval so fake jobs don't reach students.
+  const trusted =
+    company.verified === true ||
+    emailMatchesCompanyDomain(user.email, company.domain);
+
   const job = await createJob({
     companyId: b.companyId,
     recruiterId: session.user.id,
@@ -47,6 +101,29 @@ export async function POST(req: Request) {
     description: b.description,
     salaryMin: b.salaryMin,
     salaryMax: b.salaryMax,
+    active: trusted,
   });
-  return NextResponse.json(job, { status: 201 });
+
+  void writeAuditLog({
+    actorId: user.id,
+    actorRole: "recruiter",
+    action: trusted ? "jobs.create-live" : "jobs.create-pending",
+    targetType: "job",
+    targetId: job.id,
+    summary: `Job "${b.title}" ${trusted ? "published" : "held for approval"} (company ${company.id})`,
+  }).catch(() => {
+    /* audit failure must not block job creation */
+  });
+
+  return NextResponse.json(
+    { ...job, pendingApproval: !trusted },
+    { status: 201 },
+  );
 }
+
+// Rate limited per recruiter — 20 job posts/min is generous for a real user
+// and stops a compromised/scripted account from flooding the feed.
+export const POST = withRateLimit(
+  { bucket: "jobs.create", limit: 20, windowSec: 60, by: "user" },
+  withApiErrorTracking(handler),
+);
