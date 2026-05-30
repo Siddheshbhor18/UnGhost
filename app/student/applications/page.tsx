@@ -19,9 +19,11 @@ export default async function ApplicationsListPage() {
   if (!session) redirect("/login?next=/student/applications");
   if (session.user.role !== "student") redirect("/");
 
-  await maybeRunSlaSweep();
-
-  const [apps, jobs, companies] = await Promise.all([
+  // Throttled SLA sweep, run concurrently with the page fetch (was a blocking
+  // pre-step adding a full applications scan to the critical path). Durable
+  // mechanism is the /api/cron/sla-sweep cron; this is a best-effort top-up.
+  const [, apps, jobs, companies] = await Promise.all([
+    maybeRunSlaSweep(),
     listApplicationsByStudent(session.user.id),
     listJobs(),
     listCompanies(),

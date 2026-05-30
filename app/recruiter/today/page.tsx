@@ -43,9 +43,11 @@ export default async function RecruiterToday() {
     redirect(session.user.role === "admin" ? "/admin/metrics" : "/dashboard");
   }
 
-  await maybeRunSlaSweep();
-
-  const [apps, jobs, user, studentList] = await Promise.all([
+  // Throttled SLA sweep, run concurrently with the page fetch (was a blocking
+  // pre-step adding a full applications scan to the critical path). Durable
+  // mechanism is the /api/cron/sla-sweep cron; this is a best-effort top-up.
+  const [, apps, jobs, user, studentList] = await Promise.all([
+    maybeRunSlaSweep(),
     listApplicationsByRecruiter(session.user.id),
     listJobsByRecruiter(session.user.id),
     getUserById(session.user.id),

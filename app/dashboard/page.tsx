@@ -48,12 +48,15 @@ export default async function DashboardPage() {
     );
   }
 
-  // Cheap, throttled SLA sweep — fires breach/warning notifications inline so
-  // the student lands on the dashboard with fresh state. Throttled to 60s to
-  // avoid hammering. Real prod: swap for Inngest cron via /api/cron/sla-sweep.
-  await maybeRunSlaSweep();
-
+  // Cheap, throttled SLA sweep — fires breach/warning notifications so the
+  // student lands with fresh state. Throttled to 60s. Run it CONCURRENTLY with
+  // the page's data fetch (was a blocking pre-step that added a full
+  // applications-collection scan to the critical path on every cold start).
+  // The cron at /api/cron/sla-sweep is the durable mechanism; this is a
+  // best-effort top-up. Worst case is a one-render staleness for the single
+  // request that trips the throttle — corrected on the next load.
   const [
+    ,
     user,
     apps,
     allJobs,
@@ -65,6 +68,7 @@ export default async function DashboardPage() {
     savedJobs,
     upcomingLive,
   ] = await Promise.all([
+    maybeRunSlaSweep(),
     getUserById(session.user.id),
     listApplicationsByStudent(session.user.id),
     listJobs(),

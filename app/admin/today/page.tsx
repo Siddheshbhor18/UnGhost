@@ -34,12 +34,15 @@ import {
 } from "lucide-react";
 
 export default async function AdminToday() {
-  await maybeRunSlaSweep();
-  const telemetryAlerts = await detectTelemetryAlerts();
+  // SLA sweep + telemetry detection run concurrently with the page fetch (both
+  // were blocking pre-steps that serialised onto the critical path). Durable
+  // sweep mechanism is the /api/cron/sla-sweep cron; inline is a top-up.
   // Replaced full listUsers("student"/"recruiter") with countDocuments — admin
   // dashboard only consumed `.length`, so the full collection scan was waste.
-  const [m, apps, jobs, bcs, studentCount, recruiterCount, heatmap, finance, students] =
+  const [, telemetryAlerts, m, apps, jobs, bcs, studentCount, recruiterCount, heatmap, finance, students] =
     await Promise.all([
+      maybeRunSlaSweep(),
+      detectTelemetryAlerts(),
       getGlobalMetrics(),
       listApplications(),
       listJobs(),
