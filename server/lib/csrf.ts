@@ -16,6 +16,21 @@
  */
 import { NextResponse } from "next/server";
 
+/**
+ * Parse a host out of an env-supplied URL. Returns null on absent/invalid
+ * input instead of throwing — a misconfigured env var (e.g. a bare bucket
+ * name pasted into NEXTAUTH_URL) must NOT crash module load and take down
+ * the whole build. This runs at import time, so it has to be total.
+ */
+function hostFromEnv(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).host;
+  } catch {
+    return null;
+  }
+}
+
 const ALLOWED_HOSTS = new Set<string>(
   [
     // Production domains
@@ -24,8 +39,8 @@ const ALLOWED_HOSTS = new Set<string>(
     // Vercel preview deploys
     "un-ghost.vercel.app",
     // Env-driven (set on Vercel + .env.local)
-    process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).host : null,
-    process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL).host : null,
+    hostFromEnv(process.env.NEXT_PUBLIC_APP_URL),
+    hostFromEnv(process.env.NEXTAUTH_URL),
     // localhost / dev
     "localhost:3000",
     "localhost:3001",
