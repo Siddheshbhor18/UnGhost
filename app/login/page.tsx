@@ -109,7 +109,8 @@ function LoginInner() {
       if (
         res.error.toLowerCase().includes("suspended") ||
         res.error.toLowerCase().includes("banned") ||
-        res.error.toLowerCase().includes("grace")
+        res.error.toLowerCase().includes("grace") ||
+        res.error.toLowerCase().includes("attempt")
       ) {
         setErr(res.error);
       } else {

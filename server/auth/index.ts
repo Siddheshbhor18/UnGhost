@@ -7,7 +7,23 @@ import {
   upsertOAuthUser,
 } from "@/server/store";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
+import { rateLimit } from "@/server/lib/rate-limit";
+import { logger } from "@/server/lib/logger";
 import type { Role } from "@/shared/types";
+
+/**
+ * Pull the caller IP out of the NextAuth request object. NextAuth hands
+ * `authorize` a trimmed req with a plain `headers` record (not a web
+ * `Headers`), so we read the proxy headers directly. Falls back to "anon"
+ * so the limiter still buckets header-less callers together.
+ */
+function ipFromAuthReq(req: unknown): string {
+  const headers = (req as { headers?: Record<string, string> } | undefined)
+    ?.headers;
+  const fwd = headers?.["x-forwarded-for"];
+  if (fwd) return fwd.split(",")[0].trim();
+  return headers?.["x-real-ip"] ?? "anon";
+}
 
 /**
  * In production we set the secure cookie prefix (`__Secure-`) and force the
@@ -76,8 +92,33 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
         role: { label: "Role", type: "text" },
       },
-      async authorize(creds) {
+      async authorize(creds, req) {
         if (!creds?.email || !creds.password) return null;
+
+        // Brute-force throttle. NextAuth does not rate-limit the credentials
+        // callback, so without this the password endpoint is open to
+        // unlimited guessing. Two buckets:
+        //   • per (ip, email): stops hammering one account.
+        //   • per ip: stops credential-stuffing across many accounts.
+        // Both count every attempt (success or fail) — legitimate users stay
+        // far under the cap; an attacker hits it fast. Throwing surfaces the
+        // message on the sign-in form.
+        const ip = ipFromAuthReq(req);
+        const email = creds.email.toLowerCase();
+        const [perAccount, perIp] = await Promise.all([
+          rateLimit("login.acct", `${ip}:${email}`, { limit: 10, windowSec: 300 }),
+          rateLimit("login.ip", ip, { limit: 50, windowSec: 900 }),
+        ]);
+        if (!perAccount.allowed || !perIp.allowed) {
+          logger.warn(
+            { ipPrefix: ip.slice(0, 7), bucket: !perAccount.allowed ? "acct" : "ip" },
+            "auth.login-rate-limited",
+          );
+          throw new Error(
+            "Too many sign-in attempts. Please wait a few minutes and try again.",
+          );
+        }
+
         const user = await getUserByEmail(creds.email);
         if (!user) return null;
         // bcrypt path + legacy-plaintext shim for un-migrated seed rows.
