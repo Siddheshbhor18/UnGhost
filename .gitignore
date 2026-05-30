@@ -22,3 +22,6 @@ skills-lock.json
 # Test coverage
 coverage/
 
+
+# DB backups from cleanup-demo (PII/hashes — never commit)
+scripts/backups/
