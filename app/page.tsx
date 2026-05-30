@@ -451,7 +451,8 @@ export default async function LandingPage() {
                     <CountUp to={4999} prefix="₹" format duration={2} />
                   </span>
                 }
-                sub="one-time · lifetime"
+                sub="one-time"
+                note="Lifetime access — first 1,000 students only."
                 features={[
                   "Unlimited applications",
                   "AI Coach + Q&A forever",
@@ -731,6 +732,7 @@ function PriceCard({
   tier,
   priceNode,
   sub,
+  note,
   features,
   cta,
   href,
@@ -739,6 +741,7 @@ function PriceCard({
   tier: string;
   priceNode: React.ReactNode;
   sub: string;
+  note?: string;
   features: string[];
   cta: string;
   href: string;
@@ -747,18 +750,25 @@ function PriceCard({
   return (
     <Card
       selected={highlight}
-      className={`!p-8 h-full ${highlight ? "shadow-elev-4" : ""}`}
+      className={`!p-8 h-full flex flex-col ${highlight ? "shadow-elev-4" : ""}`}
     >
-      {highlight && (
-        <Badge tone="info" className="mb-3 pop-in">
-          Best value
-        </Badge>
-      )}
+      {/* Fixed-height badge slot on BOTH cards so titles/prices/rows line up
+          whether or not the card is highlighted. */}
+      <div className="h-6 mb-3 flex items-center">
+        {highlight && (
+          <Badge tone="info" className="pop-in">
+            Best value
+          </Badge>
+        )}
+      </div>
       <p className="font-display font-bold text-neutral-900 text-lg">{tier}</p>
       <div className="flex items-baseline gap-2 mt-2 mb-1">
         {priceNode}
         <span className="text-body-sm text-neutral-500">{sub}</span>
       </div>
+      {note ? (
+        <p className="text-body-xs font-semibold text-brand-600 mb-1">{note}</p>
+      ) : null}
       <ul className="space-y-2 my-6 text-body-sm text-neutral-700">
         {features.map((f) => (
           <li key={f} className="flex items-start gap-2">
@@ -770,7 +780,9 @@ function PriceCard({
           </li>
         ))}
       </ul>
-      <Link href={href}>
+      {/* mt-auto pins the CTA to the card bottom so both buttons align even
+          when feature lists differ in length. */}
+      <Link href={href} className="mt-auto block">
         <Button
           variant={highlight ? "primary" : "secondary"}
           size="md"
