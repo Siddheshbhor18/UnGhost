@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import {
+  rateLimit,
+  rateLimitResponse,
+  identifierFromRequest,
+} from "@/server/lib/rate-limit";
 import { getAI } from "@/server/integrations/ai";
 import { getBootcampById } from "@/server/store";
 
@@ -21,6 +26,14 @@ export async function POST(req: Request) {
   if (!session?.user?.id || session.user.role !== "student") {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  // LLM-cost guard — 15 tutor turns / minute / user, matching the AI Coach
+  // budget. Without this any logged-in student could fan out unbounded
+  // (paid) model calls.
+  const rl = await rateLimit("tutor", identifierFromRequest(req, session.user.id), {
+    limit: 15,
+    windowSec: 60,
+  });
+  if (!rl.allowed) return rateLimitResponse(rl);
   const body = (await req.json().catch(() => ({}))) as Partial<TutorRequest>;
   if (!body.bootcampId) {
     return NextResponse.json({ error: "bootcampId required" }, { status: 400 });
