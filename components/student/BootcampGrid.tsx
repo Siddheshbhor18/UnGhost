@@ -26,18 +26,23 @@ export function BootcampGrid({
   instructors,
   enrolledIds,
   sponsoredIds = [],
+  hideFilters = false,
 }: {
   bootcamps: Bootcamp[];
   instructors: Record<string, { name?: string } | undefined>;
   enrolledIds: string[];
   /** Bootcamps a recruiter is currently sponsoring for this student. */
   sponsoredIds?: string[];
+  /** Hide the category filter row — used inside a single-room hub where the
+   *  room *is* the filter, so the chips would be redundant. */
+  hideFilters?: boolean;
 }) {
   const [cat, setCat] = useState<BootcampCategory | "all">("all");
   const filtered = cat === "all" ? bootcamps : bootcamps.filter((b) => b.category === cat);
 
   return (
     <div className="space-y-6">
+      {!hideFilters && (
       <div className="flex flex-wrap gap-2">
         {CATS.map((c) => (
           <button
@@ -55,6 +60,7 @@ export function BootcampGrid({
           </button>
         ))}
       </div>
+      )}
 
       {filtered.length === 0 ? (
         <GlassCard className="text-center py-10 text-brand-muted">
