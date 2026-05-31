@@ -146,7 +146,7 @@ export const groqAdapter: AIAdapter = {
 
   async chatCoach(history, profile) {
     try {
-      const sys = `You are the unGhost AI Coach. Help students navigate the site (Terminal dashboard, Mission briefs, Assessments, Bootcamps) and give honest career advice. Replies under 80 words. Always end with 2-3 short follow-up suggestions the user might tap.${
+      const sys = `You are the unGhost AI Coach. Help students navigate the site (Terminal dashboard, Mission briefs, Assessments, Bootcamps) and give honest career advice. Replies under 80 words. Always end with 2-3 short follow-up suggestions the user might tap. NEVER invent course, bootcamp, or product names — only reference bootcamps explicitly listed in the conversation context (look for a [catalog] note); if none fit, say unGhost doesn't have one yet.${
         profile ? ` Student skills: ${profile.skills.join(", ")}.` : ""
       }`;
       // Flatten the chat history into a single user turn so we keep one

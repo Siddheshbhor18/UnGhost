@@ -142,7 +142,7 @@ export const claudeAdapter: AIAdapter = {
   async chatCoach(history, profile) {
     try {
       const client = getClient();
-      const sysText = `You are the NoGhost AI Coach. Help students navigate the site (Terminal dashboard, Mission briefs, Assessments, Bootcamps) and give honest career advice. Keep replies under 80 words. Always end with 2-3 short follow-up suggestions the user might tap.${profile ? ` Student skills: ${profile.skills.join(", ")}.` : ""}`;
+      const sysText = `You are the NoGhost AI Coach. Help students navigate the site (Terminal dashboard, Mission briefs, Assessments, Bootcamps) and give honest career advice. Keep replies under 80 words. Always end with 2-3 short follow-up suggestions the user might tap. NEVER invent course, bootcamp, or product names — only reference bootcamps explicitly listed in the conversation context (look for a [catalog] note); if none fit, say unGhost doesn't have one yet.${profile ? ` Student skills: ${profile.skills.join(", ")}.` : ""}`;
       const params = {
         model: MODEL,
         max_tokens: 800,

@@ -17,10 +17,12 @@ import {
   deleteCoachConversation,
   getCoachConversation,
   getUserById,
+  listBootcamps,
   listCoachConversations,
   rollupCoachMemory,
   setCoachPersona,
 } from "@/server/store";
+import { roomLabel } from "@/shared/rooms";
 import { COACH_PERSONAS, type CoachPersona } from "@/shared/types";
 
 const PersonaSchema = z.enum(["balanced", "encouraging", "direct", "strategic"]);
@@ -132,6 +134,29 @@ export async function POST(req: Request) {
   coachHistory.push({
     role: "coach",
     content: `[persona:${personaDef.id}] ${personaDef.systemNote}`,
+  });
+
+  // Ground the model in the REAL catalog. Without this, an 8B model invents
+  // plausible-but-fake course names ("Data Analysis with Python" etc.) when
+  // asked for recommendations. We list only published bootcamps and forbid
+  // inventing anything outside this list.
+  const allBootcamps = await listBootcamps();
+  const liveCatalog = allBootcamps.filter(
+    (b) => (b.status ?? "published") === "published",
+  );
+  const catalogLine =
+    liveCatalog.length > 0
+      ? liveCatalog
+          .map((b) => `"${b.title}" (${roomLabel(b.category)} room)`)
+          .join("; ")
+      : "(none published yet)";
+  coachHistory.push({
+    role: "coach",
+    content:
+      `[catalog] The ONLY bootcamps that exist on unGhost right now: ${catalogLine}. ` +
+      `[rules] When recommending courses or bootcamps you MUST only name ones from this exact catalog. ` +
+      `Never invent, assume, or mention any course/bootcamp not in the list. ` +
+      `If nothing in the catalog fits the student, say we don't have one yet rather than making one up.`,
   });
   for (const m of history) {
     coachHistory.push({
