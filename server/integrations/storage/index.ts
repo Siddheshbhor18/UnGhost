@@ -148,7 +148,7 @@ function presignR2(
  * in our DB (e.g. on the user.resumeUrl field).
  */
 export async function presignUpload(input: {
-  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover" | "bootcamp-video";
+  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover" | "bootcamp-video" | "lecture-video";
   contentType: string;
   filename?: string;
 }): Promise<PresignedUpload> {
@@ -218,7 +218,7 @@ export async function mockRead(key: string): Promise<Uint8Array | null> {
  * caller never needs to know which mode is live.
  */
 export async function uploadObject(input: {
-  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover" | "bootcamp-video";
+  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover" | "bootcamp-video" | "lecture-video";
   contentType: string;
   filename: string;
   body: Uint8Array;

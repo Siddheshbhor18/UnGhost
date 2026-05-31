@@ -597,7 +597,9 @@ export interface AuditLog {
     // Partner attribution flow.
     | "partner"
     // Video access auditing.
-    | "live_session";
+    | "live_session"
+    // Recruiter guest-lecture videos in room libraries.
+    | "lecture";
   targetId: string;
   summary: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
