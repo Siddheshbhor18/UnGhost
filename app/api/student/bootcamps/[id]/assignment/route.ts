@@ -15,6 +15,10 @@ import type { BootcampProgress } from "@/shared/types";
 
 export const runtime = "nodejs";
 
+// Minimum total score to earn the Verified Skill badge. Matches the 70%
+// gate the student-facing UI already advertises.
+const PASS_SCORE = 70;
+
 // PRD: 5 criteria × 20 points each = 100. Instructor-defined; static for Phase 1.
 const RUBRIC: AssignmentRubricCriterion[] = [
   {
@@ -90,19 +94,23 @@ export async function POST(
 
   const existing =
     (await getBootcampProgress(studentId, params.id)) ?? seed(params.id);
-  if (existing.assignment?.submittedAt) {
+  // Lock only once the badge is actually earned. A failing submission can be
+  // resubmitted — otherwise a low score would permanently bar the student.
+  if (existing.verifiedBadgeIssued) {
     return NextResponse.json(
-      { error: "already submitted" },
+      { error: "already passed — badge already issued" },
       { status: 409 },
     );
   }
 
   const grade = await getAI().gradeAssignment(body, RUBRIC);
+  const passed = grade.totalScore >= PASS_SCORE;
 
   const now = new Date().toISOString();
   const nextProgress: BootcampProgress = {
     ...existing,
-    verifiedBadgeIssued: true,
+    // Only issue the Verified Skill badge on a passing score.
+    verifiedBadgeIssued: passed,
     assignment: {
       releasedAt: existing.assignment?.releasedAt ?? now,
       expiresAt:
@@ -124,19 +132,27 @@ export async function POST(
     },
   };
   await upsertBootcampProgress(studentId, nextProgress);
-  await markSkillVerified(studentId, bootcamp.skill);
+  // Verified skill only marked on a pass — recruiters rely on this signal.
+  if (passed) {
+    await markSkillVerified(studentId, bootcamp.skill);
+  }
 
   await notify({
     userId: studentId,
     kind: "bootcamp_complete",
-    priority: "high",
-    title: `Bootcamp complete · ${grade.totalScore}/100`,
-    body: `Verified Skill badge issued for ${bootcamp.skill}. Recruiters can now see it on your profile.`,
+    priority: passed ? "high" : "normal",
+    title: passed
+      ? `Bootcamp complete · ${grade.totalScore}/100`
+      : `Assignment graded · ${grade.totalScore}/100 (need ${PASS_SCORE})`,
+    body: passed
+      ? `Verified Skill badge issued for ${bootcamp.skill}. Recruiters can now see it on your profile.`
+      : `Not a pass yet — review the feedback and resubmit to earn the ${bootcamp.skill} badge.`,
     link: `/student/my-bootcamps/${bootcamp.id}/assignment`,
   });
 
   return NextResponse.json({
     grade,
+    passed,
     progress: nextProgress,
     rubric: RUBRIC,
   });

@@ -44,9 +44,13 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [confirmOwnWork, setConfirmOwnWork] = useState(false);
   const [busy, setBusy] = useState(false);
+  // When a submission scores below the pass mark, the student can return to
+  // the editor and resubmit. This flips the view back to the form.
+  const [retrying, setRetrying] = useState(false);
 
   const isSubmitted = !!progress.assignment?.submittedAt;
   const grade = progress.assignment?.grade;
+  const passed = !!progress.verifiedBadgeIssued;
   const wordCount = useMemo(
     () => writeup.split(/\s+/).filter(Boolean).length,
     [writeup],
@@ -114,6 +118,7 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
       }
       setProgress(data.progress);
       setShowSubmitModal(false);
+      setRetrying(false);
     } finally {
       setBusy(false);
     }
@@ -137,8 +142,16 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
   }
 
   // ── Submitted → Results screen ──────────────────────────────
-  if (isSubmitted && grade) {
-    return <ResultsView bootcamp={bootcamp} grade={grade} progress={progress} rubric={rubric} />;
+  if (isSubmitted && grade && !retrying) {
+    return (
+      <ResultsView
+        bootcamp={bootcamp}
+        grade={grade}
+        progress={progress}
+        rubric={rubric}
+        onRetry={passed ? undefined : () => setRetrying(true)}
+      />
+    );
   }
 
   return (
@@ -162,7 +175,8 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
               </h1>
               <p className="text-sm text-brand-muted mt-1 max-w-xl">
                 Submit a focused write-up plus a short reflection. AI grades 5
-                rubric criteria. The Verified Skill badge ships once you submit.
+                rubric criteria. Score 70+ to earn the Verified Skill badge —
+                you can resubmit if you fall short.
               </p>
             </div>
             <div className="text-right">
@@ -419,11 +433,13 @@ function ResultsView({
   grade,
   progress,
   rubric,
+  onRetry,
 }: {
   bootcamp: Bootcamp;
   grade: NonNullable<BootcampProgress["assignment"]>["grade"];
   progress: BootcampProgress;
   rubric: AssignmentRubricCriterion[];
+  onRetry?: () => void;
 }) {
   if (!grade) return null;
   const isTop10 = grade.totalScore >= 85;
@@ -460,6 +476,13 @@ function ResultsView({
             <span className="text-sm font-semibold text-amber-700">
               Top 10 — public leaderboard
             </span>
+          </div>
+        )}
+        {onRetry && (
+          <div className="mt-5">
+            <GlassButton variant="brand" onClick={onRetry}>
+              Revise &amp; resubmit
+            </GlassButton>
           </div>
         )}
       </GlassCard>
