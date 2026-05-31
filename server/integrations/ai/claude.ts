@@ -88,8 +88,8 @@ export const claudeAdapter: AIAdapter = {
   async matchScore(profile, job) {
     try {
       return await jsonChat(
-        "You score how well a candidate matches a job. Return integer matchPct (0-100) and one-sentence reasoning. Be calibrated; 90+ should be rare.",
-        `Candidate skills: ${profile.skills.join(", ")}\nJob skills: ${job.skills.join(", ")}\nJob title: ${job.title}`,
+        "You score how well a candidate matches a job. Weigh the job description, not just the skills list. Return integer matchPct (0-100) and one-sentence reasoning. Be calibrated; 90+ should be rare.",
+        `Candidate skills: ${profile.skills.join(", ")}\nJob title: ${job.title}\nJob skills: ${job.skills.join(", ")}\nJob description: ${(job.description ?? "").slice(0, 1500)}`,
         {
           type: "object",
           additionalProperties: false,
