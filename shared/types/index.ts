@@ -443,6 +443,29 @@ export interface Bootcamp {
   sessions: BootcampSession[];
 }
 
+/**
+ * A guest-lecture video a recruiter posts into a subject room's lecture
+ * library. Standalone — not tied to a bootcamp cohort. Recruiter accounts are
+ * provisioned manually for trusted lecturers, so lectures publish instantly;
+ * an admin can take one down for hygiene.
+ */
+export interface RoomLecture {
+  id: string;
+  /** Which of the 5 subject rooms this lecture lives in. */
+  room: BootcampCategory;
+  /** The recruiter (provisioned lecturer) who posted it. */
+  recruiterId: string;
+  /** Optional company attribution for display. */
+  companyId?: string;
+  title: string;
+  description: string;
+  /** Playback URL — R2/public file or a YouTube watch/share URL. */
+  videoUrl: string;
+  posterUrl?: string;
+  durationMin?: number;
+  createdAt: string;
+}
+
 export type SponsorshipStatus =
   | "payment_pending"
   | "offered"

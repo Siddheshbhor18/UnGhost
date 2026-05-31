@@ -16,6 +16,7 @@ import type {
   MessageThread,
   ModerationFlag,
   NotInterestedFeedback,
+  RoomLecture,
   SavedJob,
   SavedSearch,
   Sponsorship,
@@ -336,6 +337,25 @@ const CampaignSchema = withJsonTransform(
   ),
 );
 
+// ---------- RoomLecture ----------
+const RoomLectureSchema = withJsonTransform(
+  new Schema(
+    {
+      _id: { type: String, required: true },
+      room: { type: String, index: true },
+      recruiterId: { type: String, index: true },
+      companyId: { type: String, index: true },
+      title: String,
+      description: String,
+      videoUrl: String,
+      posterUrl: String,
+      durationMin: Number,
+      createdAt: String,
+    },
+    { versionKey: false },
+  ),
+);
+
 // Use mongoose.models guard so HMR doesn't error on recompile
 export const UserModel: Model<User> =
   (mongoose.models.User as Model<User>) ||
@@ -356,6 +376,10 @@ export const ApplicationModel: Model<Application> =
 export const BootcampModel: Model<Bootcamp> =
   (mongoose.models.Bootcamp as Model<Bootcamp>) ||
   mongoose.model<Bootcamp>("Bootcamp", BootcampSchema);
+
+export const RoomLectureModel: Model<RoomLecture> =
+  (mongoose.models.RoomLecture as Model<RoomLecture>) ||
+  mongoose.model<RoomLecture>("RoomLecture", RoomLectureSchema);
 
 // ─────────────────────────────────────────────────────────────────────────
 //  PaymentSubmission

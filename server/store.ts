@@ -31,6 +31,7 @@ import {
   NotificationModel,
   PartnerModel,
   ProcessedTxnModel,
+  RoomLectureModel,
   SavedJobModel,
   SessionRecordingModel,
   SponsorshipModel,
@@ -60,6 +61,7 @@ import type {
   Message,
   MessageThread,
   NotInterestedFeedback,
+  RoomLecture,
   NotificationKind,
   NotificationPriority,
   Placement,
@@ -806,6 +808,67 @@ export async function createJob(
   await JobModel.create({ ...(job as any), _id: job.id });
   await invalidate("jobs:active", "jobs:active:lite");
   return job;
+}
+
+// ---------- ROOM LECTURES ----------
+// Guest-lecture videos recruiters post into a subject room's library.
+// Provisioned/trusted accounts → publish instantly; admin can take down.
+export async function createRoomLecture(
+  l: Omit<RoomLecture, "id" | "createdAt">,
+): Promise<RoomLecture> {
+  await db();
+  const lecture: RoomLecture = {
+    ...l,
+    id: genId("lecture"),
+    createdAt: new Date().toISOString(),
+  };
+  await RoomLectureModel.create({ ...(lecture as any), _id: lecture.id });
+  return lecture;
+}
+
+/** All lectures in a room, newest first — for the student room hub. */
+export async function listRoomLecturesByRoom(
+  room: string,
+): Promise<RoomLecture[]> {
+  await db();
+  const docs = await RoomLectureModel.find({ room: room as RoomLecture["room"] })
+    .sort({ createdAt: -1 })
+    .lean();
+  return unwrapAll(docs as unknown as RoomLecture[]);
+}
+
+/** A recruiter's own lectures across rooms — for their lectures dashboard. */
+export async function listRoomLecturesByRecruiter(
+  recruiterId: string,
+): Promise<RoomLecture[]> {
+  await db();
+  const docs = await RoomLectureModel.find({ recruiterId })
+    .sort({ createdAt: -1 })
+    .lean();
+  return unwrapAll(docs as unknown as RoomLecture[]);
+}
+
+export async function getRoomLectureById(
+  id: string,
+): Promise<RoomLecture | undefined> {
+  await db();
+  const doc = await RoomLectureModel.findById(id).lean();
+  return unwrap(doc as unknown as RoomLecture);
+}
+
+/** Every lecture, newest first — for the admin takedown view. */
+export async function listAllRoomLectures(): Promise<RoomLecture[]> {
+  await db();
+  const docs = await RoomLectureModel.find({})
+    .sort({ createdAt: -1 })
+    .lean();
+  return unwrapAll(docs as unknown as RoomLecture[]);
+}
+
+/** Hard delete — owner removing their own, or admin takedown. */
+export async function deleteRoomLecture(id: string): Promise<void> {
+  await db();
+  await RoomLectureModel.deleteOne({ _id: id });
 }
 
 // ---------- APPLICATIONS ----------
