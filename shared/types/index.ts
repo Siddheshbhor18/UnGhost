@@ -377,12 +377,10 @@ export interface BootcampVideo {
   url?: string | null;
 }
 
-export type BootcampCategory =
-  | "ai"
-  | "data_science"
-  | "marketing"
-  | "finance"
-  | "sales";
+// Bootcamp categories ("rooms") are defined once in ../rooms and re-exported
+// here so existing `@/shared/types` imports keep working.
+import type { BootcampCategory } from "../rooms";
+export type { BootcampCategory };
 
 export type BootcampStatus =
   | "draft"

@@ -32,18 +32,15 @@ import type {
   BootcampStatus,
   BootcampVideo,
 } from "@/shared/types";
+import { ROOMS } from "@/shared/rooms";
 
 interface Props {
   bootcamp: Bootcamp;
 }
 
-const CATEGORIES: Array<{ value: BootcampCategory; label: string }> = [
-  { value: "ai", label: "AI / GenAI" },
-  { value: "data_science", label: "Data Science" },
-  { value: "marketing", label: "Marketing" },
-  { value: "finance", label: "Finance" },
-  { value: "sales", label: "Sales / BD" },
-];
+const CATEGORIES: Array<{ value: BootcampCategory; label: string }> = ROOMS.map(
+  (r) => ({ value: r.id, label: r.label }),
+);
 
 const STATUS_TONE: Record<
   BootcampStatus,

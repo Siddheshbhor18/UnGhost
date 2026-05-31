@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { GlassBadge, GlassButton, GlassCard } from "@/components/glass";
 import type { Bootcamp } from "@/shared/types";
+import { getRoom } from "@/shared/rooms";
 
 interface Props {
   bootcamp: Bootcamp;
@@ -24,14 +25,6 @@ interface Props {
 }
 
 type Phase = "idle" | "approving" | "rejecting" | "feedback" | "done";
-
-const CATEGORY_LABEL: Record<string, string> = {
-  ai: "AI / GenAI",
-  data_science: "Data Science",
-  marketing: "Marketing",
-  finance: "Finance",
-  sales: "Sales / BD",
-};
 
 export function BootcampReviewCard({ bootcamp, instructorName }: Props) {
   const router = useRouter();
@@ -75,7 +68,7 @@ export function BootcampReviewCard({ bootcamp, instructorName }: Props) {
               <Clock size={10} /> In review
             </GlassBadge>
             <GlassBadge tone="brand">
-              {CATEGORY_LABEL[bootcamp.category] ?? bootcamp.skill}
+              {getRoom(bootcamp.category)?.label ?? bootcamp.skill}
             </GlassBadge>
             <span className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
               by {instructorName}

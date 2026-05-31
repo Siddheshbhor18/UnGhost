@@ -2,14 +2,7 @@ import { GlassBadge, GlassCard } from "@/components/glass";
 import { listBootcamps, getUserById } from "@/server/store";
 import { BootcampReviewCard } from "@/components/admin/BootcampReviewCard";
 import { AlertTriangle, Star, Users, Clock, IndianRupee } from "lucide-react";
-
-const CATEGORY_LABEL: Record<string, string> = {
-  ai: "AI / GenAI",
-  data_science: "Data Science",
-  marketing: "Marketing",
-  finance: "Finance",
-  sales: "Sales / BD",
-};
+import { getRoom } from "@/shared/rooms";
 
 export default async function BootcampsAdmin() {
   const all = await listBootcamps();
@@ -92,7 +85,7 @@ export default async function BootcampsAdmin() {
             <GlassCard key={b.id} interactive className="space-y-3">
               <div className="flex items-center justify-between">
                 <GlassBadge tone="warn">
-                  {CATEGORY_LABEL[b.category] ?? b.skill}
+                  {getRoom(b.category)?.label ?? b.skill}
                 </GlassBadge>
                 <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-semibold">
                   <Star size={12} fill="currentColor" /> {b.rating}

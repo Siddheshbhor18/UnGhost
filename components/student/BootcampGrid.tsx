@@ -2,18 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Brain, BarChart3, Megaphone, Wallet, Handshake, Star, Clock, Users, Video } from "lucide-react";
+import { Brain, Megaphone, Handshake, Rocket, Briefcase, Star, Clock, Users, Video } from "lucide-react";
 import clsx from "clsx";
 import { GlassBadge, GlassCard } from "@/components/glass";
 import type { Bootcamp, BootcampCategory } from "@/shared/types";
+import { ROOMS } from "@/shared/rooms";
+
+const ROOM_ICON: Record<BootcampCategory, React.ReactNode> = {
+  ai: <Brain size={14} />,
+  marketing: <Megaphone size={14} />,
+  sales: <Handshake size={14} />,
+  entrepreneurship: <Rocket size={14} />,
+  freelancing: <Briefcase size={14} />,
+};
 
 const CATS: { id: BootcampCategory | "all"; label: string; icon: React.ReactNode }[] = [
   { id: "all", label: "All", icon: null },
-  { id: "ai", label: "AI / GenAI", icon: <Brain size={14} /> },
-  { id: "data_science", label: "Data Science", icon: <BarChart3 size={14} /> },
-  { id: "marketing", label: "Marketing", icon: <Megaphone size={14} /> },
-  { id: "finance", label: "Finance", icon: <Wallet size={14} /> },
-  { id: "sales", label: "Sales", icon: <Handshake size={14} /> },
+  ...ROOMS.map((r) => ({ id: r.id, label: r.label, icon: ROOM_ICON[r.id] })),
 ];
 
 export function BootcampGrid({

@@ -24,14 +24,7 @@ import {
   getUserById,
   listBootcampsByInstructor,
 } from "@/server/store";
-
-const CATEGORY_LABEL: Record<string, string> = {
-  ai: "AI / GenAI",
-  data_science: "Data Science",
-  marketing: "Marketing",
-  finance: "Finance",
-  sales: "Sales / BD",
-};
+import { getRoom } from "@/shared/rooms";
 
 export default async function InstructorPublicProfile({
   params,
@@ -161,7 +154,7 @@ export default async function InstructorPublicProfile({
                 >
                   <div className="flex items-center justify-between mb-2">
                     <GlassBadge tone="warn">
-                      {CATEGORY_LABEL[b.category] ?? b.skill}
+                      {getRoom(b.category)?.label ?? b.skill}
                     </GlassBadge>
                     <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-semibold">
                       <Star size={11} fill="currentColor" /> {b.rating}

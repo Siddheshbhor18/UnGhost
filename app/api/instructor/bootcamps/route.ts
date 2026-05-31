@@ -7,16 +7,11 @@ import {
   listBootcampsByInstructor,
 } from "@/server/store";
 import type { Bootcamp } from "@/shared/types";
+import { ROOM_IDS } from "@/shared/rooms";
 
 export const runtime = "nodejs";
 
-const CATEGORIES: Bootcamp["category"][] = [
-  "ai",
-  "data_science",
-  "marketing",
-  "finance",
-  "sales",
-];
+const CATEGORIES = ROOM_IDS;
 
 export async function GET() {
   const session = await getServerSession(authOptions);
