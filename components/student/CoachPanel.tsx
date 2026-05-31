@@ -65,7 +65,8 @@ export function CoachPanel({ studentFirstName }: { studentFirstName: string }) {
       const replyText =
         typeof data === "string"
           ? data
-          : data.text ??
+          : data.message ??
+            data.text ??
             data.reply ??
             data.content ??
             "I'm still warming up — try again in a moment.";
