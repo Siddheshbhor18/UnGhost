@@ -5,8 +5,14 @@ import { ArrowLeft, GraduationCap } from "lucide-react";
 import { authOptions } from "@/server/auth";
 import { GlassNavbar, GlassBadge, GlassCard } from "@/components/glass";
 import { BackdropMesh, SectionLabel } from "@/components/ui";
-import { listBootcamps, getUserById, getUsersByIds } from "@/server/store";
+import {
+  listBootcamps,
+  getUserById,
+  getUsersByIds,
+  listRoomLecturesByRoom,
+} from "@/server/store";
 import { BootcampGrid } from "@/components/student/BootcampGrid";
+import { VideoPlayer } from "@/components/bootcamp/VideoPlayer";
 import { getRoom, isRoomId } from "@/shared/rooms";
 
 export default async function RoomHub({
@@ -18,7 +24,10 @@ export default async function RoomHub({
   const room = getRoom(params.room)!;
 
   const session = await getServerSession(authOptions);
-  const all = await listBootcamps();
+  const [all, lectures] = await Promise.all([
+    listBootcamps(),
+    listRoomLecturesByRoom(room.id),
+  ]);
   // Only surface live cohorts to students; drafts/in-review stay hidden.
   const bcs = all.filter(
     (b) =>
@@ -90,6 +99,38 @@ export default async function RoomHub({
             enrolledIds={enrolledIds}
             hideFilters
           />
+        )}
+
+        {lectures.length > 0 && (
+          <section className="mt-14">
+            <h2 className="font-display font-bold text-2xl text-neutral-950 mb-1 tracking-tight">
+              Guest lectures
+            </h2>
+            <p className="text-body-sm text-neutral-500 mb-6">
+              Talks from recruiters and operators working in {room.label}.
+            </p>
+            <div className="grid md:grid-cols-2 gap-6">
+              {lectures.map((lec) => (
+                <GlassCard key={lec.id} className="overflow-hidden !p-0">
+                  <VideoPlayer
+                    url={lec.videoUrl}
+                    posterUrl={lec.posterUrl}
+                    title={lec.title}
+                  />
+                  <div className="p-4">
+                    <h3 className="font-display font-bold text-base text-brand-ink leading-snug">
+                      {lec.title}
+                    </h3>
+                    {lec.description ? (
+                      <p className="text-sm text-brand-muted mt-1.5 line-clamp-3">
+                        {lec.description}
+                      </p>
+                    ) : null}
+                  </div>
+                </GlassCard>
+              ))}
+            </div>
+          </section>
         )}
       </div>
     </main>

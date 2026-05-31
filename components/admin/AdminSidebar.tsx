@@ -23,6 +23,7 @@ import {
   Handshake,
   Wallet,
   Radio,
+  Video,
 } from "lucide-react";
 import { Logo, GlassBadge } from "@/components/glass";
 
@@ -34,6 +35,7 @@ const NAV = [
   { href: "/admin/companies", label: "Companies", icon: Building2 },
   { href: "/admin/jobs", label: "Jobs", icon: Briefcase },
   { href: "/admin/bootcamps", label: "Bootcamps", icon: GraduationCap },
+  { href: "/admin/lectures", label: "Lectures", icon: Video },
   { href: "/admin/placements", label: "Placements", icon: Award },
   { href: "/admin/moderation", label: "Moderation", icon: ShieldAlert },
   { href: "/admin/financial", label: "Financial", icon: IndianRupee },
