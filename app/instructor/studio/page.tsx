@@ -10,6 +10,12 @@ import {
 } from "@/components/glass";
 import { listBootcampsByInstructor } from "@/server/store";
 import {
+  ROOMS,
+  getRoom,
+  isRoomId,
+  type BootcampCategory,
+} from "@/shared/rooms";
+import {
   Plus,
   Users as UsersIcon,
   Star,
@@ -18,25 +24,105 @@ import {
   CheckCircle2,
   Eye,
   Edit3,
+  Brain,
+  Megaphone,
+  Handshake,
+  Rocket,
+  Briefcase,
+  ArrowLeft,
+  ArrowRight,
 } from "lucide-react";
 
-export default async function ContentStudio() {
+const ROOM_ICON: Record<BootcampCategory, React.ReactNode> = {
+  ai: <Brain size={22} />,
+  marketing: <Megaphone size={22} />,
+  sales: <Handshake size={22} />,
+  entrepreneurship: <Rocket size={22} />,
+  freelancing: <Briefcase size={22} />,
+};
+
+export default async function ContentStudio({
+  searchParams,
+}: {
+  searchParams: { room?: string };
+}) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login?role=instructor");
   if (session.user.role !== "instructor") redirect("/");
 
   const all = await listBootcampsByInstructor(session.user.id);
-
-  // Real status splits — defaults to "published" on seed for backwards compat
   const statusOf = (s: string | undefined) => s ?? "published";
-  const drafts = all.filter((b) => statusOf(b.status) === "draft");
-  const inReview = all.filter((b) => statusOf(b.status) === "in_review");
-  const published = all.filter((b) => statusOf(b.status) === "published");
-  const archived = all.filter((b) => statusOf(b.status) === "archived");
-  const changesRequested = all.filter(
+
+  const roomParam = searchParams?.room;
+  const activeRoom: BootcampCategory | null =
+    roomParam && isRoomId(roomParam) ? roomParam : null;
+
+  // ── Room lobby ──────────────────────────────────────────────────────────
+  // No room selected → pick a room first. Keeps everything from piling into
+  // one giant list; each room opens its own scoped catalogue.
+  if (!activeRoom) {
+    const countByRoom = new Map<BootcampCategory, number>();
+    for (const b of all) {
+      countByRoom.set(b.category, (countByRoom.get(b.category) ?? 0) + 1);
+    }
+    return (
+      <main className="relative min-h-screen">
+        <BlobField />
+        <GlassNavbar />
+        <div className="mx-auto max-w-7xl px-4 pt-6 pb-16">
+          <div className="mb-8">
+            <GlassBadge tone="warn">Content Studio</GlassBadge>
+            <h1 className="font-display font-extrabold text-3xl md:text-4xl text-brand-ink mt-2">
+              Your rooms
+            </h1>
+            <p className="text-sm text-brand-muted mt-1">
+              Pick a room to manage its bootcamps. Each subject stays in its
+              own space.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {ROOMS.map((room) => {
+              const count = countByRoom.get(room.id) ?? 0;
+              return (
+                <Link key={room.id} href={`/instructor/studio?room=${room.id}`}>
+                  <GlassCard interactive className="h-full flex flex-col">
+                    <div className="flex items-start justify-between gap-2 mb-4">
+                      <span className="grid place-items-center w-12 h-12 rounded-2xl bg-brand-gradient text-white shadow-brand-glow">
+                        {ROOM_ICON[room.id]}
+                      </span>
+                      <GlassBadge tone={count > 0 ? "success" : "neutral"}>
+                        {count} {count === 1 ? "bootcamp" : "bootcamps"}
+                      </GlassBadge>
+                    </div>
+                    <h3 className="font-display font-bold text-xl text-brand-ink mb-1.5">
+                      {room.label}
+                    </h3>
+                    <p className="text-sm text-brand-muted leading-relaxed mb-4 flex-1">
+                      {room.blurb}
+                    </p>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-primary">
+                      Open room <ArrowRight size={15} />
+                    </span>
+                  </GlassCard>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // ── Room-scoped catalogue ───────────────────────────────────────────────
+  const room = getRoom(activeRoom)!;
+  const scoped = all.filter((b) => b.category === activeRoom);
+  const drafts = scoped.filter((b) => statusOf(b.status) === "draft");
+  const inReview = scoped.filter((b) => statusOf(b.status) === "in_review");
+  const published = scoped.filter((b) => statusOf(b.status) === "published");
+  const archived = scoped.filter((b) => statusOf(b.status) === "archived");
+  const changesRequested = scoped.filter(
     (b) => statusOf(b.status) === "changes_requested",
   );
-  // Show everything in the grid for now; filter chips are visual.
   const bcs = [...drafts, ...changesRequested, ...inReview, ...published];
 
   return (
@@ -45,17 +131,26 @@ export default async function ContentStudio() {
       <GlassNavbar />
 
       <div className="mx-auto max-w-7xl px-4 pt-6 pb-16">
+        <Link
+          href="/instructor/studio"
+          className="inline-flex items-center gap-1.5 text-sm text-brand-muted hover:text-brand-primary transition mb-5"
+        >
+          <ArrowLeft size={15} /> All rooms
+        </Link>
         <div className="flex items-end justify-between gap-4 flex-wrap mb-6">
           <div>
-            <GlassBadge tone="warn">Content Studio</GlassBadge>
+            <GlassBadge tone="warn">{room.label} room</GlassBadge>
             <h1 className="font-display font-extrabold text-3xl md:text-4xl text-brand-ink mt-2">
-              Your bootcamp catalogue
+              {room.label} bootcamps
             </h1>
             <p className="text-sm text-brand-muted mt-1">
               Drafts, in-review, published, archived. Click any card to open the editor.
             </p>
           </div>
-          <Link href="/instructor/studio/new" className="btn-brand">
+          <Link
+            href={`/instructor/studio/new?room=${room.id}`}
+            className="btn-brand"
+          >
             <Plus size={14} /> New bootcamp
           </Link>
         </div>
@@ -148,7 +243,7 @@ export default async function ContentStudio() {
 
           {/* Create card */}
           <Link
-            href="/instructor/studio/new"
+            href={`/instructor/studio/new?room=${room.id}`}
             className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-brand-primary/30 bg-white/30 backdrop-blur-sm p-8 hover:border-brand-primary hover:bg-white/50 transition group"
           >
             <span className="grid place-items-center w-12 h-12 rounded-xl bg-brand-gradient text-white shadow-brand-glow mb-3 group-hover:scale-110 transition">
@@ -170,7 +265,10 @@ export default async function ContentStudio() {
               Submit your first bootcamp for Admin review — usually approved within 48
               hours.
             </p>
-            <Link href="/instructor/studio/new" className="btn-brand">
+            <Link
+              href={`/instructor/studio/new?room=${room.id}`}
+              className="btn-brand"
+            >
               <Plus size={14} /> Create bootcamp
             </Link>
           </GlassCard>
