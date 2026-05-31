@@ -54,6 +54,7 @@ const NAV_BY_ROLE: Record<string, NavItem[]> = {
     { href: "/recruiter/messages", label: "Messages" },
     { href: "/recruiter/analytics", label: "Analytics" },
     { href: "/recruiter/deploy", label: "Post Job" },
+    { href: "/recruiter/lectures", label: "Lectures" },
   ],
 };
 
