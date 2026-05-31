@@ -20,6 +20,7 @@
 // Why no SDK: Groq exposes the standard OpenAI Chat Completions REST
 // shape. Native fetch keeps the bundle small + avoids SDK churn.
 
+import { z, type ZodType } from "zod";
 import { geminiAdapter } from "./gemini";
 import type { AIAdapter } from "./index";
 
@@ -33,11 +34,99 @@ interface GroqResponse {
   choices?: GroqChoice[];
 }
 
+// ── Output validation/clamping ──────────────────────────────────────────
+// llama-3.1-8b is JSON-mode but NOT schema-constrained, so it can return
+// out-of-range numbers, string-typed numbers, or an unexpected enum value.
+// These flow straight into scoring/grading gates if unchecked. Every method
+// below parses the raw JSON through one of these schemas; on a hard mismatch
+// the parse throws and we fall through to the structured-output gemini
+// adapter (then to the deterministic mock).
+//
+// `int100` coerces strings → number and clamps to an integer in [0,100].
+const int100 = z
+  .coerce.number()
+  .transform((n) => Math.max(0, Math.min(100, Math.round(n))));
+const nonEmptyStr = z.coerce.string();
+const strArray = z.array(z.coerce.string()).default([]);
+
+const MatchSchema = z.object({
+  matchPct: int100,
+  reasoning: nonEmptyStr,
+});
+const WhyMatchSchema = z.object({
+  summary: nonEmptyStr,
+  strengths: strArray,
+  risks: strArray,
+});
+const GradeSchema = z.object({
+  score: int100,
+  notes: nonEmptyStr,
+  verdict: z.enum(["advance", "reject", "borderline"]).catch("borderline"),
+  depthSignal: int100,
+});
+const ChatSchema = z.object({
+  message: nonEmptyStr,
+  suggestions: strArray,
+});
+const DraftSchema = z.object({ body: nonEmptyStr });
+const ResumeSchema = z.object({
+  alias: nonEmptyStr,
+  contactEmail: z.coerce.string().default(""),
+  contactPhone: z.coerce.string().optional(),
+  city: z.coerce.string().optional(),
+  skills: strArray,
+  history: z
+    .array(
+      z.object({
+        title: z.coerce.string().default(""),
+        company: z.coerce.string().default(""),
+        startDate: z.coerce.string().default(""),
+        endDate: z.coerce.string().default(""),
+        impact: z.coerce.string().default(""),
+      }),
+    )
+    .default([]),
+});
+const ParseJDSchema = z
+  .object({
+    title: nonEmptyStr,
+    skills: strArray,
+    gauntletPrompt: nonEmptyStr,
+    description: nonEmptyStr,
+    salaryMin: z.coerce.number(),
+    salaryMax: z.coerce.number(),
+  })
+  .transform((d) => {
+    // Clamp to a sane INR LPA band and keep min <= max.
+    const clamp = (n: number) => Math.max(1, Math.min(200, Math.round(n)));
+    let salaryMin = clamp(d.salaryMin);
+    let salaryMax = clamp(d.salaryMax);
+    if (salaryMin > salaryMax) [salaryMin, salaryMax] = [salaryMax, salaryMin];
+    return { ...d, salaryMin, salaryMax };
+  });
+const AssignmentSchema = z.object({
+  totalScore: int100,
+  perCriterion: z
+    .array(
+      z.object({
+        key: z.coerce.string(),
+        score: int100,
+        feedback: z.coerce.string().default(""),
+      }),
+    )
+    .default([]),
+  strengths: strArray,
+  improvements: strArray,
+  plagiarismFlag: z.coerce.boolean().catch(false),
+  aiGeneratedLikelihood: int100,
+});
+
 async function groqJSON<T>(
   system: string,
   user: string,
   shapeHint: string,
   maxTokens = 1200,
+  schema?: ZodType<T>,
 ): Promise<T> {
   const res = await fetch(ENDPOINT, {
     method: "POST",
@@ -63,7 +152,10 @@ async function groqJSON<T>(
   const data = (await res.json()) as GroqResponse;
   const text = data?.choices?.[0]?.message?.content;
   if (!text) throw new Error("empty groq response");
-  return JSON.parse(text) as T;
+  const parsed = JSON.parse(text);
+  // Validate/clamp when a schema is supplied; a hard mismatch throws and the
+  // caller falls through to the gemini → mock chain.
+  return schema ? schema.parse(parsed) : (parsed as T);
 }
 
 export const groqAdapter: AIAdapter = {
@@ -73,6 +165,8 @@ export const groqAdapter: AIAdapter = {
         "You are a resume parser. Extract precisely. Do not invent facts.",
         `Parse this resume:\n\n${rawText.slice(0, 8000)}`,
         `{ "alias": string, "contactEmail": string, "contactPhone"?: string, "city"?: string, "skills": string[], "history": [{ "title": string, "company": string, "startDate": string, "endDate": string, "impact": string }] }`,
+        1200,
+        ResumeSchema,
       );
     } catch {
       return geminiAdapter.parseResume(rawText);
@@ -86,6 +180,7 @@ export const groqAdapter: AIAdapter = {
         `Candidate skills: ${profile.skills.join(", ")}\nJob skills: ${job.skills.join(", ")}\nJob title: ${job.title}`,
         `{ "matchPct": integer (0-100), "reasoning": one-sentence string }`,
         400,
+        MatchSchema,
       );
     } catch {
       return geminiAdapter.matchScore(profile, job);
@@ -99,6 +194,7 @@ export const groqAdapter: AIAdapter = {
         `Candidate: skills=${profile.skills.join(", ")}, verified=${profile.verifiedSkills.join(", ")}, trajectory=${profile.trajectory}.\nJob: ${job.title}, skills=${job.skills.join(", ")}.`,
         `{ "summary": 3-sentence string, "strengths": string[2-4], "risks": string[2-3] }`,
         700,
+        WhyMatchSchema,
       );
     } catch {
       return geminiAdapter.whyMatch(profile, job);
@@ -119,11 +215,12 @@ export const groqAdapter: AIAdapter = {
           lines.push(`  ${m.role}: ${m.body}`);
         }
       }
-      const result = await groqJSON<{ body: string }>(
+      const result = await groqJSON(
         sys,
         lines.join("\n"),
         `{ "body": string under 60 words }`,
         400,
+        DraftSchema,
       );
       return result.body;
     } catch {
@@ -138,6 +235,7 @@ export const groqAdapter: AIAdapter = {
         `Job: ${job.title}\nPrompt: ${prompt}\n\nCandidate response:\n${response}`,
         `{ "score": integer (0-100), "notes": string, "verdict": "advance"|"reject"|"borderline", "depthSignal": integer (0-100) }`,
         600,
+        GradeSchema,
       );
     } catch {
       return geminiAdapter.gradeAssessment(prompt, response, job);
@@ -159,6 +257,7 @@ export const groqAdapter: AIAdapter = {
         transcript,
         `{ "message": string under 80 words, "suggestions": string[2-3] }`,
         800,
+        ChatSchema,
       );
     } catch {
       return geminiAdapter.chatCoach(history, profile);
@@ -172,6 +271,7 @@ export const groqAdapter: AIAdapter = {
         jdText,
         `{ "title": string, "skills": string[], "gauntletPrompt": 2-3 sentence string, "description": string, "salaryMin": integer (5-200), "salaryMax": integer (5-200) }`,
         900,
+        ParseJDSchema,
       );
     } catch {
       return geminiAdapter.parseJD(jdText);
@@ -191,6 +291,7 @@ export const groqAdapter: AIAdapter = {
         transcript,
         `{ "message": string under 80 words, "suggestions": string[2-3] }`,
         800,
+        ChatSchema,
       );
     } catch {
       return geminiAdapter.chatTutor(history, ctx);
@@ -214,6 +315,7 @@ export const groqAdapter: AIAdapter = {
           .join("\n")}`,
         `{ "totalScore": integer (0-100), "perCriterion": [{ "key": string, "score": integer (0-100), "feedback": string }], "strengths": string[<=4], "improvements": string[<=4], "plagiarismFlag": boolean, "aiGeneratedLikelihood": integer (0-100) }`,
         1500,
+        AssignmentSchema,
       );
     } catch {
       return geminiAdapter.gradeAssignment(submission, rubric);
