@@ -9,11 +9,11 @@ import {
   upsertBootcampProgress,
   markSkillVerified,
 } from "@/server/store";
-import type {
-  BootcampProgress,
-  StudentProfile,
-} from "@/shared/types";
-import type { SkillCheckQuestion } from "@/server/integrations/ai";
+import type { BootcampProgress } from "@/shared/types";
+import {
+  buildSkillCheckQuestions,
+  toPublicSkillCheckQuestions,
+} from "@/server/lib/skillcheck";
 
 export const runtime = "nodejs";
 
@@ -22,8 +22,40 @@ const MAX_ATTEMPTS = 3;
 
 interface Body {
   videoId: string;
-  questions: SkillCheckQuestion[];
+  // `questions` from the client is intentionally IGNORED — the answer key is
+  // rebuilt server-side so a tampered request can't forge a pass.
   answers: Array<{ questionId: string; answer: string | number }>;
+}
+
+/** GET — sanitized questions (no answer key) for the client to render. */
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } },
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || session.user.role !== "student") {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const videoId = new URL(req.url).searchParams.get("videoId");
+  if (!videoId) {
+    return NextResponse.json({ error: "videoId required" }, { status: 400 });
+  }
+  const bootcamp = await getBootcampById(params.id);
+  if (!bootcamp) {
+    return NextResponse.json({ error: "bootcamp not found" }, { status: 404 });
+  }
+  if (!bootcamp.enrolledStudentIds.includes(session.user.id)) {
+    return NextResponse.json({ error: "not enrolled" }, { status: 403 });
+  }
+  const video = bootcamp.videos.find((v) => v.id === videoId);
+  if (!video) {
+    return NextResponse.json({ error: "video not found" }, { status: 404 });
+  }
+  return NextResponse.json({
+    questions: toPublicSkillCheckQuestions(
+      buildSkillCheckQuestions(video, bootcamp),
+    ),
+  });
 }
 
 export async function POST(
@@ -38,7 +70,7 @@ export async function POST(
   }
   const studentId = session.user.id;
   const body = (await req.json().catch(() => null)) as Body | null;
-  if (!body?.videoId || !Array.isArray(body.questions) || !Array.isArray(body.answers)) {
+  if (!body?.videoId || !Array.isArray(body.answers)) {
     return NextResponse.json({ error: "invalid payload" }, { status: 400 });
   }
 
@@ -50,6 +82,14 @@ export async function POST(
   if (!bootcamp.enrolledStudentIds.includes(studentId)) {
     return NextResponse.json({ error: "not enrolled" }, { status: 403 });
   }
+  const video = bootcamp.videos.find((v) => v.id === body.videoId);
+  if (!video) {
+    return NextResponse.json({ error: "video not found" }, { status: 404 });
+  }
+  // Authoritative questions (with answer key) rebuilt server-side. The
+  // client's submitted answers are graded against THESE, never against any
+  // client-supplied question set.
+  const questions = buildSkillCheckQuestions(video, bootcamp);
 
   // Cooldown / attempt check
   const existing =
@@ -62,8 +102,8 @@ export async function POST(
     );
   }
 
-  // Grade
-  const grade = await getAI().gradeSkillCheck(body.answers, body.questions);
+  // Grade against the authoritative server-side questions.
+  const grade = await getAI().gradeSkillCheck(body.answers, questions);
 
   // Persist progress
   const nextProgress: BootcampProgress = {
@@ -105,6 +145,3 @@ function initialProgress(bootcampId: string): BootcampProgress {
     verifiedBadgeIssued: false,
   };
 }
-
-// Allow re-export for use by other modules typing.
-export type _StudentProfile = StudentProfile;

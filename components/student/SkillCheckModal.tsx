@@ -16,7 +16,6 @@ interface Props {
   bootcampId: string;
   videoId: string;
   videoTitle: string;
-  questions: SkillCheckQuestion[];
   onClose: () => void;
   onPassed: () => void;
 }
@@ -28,10 +27,13 @@ export function SkillCheckModal({
   bootcampId,
   videoId,
   videoTitle,
-  questions,
   onClose,
   onPassed,
 }: Props) {
+  // Questions (without the answer key) are fetched from the server — the
+  // browser never receives correctIdx/rubric, and grading is done against
+  // the server's own copy.
+  const [questions, setQuestions] = useState<SkillCheckQuestion[] | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(TIMER_SEC);
   const [answers, setAnswers] = useState<
     Record<string, string | number | undefined>
@@ -39,6 +41,23 @@ export function SkillCheckModal({
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<SkillCheckGrade | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(
+      `/api/student/bootcamps/${bootcampId}/skill-check?videoId=${encodeURIComponent(videoId)}`,
+    )
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && Array.isArray(d.questions)) setQuestions(d.questions);
+      })
+      .catch(() => {
+        if (!cancelled) setQuestions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bootcampId, videoId]);
 
   const remaining = useMemo(() => {
     const m = Math.floor(secondsLeft / 60);
@@ -58,12 +77,11 @@ export function SkillCheckModal({
   }, [secondsLeft, result]);
 
   async function submit() {
-    if (busy) return;
+    if (busy || !questions) return;
     setBusy(true);
     try {
       const payload = {
         videoId,
-        questions,
         answers: questions
           .map((q) => ({
             questionId: q.id,
@@ -182,6 +200,17 @@ export function SkillCheckModal({
             </GlassButton>
           )}
         </div>
+      </Backdrop>
+    );
+  }
+
+  // ── Loading questions ─────────────────────────────────────────────────
+  if (!questions) {
+    return (
+      <Backdrop onClose={onClose}>
+        <p className="text-center text-sm text-brand-muted py-10">
+          Loading verification…
+        </p>
       </Backdrop>
     );
   }

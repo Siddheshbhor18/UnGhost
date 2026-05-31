@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -20,8 +20,7 @@ import { GlassBadge, GlassButton, GlassCard } from "@/components/glass";
 import { TutorPanel } from "@/components/student/TutorPanel";
 import { SkillCheckModal } from "@/components/student/SkillCheckModal";
 import { VideoPlayer } from "@/components/bootcamp/VideoPlayer";
-import type { Bootcamp, BootcampProgress, BootcampVideo } from "@/shared/types";
-import type { SkillCheckQuestion } from "@/shared/types/ai";
+import type { Bootcamp, BootcampProgress } from "@/shared/types";
 
 interface UpcomingLive {
   id: string;
@@ -40,61 +39,6 @@ interface Props {
 }
 
 type ContentTab = "overview" | "transcript" | "notes";
-
-/** Build a deterministic 5-question skill check for a given video. */
-function buildQuestions(video: BootcampVideo, bootcamp: Bootcamp): SkillCheckQuestion[] {
-  const skill = bootcamp.skill;
-  return [
-    {
-      id: `${video.id}-q1`,
-      prompt: `Which of these BEST captures the core idea covered in "${video.title}"?`,
-      type: "mcq",
-      options: [
-        `${skill} prioritises precision over coverage.`,
-        `${skill} is mostly a marketing concept with little technical depth.`,
-        `${skill} only matters in academic settings.`,
-        `${skill} replaces the need for testing.`,
-      ],
-      correctIdx: 0,
-    },
-    {
-      id: `${video.id}-q2`,
-      prompt: `In one short answer: name one trade-off you'd accept when applying ${skill} in production.`,
-      type: "short",
-      rubric: `Identifies a real trade-off such as latency vs accuracy, cost vs depth, or coverage vs precision. References ${skill} explicitly.`,
-    },
-    {
-      id: `${video.id}-q3`,
-      prompt: `Which scenario is the WORST fit for ${skill}?`,
-      type: "mcq",
-      options: [
-        `A green-field problem with no prior labels.`,
-        `A high-stakes production workflow with strict latency budgets where accuracy doesn't matter.`,
-        `A research prototype exploring a new domain.`,
-        `An internal tool with patient users.`,
-      ],
-      correctIdx: 1,
-    },
-    {
-      id: `${video.id}-q4`,
-      prompt: video.verifyPrompt ?? `Describe how you'd validate that your ${skill} implementation is working before shipping.`,
-      type: "short",
-      rubric: `Mentions a validation strategy: holdout test, shadow rollout, manual audit, or measurable success metric. Specific to ${skill}.`,
-    },
-    {
-      id: `${video.id}-q5`,
-      prompt: "Which is TRUE about the verification gate after this module?",
-      type: "mcq",
-      options: [
-        "70% pass · 3 attempts · 30-min cooldown.",
-        "100% pass · single attempt · no retries.",
-        "50% pass · unlimited attempts.",
-        "No verification — videos alone earn the badge.",
-      ],
-      correctIdx: 0,
-    },
-  ];
-}
 
 export function LearnInterface({
   bootcamp,
@@ -169,11 +113,6 @@ export function LearnInterface({
   const totalLessons = bootcamp.videos.length;
   const completedCount = progress.skillChecksPassed.length;
   const pct = Math.round((completedCount / Math.max(1, totalLessons)) * 100);
-
-  const questions = useMemo(
-    () => (activeVideo ? buildQuestions(activeVideo, bootcamp) : []),
-    [activeVideo, bootcamp],
-  );
 
   return (
     <div className="grid lg:grid-cols-12 gap-5">
@@ -551,7 +490,6 @@ export function LearnInterface({
           bootcampId={bootcamp.id}
           videoId={activeVideo.id}
           videoTitle={activeVideo.title}
-          questions={questions}
           onClose={() => setSkillCheckOpen(false)}
           onPassed={() => {
             setSkillCheckOpen(false);
