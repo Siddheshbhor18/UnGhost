@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/shared/Providers";
 import { RefCapture } from "@/components/attribution/RefCapture";
 import { DemoModeBadge } from "@/components/glass";
+import { EmailVerifyBanner } from "@/components/auth/EmailVerifyBanner";
 
 /**
  * Inter — single instance, exposes both `--font-inter` (body) and
@@ -77,6 +78,7 @@ export default function RootLayout({
     >
       <body>
         <Providers>{children}</Providers>
+        <EmailVerifyBanner />
         <RefCapture />
         <DemoModeBadge />
       </body>
