@@ -129,6 +129,7 @@ export async function POST(
         gradedAt: now,
       },
       plagiarismFlag: grade.plagiarismFlag,
+      aiGeneratedLikelihood: grade.aiGeneratedLikelihood,
     },
   };
   await upsertBootcampProgress(studentId, nextProgress);

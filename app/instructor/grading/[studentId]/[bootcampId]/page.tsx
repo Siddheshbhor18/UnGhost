@@ -83,6 +83,19 @@ export default async function InstructorGradeDetailPage({
               {a.plagiarismFlag ? (
                 <GlassBadge tone="danger">Plagiarism flagged</GlassBadge>
               ) : null}
+              {typeof a.aiGeneratedLikelihood === "number" ? (
+                <GlassBadge
+                  tone={
+                    a.aiGeneratedLikelihood >= 70
+                      ? "danger"
+                      : a.aiGeneratedLikelihood >= 40
+                      ? "warn"
+                      : "neutral"
+                  }
+                >
+                  AI-written: {a.aiGeneratedLikelihood}%
+                </GlassBadge>
+              ) : null}
               {grade?.reviewedAt ? (
                 <GlassBadge tone="success">Already reviewed</GlassBadge>
               ) : (

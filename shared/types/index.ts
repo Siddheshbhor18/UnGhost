@@ -66,6 +66,9 @@ export interface BootcampProgress {
     };
     leaderboardRank?: number;
     plagiarismFlag?: boolean;
+    /** AI's estimate (0-100) that the submission was machine-generated.
+     *  Surfaced to instructors during grading review. */
+    aiGeneratedLikelihood?: number;
   };
   /** verified-skill badge issued only after assignment.submittedAt */
   verifiedBadgeIssued: boolean;
