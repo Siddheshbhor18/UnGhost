@@ -88,7 +88,7 @@ export function GlassNavbar() {
   return (
     <header className="sticky top-0 z-40">
       <div className="mx-auto max-w-7xl px-4 pt-4">
-        <nav className="glass-panel flex items-center justify-between px-5 py-3">
+        <nav className="glass-panel flex items-center justify-between gap-2 px-4 sm:px-5 py-3">
           <Link href={homeHref} className="flex items-center gap-2 group">
             <span className="grid place-items-center w-9 h-9 rounded-xl bg-brand-gradient shadow-brand-glow transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-0.5 group-hover:rotate-[-4deg] motion-reduce:transition-none motion-reduce:transform-none">
               <img
@@ -137,24 +137,42 @@ export function GlassNavbar() {
             })}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {session ? (
               <>
                 <NotificationBell />
                 <span className="hidden sm:inline text-xs font-medium text-brand-muted">
                   {session.user?.name}
                 </span>
-                <GlassButton variant="glass" size="sm" onClick={() => signOut({ callbackUrl: "/" })}>
+                <GlassButton
+                  variant="glass"
+                  size="sm"
+                  className="whitespace-nowrap"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                >
                   Sign out
                 </GlassButton>
               </>
             ) : (
               <>
-                <Link href="/login">
-                  <GlassButton variant="glass" size="sm">Sign in</GlassButton>
+                {/* Phones: a compact text link (the button chrome is what
+                    overflows the pill beside the logo at ≤375px). sm+: the
+                    full glass button. */}
+                <Link
+                  href="/login"
+                  className="sm:hidden whitespace-nowrap px-1.5 py-1.5 text-sm font-semibold text-brand-ink"
+                >
+                  Sign in
+                </Link>
+                <Link href="/login" className="hidden sm:block">
+                  <GlassButton variant="glass" size="sm" className="whitespace-nowrap">
+                    Sign in
+                  </GlassButton>
                 </Link>
                 <Link href="/signup">
-                  <GlassButton variant="brand" size="sm">Get started</GlassButton>
+                  <GlassButton variant="brand" size="sm" className="whitespace-nowrap">
+                    Get started
+                  </GlassButton>
                 </Link>
               </>
             )}
