@@ -129,7 +129,13 @@ function LoginInner() {
       email.split("@")[0].split(/[._-]/)[0] ??
       undefined;
     setDoorName(firstName);
-    setDest(nextParam ?? HREF_BY_ROLE[role]);
+    // Route by the account's REAL role from the fresh session — not the
+    // role pill the visitor happened to have selected. The picker is a
+    // cosmetic filter (and a demo-login shortcut); trusting it here sent a
+    // student who clicked "Recruiter" to /recruiter/command, only to be
+    // bounced by the area guard. Fall back to the picker, then student.
+    const realRole = (fresh?.user as any)?.role as Role | undefined;
+    setDest(nextParam ?? HREF_BY_ROLE[realRole ?? role]);
     setPhase("entering");
     setTimeout(() => setPlayDoor(true), reduced ? 0 : HERO_TO_OVERLAY_MS);
   }
