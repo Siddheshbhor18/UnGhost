@@ -8,6 +8,7 @@ import * as React from "react";
 import { connectMongo } from "@/server/db/mongo";
 import { cached, invalidate } from "@/server/lib/cache";
 import { bumpSessionEpoch } from "@/server/auth/session-epoch";
+import { isFreeEmailDomain } from "@/server/lib/email-domain";
 
 // `React.cache` is RSC-only. In unit tests / non-RSC runtimes the symbol is
 // undefined, so fall through with a no-op identity wrapper. Either way the
@@ -4167,6 +4168,15 @@ export async function upsertOAuthUser(input: {
   name?: string;
   avatarUrl?: string;
   oauthProvider: "google" | "linkedin";
+  /**
+   * Role the visitor picked on the signup screen before redirecting to the
+   * provider (threaded through a short-lived cookie). ONLY applied when this
+   * call creates a brand-new account — existing rows never change role here.
+   * Recruiter is additionally gated to a work-email domain, mirroring the
+   * credentials-signup guard; a free/personal domain silently falls back to
+   * student. Admin/instructor are never self-assignable via OAuth.
+   */
+  requestedRole?: Role;
 }): Promise<User> {
   await db();
   const emailLower = input.email.trim().toLowerCase();
@@ -4181,9 +4191,19 @@ export async function upsertOAuthUser(input: {
     return unwrap(existing as unknown as User) as User;
   }
 
+  // Resolve the role for the NEW account. Default student. Honour an explicit
+  // recruiter intent only when the OAuth email is on a work domain — a Google
+  // Workspace account on a company domain is a legitimate recruiter, a
+  // personal gmail is not. Anything else (admin/instructor) is ignored.
+  let newRole: Role = "student";
+  if (input.requestedRole === "recruiter" && !isFreeEmailDomain(emailLower)) {
+    newRole = "recruiter";
+  }
+
   const { randomUUID } = await import("crypto");
   const now = new Date().toISOString();
-  const id = `usr_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  const idPrefix = newRole === "recruiter" ? "rec_" : "usr_";
+  const id = `${idPrefix}${randomUUID().replace(/-/g, "").slice(0, 16)}`;
   const fallbackName = emailLower.split("@")[0] ?? "user";
   const displayName = input.name?.trim() || fallbackName;
 
@@ -4194,7 +4214,7 @@ export async function upsertOAuthUser(input: {
     // can use /forgot-password to set one later, which proves email ownership
     // via the same provider that signed them in.
     passwordHash: "",
-    role: "student",
+    role: newRole,
     name: displayName,
     avatarUrl: input.avatarUrl,
     profile: {

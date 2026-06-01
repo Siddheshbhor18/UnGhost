@@ -360,7 +360,11 @@ export function SignupWizard() {
                 </span>
                 <span className="h-px bg-brand-ink/10 flex-1" />
               </div>
-              <OAuthButtons callbackUrl="/dashboard" onError={setErr} />
+              <OAuthButtons
+                callbackUrl={HREF_BY_ROLE_SIGNUP[role] ?? "/dashboard"}
+                intentRole={role === "recruiter" ? "recruiter" : "student"}
+                onError={setErr}
+              />
             </>
           ) : null}
 

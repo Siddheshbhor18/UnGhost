@@ -227,12 +227,30 @@ export const authOptions: AuthOptions = {
       const email = user?.email?.trim();
       if (!email) return false;
 
+      // Role intent threaded from the signup screen via a short-lived,
+      // first-party cookie set just before the provider redirect. Only ever
+      // applied to a BRAND-NEW account (upsertOAuthUser ignores it for
+      // existing rows) and recruiter is re-gated to a work-email domain there.
+      // Best-effort: any read failure falls back to the default student role,
+      // so this can never regress the prior behaviour.
+      let requestedRole: Role | undefined;
+      try {
+        const { cookies } = await import("next/headers");
+        const raw = cookies().get("ug_oauth_role")?.value;
+        if (raw === "recruiter" || raw === "student") {
+          requestedRole = raw;
+        }
+      } catch {
+        /* cookie unreadable in this context — fall back to student default */
+      }
+
       try {
         const mongoUser = await upsertOAuthUser({
           email,
           name: user.name ?? undefined,
           avatarUrl: user.image ?? undefined,
           oauthProvider: provider,
+          requestedRole,
         });
         // Mutate the user object so jwt({user}) picks these up on first signin.
         (user as any).id = mongoUser.id;

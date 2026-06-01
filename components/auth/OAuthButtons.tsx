@@ -19,14 +19,26 @@ interface Props {
   onError?: (msg: string) => void;
   /** When true, render only icon-circle version (tight layouts). */
   compact?: boolean;
+  /**
+   * Role the visitor picked on the signup screen. Stashed in a short-lived
+   * first-party cookie just before the provider redirect so the server-side
+   * `signIn` callback can stamp it onto a brand-new OAuth account. Omit on the
+   * LOGIN screen — login never changes an existing account's role.
+   */
+  intentRole?: "student" | "recruiter";
 }
 
-export function OAuthButtons({ callbackUrl, onError, compact }: Props) {
+export function OAuthButtons({ callbackUrl, onError, compact, intentRole }: Props) {
   const reduced = useReducedMotion();
   const hoverProps = reduced ? {} : { whileHover: { scale: 1.015 }, whileTap: { scale: 0.985 } };
 
   async function go() {
     try {
+      // Stash the chosen role for the OAuth round-trip. 5-min TTL, Lax so it
+      // survives the provider redirect back to us, scoped to the whole site.
+      if (intentRole) {
+        document.cookie = `ug_oauth_role=${intentRole}; path=/; max-age=300; samesite=lax`;
+      }
       await signIn("google", callbackUrl ? { callbackUrl } : undefined);
     } catch {
       onError?.("Google OAuth not configured. Use the email form for now.");
