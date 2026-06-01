@@ -23,6 +23,11 @@ export interface RoleOption {
   label: string;
   icon: React.ReactNode;
   demoEmail?: string;
+  /** The literal account type ("Student" / "Recruiter"), shown as the card
+   *  eyebrow so the user is never guessing which account they're creating. */
+  roleWord?: string;
+  /** One-line clarifier shown under the card title (cards variant only). */
+  desc?: string;
 }
 
 // Demo "Try as…" credentials are dev-only. In a production build NODE_ENV is
@@ -39,8 +44,20 @@ const DEFAULT_FOUR: RoleOption[] = [
 ];
 
 const SIGNUP_TWO: RoleOption[] = [
-  { id: "student", label: "Find a job", icon: <User2 size={16} /> },
-  { id: "recruiter", label: "Hire talent", icon: <Briefcase size={16} /> },
+  {
+    id: "student",
+    label: "Find a job",
+    roleWord: "Student",
+    desc: "Apply to jobs and get a real reply.",
+    icon: <User2 size={16} />,
+  },
+  {
+    id: "recruiter",
+    label: "Hire talent",
+    roleWord: "Recruiter",
+    desc: "Post jobs · needs a work email.",
+    icon: <Briefcase size={16} />,
+  },
 ];
 
 interface Props {
@@ -91,11 +108,16 @@ export function RolePicker({ value, onChange, variant = "pills", roles }: Props)
                   )}
                 >
                   {r.icon}
-                  Role
+                  {r.roleWord ?? "Role"}
                 </span>
                 <p className="font-display font-bold text-brand-ink mt-1 text-sm">
                   {r.label}
                 </p>
+                {r.desc ? (
+                  <p className="text-[11px] text-brand-muted mt-0.5 leading-snug">
+                    {r.desc}
+                  </p>
+                ) : null}
               </button>
             );
           })}
