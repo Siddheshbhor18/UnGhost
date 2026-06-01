@@ -22,6 +22,7 @@
  * way under the precision threshold where bucket-vs-window matters.
  */
 import { redis } from "@/server/db/redis";
+import { clientIp as trustedClientIp } from "@/server/lib/client-ip";
 
 export interface RateLimitOutcome {
   /** false → request must be blocked with 429. */
@@ -69,7 +70,6 @@ export async function enforceRateLimit({
  * to the same bucket — fail-closed for shared NATs is fine at v1).
  */
 export function clientIp(req: Request): string {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]?.trim() || "unknown";
-  return req.headers.get("x-real-ip") || "unknown";
+  // Delegate to the shared trusted extractor (prefers non-spoofable x-real-ip).
+  return trustedClientIp(req, "unknown");
 }

@@ -8,21 +8,26 @@ import {
 } from "@/server/store";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { rateLimit } from "@/server/lib/rate-limit";
+import { clientIpFromHeaders } from "@/server/lib/client-ip";
 import { logger } from "@/server/lib/logger";
 import type { Role } from "@/shared/types";
 
 /**
  * Pull the caller IP out of the NextAuth request object. NextAuth hands
  * `authorize` a trimmed req with a plain `headers` record (not a web
- * `Headers`), so we read the proxy headers directly. Falls back to "anon"
+ * `Headers`), so we read the proxy headers directly. Prefers the trusted,
+ * non-spoofable `x-real-ip` (see client-ip.ts) — never the client-controlled
+ * leftmost `x-forwarded-for` hop, which would let an attacker rotate the
+ * header to bypass the login brute-force throttle below. Falls back to "anon"
  * so the limiter still buckets header-less callers together.
  */
 function ipFromAuthReq(req: unknown): string {
   const headers = (req as { headers?: Record<string, string> } | undefined)
     ?.headers;
-  const fwd = headers?.["x-forwarded-for"];
-  if (fwd) return fwd.split(",")[0].trim();
-  return headers?.["x-real-ip"] ?? "anon";
+  return clientIpFromHeaders(
+    headers?.["x-real-ip"],
+    headers?.["x-forwarded-for"],
+  );
 }
 
 /**

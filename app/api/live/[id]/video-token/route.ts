@@ -23,6 +23,7 @@ import {
   rateLimitResponse,
   identifierFromRequest,
 } from "@/server/lib/rate-limit";
+import { clientIp } from "@/server/lib/client-ip";
 
 export const runtime = "nodejs";
 
@@ -91,10 +92,7 @@ export async function GET(req: Request, { params }: Ctx) {
   }
 
   // ── Audit log ─────────────────────────────────────────────────────
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown";
+  const ip = clientIp(req, "unknown");
 
   // Fire-and-forget — don't block response on audit write
   void AuditLogModel.create({

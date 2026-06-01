@@ -17,6 +17,7 @@
  */
 import { NextResponse } from "next/server";
 import { redis } from "@/server/db/redis";
+import { clientIp } from "@/server/lib/client-ip";
 
 export interface RateLimitOptions {
   /** Number of requests allowed in the window. */
@@ -73,9 +74,7 @@ export function identifierFromRequest(
   userId?: string,
 ): string {
   if (userId) return `u:${userId}`;
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return `ip:${fwd.split(",")[0].trim()}`;
-  const real = req.headers.get("x-real-ip");
-  if (real) return `ip:${real}`;
-  return "ip:anon";
+  // Trusted IP only — prefers the proxy-set, non-spoofable x-real-ip so a
+  // client can't rotate x-forwarded-for to escape an IP-keyed bucket.
+  return `ip:${clientIp(req)}`;
 }
