@@ -31,7 +31,9 @@ export default function VerifyEmailPage({ params }: Props) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/auth/verify-email/${params.token}`);
+        const res = await fetch(`/api/auth/verify-email/${params.token}`, {
+          method: "POST",
+        });
         const data = (await res.json()) as {
           ok?: boolean;
           email?: string;

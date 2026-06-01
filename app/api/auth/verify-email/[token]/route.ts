@@ -3,6 +3,7 @@ import { consumeEmailVerifyToken } from "@/server/auth/email-verify-token";
 import { markEmailVerified, writeAuditLog, getUserById } from "@/server/store";
 import { withApiErrorTracking } from "@/server/lib/api-error";
 import { withRateLimit } from "@/server/lib/with-rate-limit";
+import { requireSameOrigin } from "@/server/lib/csrf";
 
 export const runtime = "nodejs";
 
@@ -11,16 +12,25 @@ interface Ctx {
 }
 
 /**
- * GET /api/auth/verify-email/[token]
+ * POST /api/auth/verify-email/[token]
  *
  * One-shot consume: looks up token in Redis, flips emailVerified=true.
- * Returns JSON (the /verify-email/[token] page calls this on mount). Page
+ * Returns JSON (the /verify-email/[token] page POSTs to it on mount). Page
  * decides what to render based on `ok` flag.
+ *
+ * Why POST, not GET: a GET endpoint is consumed by anything that merely
+ * *fetches* the URL — email-security link scanners (Outlook SafeLinks),
+ * chat-app link unfurlers, and browser prefetch all issue GETs. That would
+ * burn the one-shot token before the human ever clicks, surfacing a bogus
+ * "link already used" error. A POST + same-origin guard means only our own
+ * page (running the user's click) can spend the token.
  *
  * Rate limited per IP — 30 / min so an attacker can't brute-force the
  * 64-hex token namespace.
  */
-async function handler(_req: Request, { params }: Ctx) {
+async function handler(req: Request, { params }: Ctx) {
+  const csrf = requireSameOrigin(req);
+  if (csrf) return csrf;
   const { token } = params;
   const result = await consumeEmailVerifyToken(token);
   if (!result.ok || !result.userId) {
@@ -58,7 +68,7 @@ async function handler(_req: Request, { params }: Ctx) {
   return NextResponse.json({ ok: true, email: user.email });
 }
 
-export const GET = withRateLimit(
+export const POST = withRateLimit(
   { bucket: "auth.verify-email", limit: 30, windowSec: 60, by: "ip" },
   withApiErrorTracking(handler),
 );
