@@ -2895,6 +2895,38 @@ export async function banUser(input: {
   return getUserById(input.userId);
 }
 
+/**
+ * Change a user's role (admin tool). Bumps the session epoch so the change
+ * takes effect immediately — the role is baked into the JWT, so without a
+ * revocation the user would keep their old role until their 30-day token
+ * expires. The edge gate forces re-auth, and the fresh token carries the new
+ * role.
+ *
+ * Returns the reason on a rejected change so the route can surface a 4xx.
+ */
+export async function setUserRole(
+  userId: string,
+  role: Role,
+): Promise<
+  | { ok: true; user: User }
+  | { ok: false; reason: "not_found" | "is_admin" | "noop" }
+> {
+  await db();
+  const user = await getUserById(userId);
+  if (!user) return { ok: false, reason: "not_found" };
+  // Never touch admins through this tool — admin provisioning is script-only.
+  if (user.role === "admin") return { ok: false, reason: "is_admin" };
+  if (user.role === role) return { ok: false, reason: "noop" };
+
+  const epoch = await bumpSessionEpoch(userId);
+  await UserModel.updateOne(
+    { _id: userId },
+    { $set: { role, sessionEpoch: epoch } },
+  );
+  const updated = await getUserById(userId);
+  return { ok: true, user: updated as User };
+}
+
 export async function restoreUser(userId: string): Promise<User | undefined> {
   await db();
   await UserModel.updateOne(

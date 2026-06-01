@@ -7,18 +7,25 @@ import {
   getUserById,
   notify,
   restoreUser,
+  setUserRole,
   suspendUser,
   writeAuditLog,
 } from "@/server/store";
+import type { Role } from "@/shared/types";
 
 export const runtime = "nodejs";
 
-type Action = "suspend" | "ban" | "restore";
+type Action = "suspend" | "ban" | "restore" | "set_role";
+
+// Roles an admin may assign via this tool. Admin is intentionally excluded —
+// admin provisioning is script-only (scripts/create-admin.ts).
+const ASSIGNABLE_ROLES: Role[] = ["student", "recruiter", "instructor"];
 
 interface Body {
   action: Action;
   durationDays?: number;
   reason?: string;
+  role?: Role;
 }
 
 export async function POST(
@@ -126,6 +133,40 @@ export async function POST(
       actorLabel: "unGhost Admin",
     });
     return NextResponse.json(updated);
+  }
+
+  if (body.action === "set_role") {
+    if (!body.role || !ASSIGNABLE_ROLES.includes(body.role)) {
+      return NextResponse.json(
+        { error: `role must be one of: ${ASSIGNABLE_ROLES.join(", ")}` },
+        { status: 400 },
+      );
+    }
+    const result = await setUserRole(params.id, body.role);
+    if (!result.ok) {
+      // is_admin / not_found / noop → 4xx with a clear reason.
+      const status = result.reason === "not_found" ? 404 : 400;
+      return NextResponse.json({ error: result.reason }, { status });
+    }
+    await writeAuditLog({
+      actorId: session.user.id,
+      actorRole: "admin",
+      action: "user.set-role",
+      targetType: "user",
+      targetId: params.id,
+      summary: `Changed ${target.name}'s role: ${target.role} → ${body.role}`,
+      before: { role: target.role },
+      after: { role: body.role },
+    });
+    await notify({
+      userId: params.id,
+      kind: "system",
+      priority: "high",
+      title: `Your account role is now ${body.role}`,
+      body: "An admin updated your account type. Please sign in again to continue.",
+      actorLabel: "unGhost Admin",
+    });
+    return NextResponse.json(result.user);
   }
 
   if (body.action === "restore") {

@@ -9,31 +9,40 @@ import {
   Loader2,
   ShieldAlert,
   ShieldCheck,
+  UserCog,
   UserX,
 } from "lucide-react";
 import { GlassBadge, GlassButton, GlassCard } from "@/components/glass";
-import type { User } from "@/shared/types";
+import type { Role, User } from "@/shared/types";
 
 interface Props {
   user: User;
   currentAdminId: string;
 }
 
-type Mode = "idle" | "suspending" | "banning" | "submitting";
+type Mode = "idle" | "suspending" | "banning" | "rolechanging" | "submitting";
+
+// Roles an admin may assign here. Admin is excluded — admin provisioning is
+// script-only (mirrors the server-side ASSIGNABLE_ROLES guard).
+const ASSIGNABLE_ROLES: Role[] = ["student", "recruiter", "instructor"];
 
 export function UserActionsCard({ user, currentAdminId }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("idle");
   const [reason, setReason] = useState("");
   const [duration, setDuration] = useState<7 | 14 | 30>(7);
+  const [newRole, setNewRole] = useState<Role>(
+    user.role === "student" ? "recruiter" : "student",
+  );
 
   const status = user.status ?? "active";
   const isSelf = user.id === currentAdminId;
 
   async function callAction(body: {
-    action: "suspend" | "ban" | "restore";
+    action: "suspend" | "ban" | "restore" | "set_role";
     durationDays?: number;
     reason?: string;
+    role?: Role;
   }) {
     setMode("submitting");
     try {
@@ -268,6 +277,60 @@ export function UserActionsCard({ user, currentAdminId }: Props) {
               <ShieldCheck size={12} /> Restore account
             </GlassButton>
           )}
+          <GlassButton
+            variant="glass"
+            size="sm"
+            onClick={() => setMode("rolechanging")}
+          >
+            <UserCog size={12} /> Change role
+          </GlassButton>
+        </div>
+      )}
+
+      {mode === "rolechanging" && (
+        <div className="space-y-3 rounded-xl bg-brand-primary/5 border border-brand-primary/20 p-4">
+          <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold">
+            Change account role
+          </p>
+          <p className="text-xs text-brand-muted">
+            Current role:{" "}
+            <span className="font-semibold text-brand-ink">{user.role}</span>.
+            Changing it signs the user out on all devices; they must sign in
+            again. Admin can&apos;t be assigned here.
+          </p>
+          <div className="flex gap-1.5">
+            {ASSIGNABLE_ROLES.map((r) => (
+              <button
+                key={r}
+                onClick={() => setNewRole(r)}
+                disabled={r === user.role}
+                className={`flex-1 rounded-xl border py-2 text-xs font-semibold capitalize transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                  newRole === r && r !== user.role
+                    ? "bg-brand-primary text-white border-brand-primary"
+                    : "bg-white/40 border-brand-ink/10 text-brand-muted hover:border-brand-primary/50"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2">
+            <GlassButton
+              variant="glass"
+              size="sm"
+              onClick={() => setMode("idle")}
+            >
+              Cancel
+            </GlassButton>
+            <GlassButton
+              variant="brand"
+              size="sm"
+              onClick={() => callAction({ action: "set_role", role: newRole })}
+              disabled={newRole === user.role}
+            >
+              Set role to {newRole}
+            </GlassButton>
+          </div>
         </div>
       )}
 
