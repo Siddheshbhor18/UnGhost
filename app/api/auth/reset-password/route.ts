@@ -44,7 +44,9 @@ async function postHandler(req: Request) {
     return NextResponse.json({ error: "invalid_or_expired" }, { status: 410 });
   }
   const newHash = await hashPassword(password);
-  await setUserPasswordHash(userId, newHash);
+  // Revoke any live sessions — a password reset must lock out whoever held the
+  // old credentials (the whole point of resetting after a compromise).
+  await setUserPasswordHash(userId, newHash, { revokeSessions: true });
   return NextResponse.json({ ok: true });
 }
 

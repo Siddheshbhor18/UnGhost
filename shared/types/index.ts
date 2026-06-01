@@ -248,6 +248,10 @@ export interface User {
   suspendedReason?: string;
   suspendedAt?: string;
   suspendedByAdminId?: string;
+  /** Session-revocation counter. Bumped on ban / suspend / password reset.
+   *  Issued JWTs embed the epoch they were minted at; edge middleware forces
+   *  re-auth once the stored value moves ahead. Defaults to 0. */
+  sessionEpoch?: number;
   /** AI Coach voice preference. Defaults to "balanced". */
   coachPersona?: CoachPersona;
   /** Rolling memory for the AI Coach (cross-session). */

@@ -9,6 +9,7 @@ import {
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { rateLimit } from "@/server/lib/rate-limit";
 import { clientIpFromHeaders } from "@/server/lib/client-ip";
+import { getSessionEpoch } from "@/server/auth/session-epoch";
 import { logger } from "@/server/lib/logger";
 import type { Role } from "@/shared/types";
 
@@ -172,12 +173,18 @@ export const authOptions: AuthOptions = {
         // Email-verification is informational, not blocking — UI surfaces a
         // banner after sign-in so the user can click the link any time.
 
+        // Stamp the token with the user's current revocation epoch so a later
+        // ban / suspend / password-reset (which bumps the epoch) invalidates
+        // this exact session at the edge.
+        const epoch = await getSessionEpoch(user.id);
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           image: user.avatarUrl,
           role: user.role,
+          epoch,
         } as never;
       },
     }),
@@ -230,6 +237,7 @@ export const authOptions: AuthOptions = {
         // Mutate the user object so jwt({user}) picks these up on first signin.
         (user as any).id = mongoUser.id;
         (user as any).role = mongoUser.role;
+        (user as any).epoch = await getSessionEpoch(mongoUser.id);
         return true;
       } catch (err) {
         // Don't leak DB errors to the OAuth screen — log and refuse.
@@ -243,6 +251,9 @@ export const authOptions: AuthOptions = {
         const u = user as any;
         token.id = u.id;
         token.role = u.role;
+        // Epoch the session was minted at. Edge middleware compares this to the
+        // stored epoch and forces re-auth once it moves ahead.
+        token.epoch = typeof u.epoch === "number" ? u.epoch : 0;
       }
       return token;
     },

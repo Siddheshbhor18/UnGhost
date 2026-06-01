@@ -115,6 +115,10 @@ const UserSchema = withJsonTransform(
       suspendedReason: String,
       suspendedAt: String,
       suspendedByAdminId: String,
+      // Session revocation counter. Bumped on ban / suspend / password reset;
+      // live JWTs carry the epoch they were issued at, and edge middleware
+      // forces re-auth when the stored epoch moves ahead. Defaults to 0.
+      sessionEpoch: { type: Number, default: 0 },
       coachPersona: { type: String, default: "balanced" },
       aiCoachMemory: {
         type: new Schema(

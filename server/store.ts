@@ -7,6 +7,7 @@
 import * as React from "react";
 import { connectMongo } from "@/server/db/mongo";
 import { cached, invalidate } from "@/server/lib/cache";
+import { bumpSessionEpoch } from "@/server/auth/session-epoch";
 
 // `React.cache` is RSC-only. In unit tests / non-RSC runtimes the symbol is
 // undefined, so fall through with a no-op identity wrapper. Either way the
@@ -273,9 +274,17 @@ export async function createUserWithCredentials(
 export async function setUserPasswordHash(
   userId: string,
   passwordHash: string,
+  opts?: { revokeSessions?: boolean },
 ): Promise<void> {
   await db();
-  await UserModel.updateOne({ _id: userId }, { $set: { passwordHash } });
+  const set: Record<string, unknown> = { passwordHash };
+  // Genuine password CHANGE (reset/change flow) must revoke every live
+  // session. The transparent legacy-plaintext rehash on login keeps the same
+  // password, so it omits this and never self-revokes the session it's minting.
+  if (opts?.revokeSessions) {
+    set.sessionEpoch = await bumpSessionEpoch(userId);
+  }
+  await UserModel.updateOne({ _id: userId }, { $set: set });
 }
 
 /** Flip emailVerified to true. Idempotent — safe to call on already-verified users. */
@@ -2840,6 +2849,9 @@ export async function suspendUser(input: {
   const user = await getUserById(input.userId);
   if (!user) return undefined;
   const until = new Date(Date.now() + input.durationDays * 86400_000);
+  // Revoke live sessions — a suspended user must lose access immediately, not
+  // when their 30-day JWT happens to expire.
+  const epoch = await bumpSessionEpoch(input.userId);
   await UserModel.updateOne(
     { _id: input.userId },
     {
@@ -2849,6 +2861,7 @@ export async function suspendUser(input: {
         suspendedReason: input.reason,
         suspendedAt: new Date().toISOString(),
         suspendedByAdminId: input.byAdminId,
+        sessionEpoch: epoch,
       },
     },
   );
@@ -2861,6 +2874,9 @@ export async function banUser(input: {
   byAdminId: string;
 }): Promise<User | undefined> {
   await db();
+  // Revoke live sessions immediately — a permanent ban must not wait out the
+  // 30-day JWT lifetime.
+  const epoch = await bumpSessionEpoch(input.userId);
   await UserModel.updateOne(
     { _id: input.userId },
     {
@@ -2871,6 +2887,7 @@ export async function banUser(input: {
         suspendedByAdminId: input.byAdminId,
         // Permanent ban — no expiry
         suspendedUntil: undefined,
+        sessionEpoch: epoch,
       },
       $unset: { suspendedUntil: 1 },
     },
