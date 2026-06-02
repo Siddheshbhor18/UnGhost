@@ -14,10 +14,10 @@ interface Props {
  */
 export default function UpgradeSuccessPage({ searchParams }: Props) {
   const plan = searchParams.plan;
-  if (plan !== "pro" && plan !== "premium") {
+  if (plan !== "premium") {
     redirect("/dashboard");
   }
-  const label = plan === "premium" ? "Premium" : "Pro";
+  const label = "Premium";
   return (
     <div className="relative min-h-screen">
       <BackdropMesh />
@@ -28,9 +28,7 @@ export default function UpgradeSuccessPage({ searchParams }: Props) {
           {label} unlocked.
         </h1>
         <p className="mt-4 text-body-md text-neutral-500 leading-relaxed">
-          {plan === "premium"
-            ? "Unlimited applications, AI Coach forever, every bootcamp included. Welcome aboard."
-            : "5 applications a month + AI Coach for the next 30 days. Renews when you tell us to."}
+          Unlimited applications, AI Coach forever, every bootcamp included. Welcome aboard.
         </p>
         <div className="mt-10 flex justify-center gap-3">
           <Link
@@ -39,14 +37,12 @@ export default function UpgradeSuccessPage({ searchParams }: Props) {
           >
             Go to dashboard
           </Link>
-          {plan === "premium" ? (
-            <Link
-              href="/bootcamps"
-              className="rounded-xl border border-neutral-300 px-6 py-3 text-body-sm font-medium hover:bg-neutral-50"
-            >
-              Browse bootcamps
-            </Link>
-          ) : null}
+          <Link
+            href="/bootcamps"
+            className="rounded-xl border border-neutral-300 px-6 py-3 text-body-sm font-medium hover:bg-neutral-50"
+          >
+            Browse bootcamps
+          </Link>
         </div>
         <p className="mt-12 text-body-xs text-neutral-500">
           Receipt sent to your email. Manage your plan from{" "}

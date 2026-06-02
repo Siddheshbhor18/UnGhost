@@ -988,7 +988,7 @@ export interface ProcessedTxn {
   provider: "phonepe" | "mock";
   orderId: string;
   userId: string;
-  plan: "pro" | "premium" | "sponsorship";
+  plan: "premium" | "sponsorship";
   amountPaise: number;
   status: "success" | "failed" | "pending";
   processedAt: string;

@@ -87,14 +87,14 @@ async function handler(req: Request) {
   }
 
   // Decode plan + userId from our orderId convention.
-  const match = /^bill_(pro|premium)_(.+)_(\d+)$/.exec(orderId);
+  const match = /^bill_(premium)_(.+)_(\d+)$/.exec(orderId);
   if (!match) {
     // Not a billing order — could be a legacy bootcamp order, sponsorship,
     // or an attacker. Log and ack 200 (returning non-200 makes PhonePe retry).
     logger.warn({ orderId }, "phonepe.webhook-non-billing-order");
     return NextResponse.json({ ok: true, ignored: true });
   }
-  const plan = match[1] as "pro" | "premium";
+  const plan = match[1] as "premium";
   const userId = match[2];
   const state = decoded.data?.state ?? "FAILED";
 
@@ -137,11 +137,8 @@ async function handler(req: Request) {
       userId,
       kind: "plan_activated",
       priority: "high",
-      title: plan === "premium" ? "Premium unlocked 🎉" : "Pro activated",
-      body:
-        plan === "premium"
-          ? "Unlimited applications + every bootcamp included. Lifetime."
-          : "5 applications per month + AI Coach for 30 days.",
+      title: "Premium unlocked 🎉",
+      body: "Unlimited applications + every bootcamp included. Lifetime.",
       link: "/dashboard",
     });
     await writeAuditLog({

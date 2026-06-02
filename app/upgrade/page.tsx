@@ -18,10 +18,10 @@ interface Props {
 /**
  * /upgrade — student subscription picker.
  *
- * Three tiers, two actually purchasable (Pro monthly, Premium lifetime).
- * The picker POSTs to /api/billing/checkout which mints a PhonePe order
- * and redirects the browser to the provider redirectUrl. After success
- * the user lands on /upgrade/success?plan=<plan>.
+ * Two tiers: Free and Premium (one-time lifetime). The picker POSTs to
+ * /api/billing/checkout which mints a PhonePe order and redirects the
+ * browser to the provider redirectUrl. After success the user lands on
+ * /upgrade/success?plan=premium.
  */
 export default async function UpgradePage({ searchParams }: Props) {
   const session = await getServerSession(authOptions);
@@ -66,11 +66,7 @@ export default async function UpgradePage({ searchParams }: Props) {
 
         <UpgradePlanPicker
           currentPlan={currentPlan}
-          recommended={
-            searchParams.to === "premium" || searchParams.to === "pro"
-              ? (searchParams.to as "premium" | "pro")
-              : null
-          }
+          recommended={searchParams.to === "premium" ? "premium" : null}
         />
 
         <div className="mt-14 text-center">
@@ -85,18 +81,14 @@ export default async function UpgradePage({ searchParams }: Props) {
           </Link>
         </div>
 
-        <section className="mt-16 grid md:grid-cols-3 gap-6 text-body-sm text-neutral-700">
+        <section className="mt-16 grid grid-cols-1 sm:grid-cols-2 gap-6 text-body-sm text-neutral-700">
           <FeatureRow
             title="Free trial"
             body={`${PLAN_LIMITS.free.applicationCap.kind === "trial" ? PLAN_LIMITS.free.applicationCap.count : 0} lifetime applications. No card needed.`}
           />
           <FeatureRow
-            title="Pro · monthly"
-            body="5 applications every 30 days, AI Coach, Q&A. Cancel anytime."
-          />
-          <FeatureRow
             title="Premium · lifetime"
-            body="Unlimited applications + every bootcamp included. Pay once."
+            body="Unlimited applications + AI Coach + every bootcamp included. Pay once."
           />
         </section>
       </main>

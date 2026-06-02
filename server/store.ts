@@ -299,16 +299,14 @@ export async function markEmailVerified(userId: string): Promise<void> {
 }
 
 /**
- * Activate or extend a student's subscription plan.
+ * Activate a student's subscription plan.
  *
- * For `pro` (monthly), the expiry is bumped to +30 days from now (or from
- * the existing expiry if still in the future — additive renewals).
  * For `premium` (lifetime), no expiry is set.
  * For `free`, all plan fields are cleared.
  */
 export async function activateUserPlan(
   userId: string,
-  plan: "free" | "pro" | "premium",
+  plan: "free" | "premium",
   txnId?: string,
 ): Promise<void> {
   await db();
@@ -323,40 +321,17 @@ export async function activateUserPlan(
     );
     return;
   }
-  if (plan === "premium") {
-    await UserModel.updateOne(
-      { _id: userId },
-      {
-        $set: {
-          plan: "premium",
-          planType: "lifetime",
-          planActivatedAt: now.toISOString(),
-          lastBillingTxnId: txnId,
-        },
-        $unset: { planExpiresAt: "" },
-      },
-    );
-    return;
-  }
-  // pro — additive monthly extension
-  const existing = (await UserModel.findById(userId).lean()) as
-    | { planExpiresAt?: string }
-    | null;
-  const baseTime =
-    existing?.planExpiresAt && new Date(existing.planExpiresAt).getTime() > now.getTime()
-      ? new Date(existing.planExpiresAt).getTime()
-      : now.getTime();
-  const expiresAt = new Date(baseTime + 30 * 24 * 60 * 60 * 1000).toISOString();
+  // premium — lifetime, no expiry
   await UserModel.updateOne(
     { _id: userId },
     {
       $set: {
-        plan: "pro",
-        planType: "monthly",
+        plan: "premium",
+        planType: "lifetime",
         planActivatedAt: now.toISOString(),
-        planExpiresAt: expiresAt,
         lastBillingTxnId: txnId,
       },
+      $unset: { planExpiresAt: "" },
     },
   );
 }
@@ -374,9 +349,10 @@ export async function cancelUserPlanRenewal(userId: string): Promise<void> {
 }
 
 /**
- * Daily expiry sweep — downgrade Pro users whose `planExpiresAt` has passed
- * to Free. Used by /api/cron/subscription-sweep. Returns the list of users
- * who got demoted so the cron can notify them.
+ * Daily expiry sweep — downgrade any user whose `planExpiresAt` has passed to
+ * Free. The only live plans are Free and Premium (lifetime, no expiry), so
+ * this now only ever catches a legacy time-limited record. Kept as a safety
+ * net. Used by /api/cron/subscription-sweep; returns the demoted user ids.
  */
 export async function sweepExpiredPlans(): Promise<{
   demoted: string[];
@@ -384,7 +360,6 @@ export async function sweepExpiredPlans(): Promise<{
   await db();
   const now = new Date().toISOString();
   const expired = await UserModel.find({
-    plan: "pro",
     planExpiresAt: { $lt: now },
   })
     .select("_id")
@@ -537,27 +512,20 @@ export async function getPartnerStats(
   const partner = await getPartnerById(partnerId);
   const pct = partner?.commissionPct ?? 0;
 
-  const [signups, paidPro, paidPremium] = await Promise.all([
+  const [signups, paidPremium] = await Promise.all([
     UserModel.countDocuments({ referrerPartnerId: partnerId }),
-    UserModel.countDocuments({
-      referrerPartnerId: partnerId,
-      plan: "pro",
-    }),
     UserModel.countDocuments({
       referrerPartnerId: partnerId,
       plan: "premium",
     }),
   ]);
 
-  // Pricing matches PLAN_PRICING in shared/types/index.ts (₹999 Pro / ₹4,999
-  // Premium). Inlined here to avoid client-bundling that constant.
-  const estCommissionINR = Math.round(
-    (paidPro * 999 + paidPremium * 4999) * (pct / 100),
-  );
+  // Pricing matches PLAN_PRICING in shared/types/index.ts (₹4,999 Premium).
+  // Inlined here to avoid client-bundling that constant.
+  const estCommissionINR = Math.round(paidPremium * 4999 * (pct / 100));
   return {
     partnerId,
     signups,
-    paidPro,
     paidPremium,
     estCommissionINR,
   };
@@ -641,7 +609,9 @@ export async function listAdminUserIds(): Promise<string[]> {
   return docs.map((u) => String((u as unknown as { _id: string })._id));
 }
 
-/** Users whose Pro plan expires inside the next `withinHours` window — used for warning emails. */
+/** Users whose time-limited plan expires inside the next `withinHours` window
+ *  — used for warning emails. Only Free + Premium (lifetime) exist now, so this
+ *  matches legacy time-limited records only. */
 export async function listUsersExpiringSoon(
   withinHours: number,
 ): Promise<User[]> {
@@ -649,7 +619,6 @@ export async function listUsersExpiringSoon(
   const now = Date.now();
   const horizon = new Date(now + withinHours * 3600_000).toISOString();
   const docs = await UserModel.find({
-    plan: "pro",
     planExpiresAt: { $gte: new Date(now).toISOString(), $lt: horizon },
   }).lean();
   return unwrapAll(docs as unknown as User[]);
@@ -671,7 +640,7 @@ export async function recordProcessedTxn(input: {
   provider: "phonepe" | "mock";
   orderId: string;
   userId: string;
-  plan: "pro" | "premium" | "sponsorship";
+  plan: "premium" | "sponsorship";
   amountPaise: number;
   status: "success" | "failed" | "pending";
   via: "callback" | "webhook";

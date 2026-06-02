@@ -26,7 +26,7 @@ import { logger } from "@/server/lib/logger";
 export const runtime = "nodejs";
 
 const Input = z.object({
-  plan: z.enum(["pro", "premium"]),
+  plan: z.enum(["premium"]),
   transactionId: z.string().min(4).max(100).trim(),
   upiApp: z.enum(["phonepe", "gpay", "paytm", "bhim", "other"]),
   payerName: z.string().min(2).max(100).trim(),
@@ -37,7 +37,7 @@ const Input = z.object({
 
 /**
  * We reuse the PaymentSubmission model but set bootcampId to a synthetic
- * value like "plan:pro" or "plan:premium" since the model requires it.
+ * value like "plan:premium" since the model requires it.
  * The admin approval route handles both bootcamp and plan submissions.
  */
 async function postHandler(req: Request) {

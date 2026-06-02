@@ -11,14 +11,12 @@ export const runtime = "nodejs";
 /**
  * POST /api/billing/cancel
  *
- * Student-only. For Pro (monthly), marks `planRenewalCancelled: true` so
- * the daily expiry cron will demote to Free when `planExpiresAt` hits.
- * Until expiry the user keeps Pro access — no proration, no immediate
- * revoke (matches industry convention).
- *
- * Premium (lifetime) cannot be "cancelled" — the user keeps access. To get
- * a refund on Premium they must contact support; we don't allow self-serve
- * destruction of paid lifetime access.
+ * Student-only. Only a time-limited (monthly) subscription can be cancelled,
+ * and the platform now sells only Free + Premium (one-time lifetime). Premium
+ * (lifetime) cannot be "cancelled" — the user keeps access; a refund on
+ * Premium goes through support, not self-serve. So this endpoint only acts on
+ * a legacy monthly record (planType === "monthly") and otherwise reports
+ * "not_cancellable". No UI currently links to it.
  */
 async function handler(req: Request) {
   const csrf = requireSameOrigin(req);
@@ -30,7 +28,7 @@ async function handler(req: Request) {
   }
   const user = await getUserById(session.user.id);
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  if (user.plan !== "pro") {
+  if (user.planType !== "monthly") {
     return NextResponse.json(
       { error: "not_cancellable", plan: user.plan },
       { status: 400 },

@@ -64,16 +64,11 @@ export function PartnerDashboard({ partner, stats, referrals }: Props) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatTile
           icon={<Users size={14} />}
           label="Signups"
           value={stats.signups}
-        />
-        <StatTile
-          icon={<TrendingUp size={14} />}
-          label="Pro conversions"
-          value={stats.paidPro}
         />
         <StatTile
           icon={<TrendingUp size={14} />}
@@ -182,7 +177,6 @@ function StatTile({
 function PlanBadge({ plan }: { plan: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     free: { label: "Free", cls: "bg-neutral-100 text-neutral-600" },
-    pro: { label: "Pro", cls: "bg-brand-primary/10 text-brand-primary" },
     premium: {
       label: "Premium",
       cls: "bg-amber-500/10 text-amber-700",

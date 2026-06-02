@@ -9,27 +9,26 @@ import { PLAN_PRICING } from "@/shared/types";
 
 interface PickerProps {
   currentPlan: SubscriptionPlan;
-  recommended: "pro" | "premium" | null;
+  recommended: "premium" | null;
 }
 
 /**
- * Three-card subscription picker. Free is current/CTA-disabled; Pro and
- * Premium kick off a /api/billing/checkout POST and bounce to the PhonePe
- * redirect URL the server returns.
+ * Two-card subscription picker. Free is the default tier; Premium kicks off
+ * a /api/billing/checkout POST (currently routed to the manual QR payment
+ * page) and, once paid + approved, unlocks lifetime access.
  */
 export function UpgradePlanPicker({ currentPlan, recommended }: PickerProps) {
   const router = useRouter();
-  const [submittingPlan, setSubmittingPlan] = useState<"pro" | "premium" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [submittingPlan, setSubmittingPlan] = useState<"premium" | null>(null);
 
-  function buy(plan: "pro" | "premium") {
+  function buy(plan: "premium") {
     setSubmittingPlan(plan);
     // Redirect to manual QR payment page (stopgap until PhonePe KYC clears)
     router.push(`/upgrade/pay?plan=${plan}`);
   }
 
   return (
-    <div className="grid md:grid-cols-3 gap-5">
+    <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto">
       <Card
         tier="free"
         title="Free"
@@ -44,41 +43,6 @@ export function UpgradePlanPicker({ currentPlan, recommended }: PickerProps) {
         recommended={false}
       >
         <Cta state={currentPlan === "free" ? "current" : "free-active"} />
-      </Card>
-
-      <Card
-        tier="pro"
-        title="Pro"
-        price={`₹${PLAN_PRICING.pro.amountINR.toLocaleString("en-IN")}`}
-        sub="per month"
-        features={[
-          "5 applications every 30 days",
-          "AI Coach (30-day rolling)",
-          "Q&A with recruiters",
-          "Cancel anytime",
-        ]}
-        currentPlan={currentPlan}
-        recommended={recommended === "pro"}
-      >
-        {currentPlan === "premium" ? (
-          <Cta state="downgrade-blocked" />
-        ) : currentPlan === "pro" ? (
-          <button
-            disabled={submittingPlan !== null}
-            onClick={() => buy("pro")}
-            className="w-full rounded-xl bg-neutral-900 text-white text-body-sm font-medium py-3 hover:bg-neutral-800 disabled:opacity-50"
-          >
-            {submittingPlan === "pro" ? <Spinner /> : "Renew 30 days"}
-          </button>
-        ) : (
-          <button
-            disabled={submittingPlan !== null}
-            onClick={() => buy("pro")}
-            className="w-full rounded-xl bg-neutral-900 text-white text-body-sm font-medium py-3 hover:bg-neutral-800 disabled:opacity-50"
-          >
-            {submittingPlan === "pro" ? <Spinner /> : "Go Pro"}
-          </button>
-        )}
       </Card>
 
       <Card
@@ -107,10 +71,6 @@ export function UpgradePlanPicker({ currentPlan, recommended }: PickerProps) {
           </button>
         )}
       </Card>
-
-      {error ? (
-        <p className="md:col-span-3 text-center text-body-sm text-red-700">{error}</p>
-      ) : null}
     </div>
   );
 }
@@ -166,7 +126,7 @@ function Card({
   );
 }
 
-function Cta({ state }: { state: "current" | "free-active" | "downgrade-blocked" }) {
+function Cta({ state }: { state: "current" | "free-active" }) {
   if (state === "current") {
     return (
       <div className="w-full rounded-xl bg-neutral-100 text-neutral-700 text-body-sm font-medium py-3 text-center">
@@ -174,16 +134,9 @@ function Cta({ state }: { state: "current" | "free-active" | "downgrade-blocked"
       </div>
     );
   }
-  if (state === "free-active") {
-    return (
-      <div className="w-full rounded-xl bg-neutral-100 text-neutral-700 text-body-sm font-medium py-3 text-center">
-        Default tier
-      </div>
-    );
-  }
   return (
-    <div className="w-full rounded-xl bg-neutral-100 text-neutral-500 text-body-sm py-3 text-center">
-      Downgrade unavailable
+    <div className="w-full rounded-xl bg-neutral-100 text-neutral-700 text-body-sm font-medium py-3 text-center">
+      Default tier
     </div>
   );
 }

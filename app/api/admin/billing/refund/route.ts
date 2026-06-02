@@ -76,7 +76,7 @@ async function handler(req: Request) {
     provider: result.channel,
     orderId: refundOrderId,
     userId,
-    plan: "pro",
+    plan: "premium",
     amountPaise: -amountPaise,
     status: "success",
     via: "callback",

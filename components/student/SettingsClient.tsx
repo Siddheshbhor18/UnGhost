@@ -225,43 +225,12 @@ export function SettingsClient({ user }: Props) {
 }
 
 /**
- * Subscription block — shows current plan, expiry (for Pro), and cancel /
- * upgrade actions. Hits /api/billing/cancel for renewal cancellation.
+ * Subscription block — shows the current plan (Free or Premium) and the
+ * upgrade action. Premium is a one-time lifetime purchase, so there is no
+ * renewal to cancel.
  */
 function SubscriptionCard({ user }: { user: User }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const plan = user.plan ?? "free";
-  const expiresAt = user.planExpiresAt
-    ? new Date(user.planExpiresAt).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : null;
-
-  async function cancelRenewal() {
-    if (busy) return;
-    if (!confirm("Cancel auto-renewal? Your Pro plan stays active until expiry.")) {
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await fetch("/api/billing/cancel", { method: "POST" });
-      const data = await res.json();
-      if (res.ok && data.ok) {
-        setMsg(data.message ?? "Renewal cancelled.");
-        router.refresh();
-      } else {
-        setMsg(data.error ?? "Couldn't cancel.");
-      }
-    } catch (e) {
-      setMsg((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const isPremium = (user.plan ?? "free") === "premium";
 
   return (
     <GlassCard>
@@ -271,57 +240,29 @@ function SubscriptionCard({ user }: { user: User }) {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="font-display font-bold text-brand-ink">
-            {plan === "premium"
-              ? "Premium · lifetime"
-              : plan === "pro"
-              ? "Pro · monthly"
-              : "Free · trial"}{" "}
-            <GlassBadge tone={plan === "free" ? "neutral" : "brand"} className="ml-1">
+            {isPremium ? "Premium · lifetime" : "Free · trial"}{" "}
+            <GlassBadge tone={isPremium ? "brand" : "neutral"} className="ml-1">
               current
             </GlassBadge>
           </p>
           <p className="text-xs text-brand-muted mt-0.5">
-            {plan === "premium"
+            {isPremium
               ? "Unlimited applications · AI Coach · all bootcamps · forever."
-              : plan === "pro"
-              ? `5 applications / 30 days · AI Coach · Q&A${
-                  expiresAt
-                    ? ` · ${user.planRenewalCancelled ? "ends" : "renews"} ${expiresAt}`
-                    : ""
-                }`
-              : "2 lifetime applications. Upgrade for monthly or lifetime access."}
+              : "2 lifetime applications. Upgrade to Premium for unlimited access."}
           </p>
         </div>
         <div className="flex gap-2">
-          {plan === "free" ? (
-            <a href="/upgrade" className="btn-brand">
-              Upgrade
-            </a>
-          ) : plan === "pro" ? (
-            <>
-              <a href="/upgrade?to=premium" className="btn-brand">
-                Go Premium
-              </a>
-              {!user.planRenewalCancelled && (
-                <button
-                  onClick={cancelRenewal}
-                  disabled={busy}
-                  className="text-xs font-semibold text-rose-700 hover:underline disabled:opacity-50"
-                >
-                  Cancel renewal
-                </button>
-              )}
-            </>
-          ) : (
+          {isPremium ? (
             <a href="/dashboard" className="text-xs font-semibold text-brand-primary">
               Open dashboard →
+            </a>
+          ) : (
+            <a href="/upgrade" className="btn-brand">
+              Upgrade
             </a>
           )}
         </div>
       </div>
-      {msg ? (
-        <p className="text-xs text-brand-muted mt-3">{msg}</p>
-      ) : null}
     </GlassCard>
   );
 }

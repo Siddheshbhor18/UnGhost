@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       {
         error: "upgrade_required",
         plan: effectivePlan(userForGate),
-        message: "AI Coach is included with Pro and Premium plans.",
+        message: "AI Coach is included with the Premium plan.",
         upgradeUrl: "/upgrade",
       },
       { status: 402 },

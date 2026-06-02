@@ -18,8 +18,8 @@ export default async function ManualPayPage({ searchParams }: Props) {
   if (!session?.user?.id) redirect("/login?next=/upgrade/pay");
   if (session.user.role !== "student") redirect("/dashboard");
 
-  const plan = searchParams.plan as "pro" | "premium" | undefined;
-  if (!plan || !["pro", "premium"].includes(plan)) redirect("/upgrade");
+  const plan = searchParams.plan as "premium" | undefined;
+  if (plan !== "premium") redirect("/upgrade");
 
   const user = await getUserById(session.user.id);
   if (!user) redirect("/login");

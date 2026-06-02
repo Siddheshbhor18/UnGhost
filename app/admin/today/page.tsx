@@ -91,13 +91,10 @@ export default async function AdminToday() {
       ? Math.round((studentIdsWithApps.size / studentCount) * 100)
       : null;
 
-  // Subscription revenue — Pro + Premium paid users × their plan price.
-  // Premium is lifetime so counts once; Pro is monthly so this is
-  // current-month MRR. PLAN_PRICING gives us the rupee amounts.
-  const proCount = students.filter((s) => s.plan === "pro").length;
+  // Subscription revenue — Premium paid users × the lifetime plan price.
+  // Premium is a one-time lifetime purchase, so it counts once.
   const premiumCount = students.filter((s) => s.plan === "premium").length;
   const subscriptionRevenuePaise =
-    proCount * PLAN_PRICING.pro.amountINR * 100 +
     premiumCount * PLAN_PRICING.premium.amountINR * 100;
 
   // Revenue mix — bootcamps + sponsorships + subscriptions.

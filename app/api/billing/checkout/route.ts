@@ -13,13 +13,13 @@ import { PLAN_PRICING } from "@/shared/types";
 export const runtime = "nodejs";
 
 const Input = z.object({
-  plan: z.enum(["pro", "premium"]),
+  plan: z.enum(["premium"]),
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 /**
- * POST { plan: "pro" | "premium" } → create a PhonePe order.
+ * POST { plan: "premium" } → create a PhonePe order.
  *
  * Returns { redirectUrl } the browser navigates to. After success/failure
  * the user is bounced back to /api/billing/callback (handled by the

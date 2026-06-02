@@ -183,10 +183,10 @@ export interface EmailTemplate {
 export type UserStatus = "active" | "suspended" | "banned" | "soft_deleted";
 
 // ── Subscription plans (student-only) ─────────────────────────────────────
+// Two tiers only:
 // FREE       → ₹0 · 2 lifetime applications · no AI Coach · no Q&A · no bootcamps
-// PRO        → ₹999/month · 5 apps per 30-day window · AI Coach · Q&A
 // PREMIUM    → ₹4999 one-time lifetime · unlimited apps · AI Coach · Q&A · all bootcamps free
-export type SubscriptionPlan = "free" | "pro" | "premium";
+export type SubscriptionPlan = "free" | "premium";
 
 export interface PlanLimits {
   /** "trial" = lifetime cap, "monthly" = rolling-30d cap, "unlimited" = no cap. */
@@ -206,12 +206,6 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     questionAndAnswer: false,
     bootcampsIncluded: false,
   },
-  pro: {
-    applicationCap: { kind: "monthly", count: 5 },
-    aiCoach: true,
-    questionAndAnswer: true,
-    bootcampsIncluded: false,
-  },
   premium: {
     applicationCap: { kind: "unlimited" },
     aiCoach: true,
@@ -225,7 +219,6 @@ export const PLAN_PRICING: Record<
   { label: string; amountINR: number; cadence: "free" | "monthly" | "lifetime" }
 > = {
   free:    { label: "Free",    amountINR: 0,    cadence: "free" },
-  pro:     { label: "Pro",     amountINR: 999,  cadence: "monthly" },
   premium: { label: "Premium", amountINR: 4999, cadence: "lifetime" },
 };
 
@@ -310,7 +303,6 @@ export interface Partner {
 export interface PartnerStats {
   partnerId: string;
   signups: number;
-  paidPro: number;
   paidPremium: number;
   /** Estimated commission in INR rupees (not paise). */
   estCommissionINR: number;

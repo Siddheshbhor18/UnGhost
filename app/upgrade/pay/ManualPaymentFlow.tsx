@@ -33,7 +33,7 @@ import Link from "next/link";
 type Step = "pay" | "confirm" | "done";
 
 interface Props {
-  plan: "pro" | "premium";
+  plan: "premium";
   planLabel: string;
   amountINR: number;
   cadence: string;

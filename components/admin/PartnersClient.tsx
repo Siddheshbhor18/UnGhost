@@ -154,7 +154,6 @@ export function PartnersClient({ initial }: Props) {
                 <th className="text-left px-4 py-2.5">Partner</th>
                 <th className="text-left px-4 py-2.5">Referral link</th>
                 <th className="text-right px-4 py-2.5">Signups</th>
-                <th className="text-right px-4 py-2.5">Pro</th>
                 <th className="text-right px-4 py-2.5">Premium</th>
                 <th className="text-right px-4 py-2.5">Comm.</th>
                 <th className="text-right px-4 py-2.5">Earned</th>
@@ -209,7 +208,6 @@ function PartnerRow({
       <td className="px-4 py-3 text-right tnum font-semibold text-brand-ink">
         {p.stats.signups}
       </td>
-      <td className="px-4 py-3 text-right tnum text-brand-ink">{p.stats.paidPro}</td>
       <td className="px-4 py-3 text-right tnum text-brand-ink">{p.stats.paidPremium}</td>
       <td className="px-4 py-3 text-right tnum text-brand-muted">{p.commissionPct}%</td>
       <td className="px-4 py-3 text-right tnum font-semibold text-brand-ink">
@@ -437,7 +435,6 @@ function zeroStats(partnerId: string): PartnerStats {
   return {
     partnerId,
     signups: 0,
-    paidPro: 0,
     paidPremium: 0,
     estCommissionINR: 0,
   };

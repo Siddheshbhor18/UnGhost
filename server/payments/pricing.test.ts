@@ -97,18 +97,18 @@ describe("formatPaiseAsINR", () => {
 });
 
 describe("billing orderId regex parsing", () => {
-  const regex = /^bill_(pro|premium)_(.+)_(\d+)$/;
+  const regex = /^bill_(premium)_(.+)_(\d+)$/;
 
   it("successfully parses standard user IDs with underscores", () => {
-    const orderId = "bill_pro_usr_koy3x8c1abc_1779718262456";
+    const orderId = "bill_premium_usr_koy3x8c1abc_1779718262456";
     const match = regex.exec(orderId);
     expect(match).not.toBeNull();
-    expect(match![1]).toBe("pro");
+    expect(match![1]).toBe("premium");
     expect(match![2]).toBe("usr_koy3x8c1abc");
     expect(match![3]).toBe("1779718262456");
   });
 
-  it("successfully parses premium plan with underscores", () => {
+  it("successfully parses premium plan with a short id", () => {
     const orderId = "bill_premium_usr_abcdefg_1234567890";
     const match = regex.exec(orderId);
     expect(match).not.toBeNull();
@@ -118,17 +118,18 @@ describe("billing orderId regex parsing", () => {
   });
 
   it("handles complex user IDs with multiple underscores", () => {
-    const orderId = "bill_pro_usr_some_complex_id_here_1779718262456";
+    const orderId = "bill_premium_usr_some_complex_id_here_1779718262456";
     const match = regex.exec(orderId);
     expect(match).not.toBeNull();
-    expect(match![1]).toBe("pro");
+    expect(match![1]).toBe("premium");
     expect(match![2]).toBe("usr_some_complex_id_here");
     expect(match![3]).toBe("1779718262456");
   });
 
   it("rejects invalid formats", () => {
-    expect(regex.exec("spons_pro_usr_koy3x8c1abc_1779718262456")).toBeNull();
+    expect(regex.exec("spons_premium_usr_koy3x8c1abc_1779718262456")).toBeNull();
+    expect(regex.exec("bill_pro_usr_koy3x8c1abc_1779718262456")).toBeNull();
     expect(regex.exec("bill_invalid_usr_koy3x8c1abc_1779718262456")).toBeNull();
-    expect(regex.exec("bill_pro_usr_koy3x8c1abc_notanumber")).toBeNull();
+    expect(regex.exec("bill_premium_usr_koy3x8c1abc_notanumber")).toBeNull();
   });
 });

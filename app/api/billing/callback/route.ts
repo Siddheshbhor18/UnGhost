@@ -34,11 +34,11 @@ async function handler(req: Request) {
   }
 
   // Decode plan + user from order id format `bill_<plan>_<userId>_<ts>`.
-  const match = /^bill_(pro|premium)_(.+)_(\d+)$/.exec(orderId);
+  const match = /^bill_(premium)_(.+)_(\d+)$/.exec(orderId);
   if (!match) {
     return NextResponse.redirect(new URL("/upgrade?error=bad_order", req.url));
   }
-  const plan = match[1] as "pro" | "premium";
+  const plan = match[1] as "premium";
   const userId = match[2];
   if (userId !== session.user.id) {
     logger.warn(
@@ -77,11 +77,8 @@ async function handler(req: Request) {
       userId,
       kind: "plan_activated",
       priority: "high",
-      title: plan === "premium" ? "Premium unlocked 🎉" : "Pro activated",
-      body:
-        plan === "premium"
-          ? "Unlimited applications + AI Coach + every bootcamp included. Lifetime."
-          : "5 applications per month + AI Coach for 30 days.",
+      title: "Premium unlocked 🎉",
+      body: "Unlimited applications + AI Coach + every bootcamp included. Lifetime.",
       link: "/dashboard",
     });
     await writeAuditLog({
