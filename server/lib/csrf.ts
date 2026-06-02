@@ -67,6 +67,18 @@ export function requireSameOrigin(req: Request): NextResponse | null {
   if (origin && ALLOWED_HOSTS.has(origin)) return null;
   if (referer && ALLOWED_HOSTS.has(referer)) return null;
 
+  // Canonical same-origin check: the request's Origin/Referer matches the very
+  // Host it was served on. This is the textbook CSRF defense — a cross-site
+  // attacker's Origin never equals the target host — and it transparently
+  // covers prod, every Vercel preview deploy, and any custom domain without
+  // hardcoding each one. (The static allowlist above stays as a belt-and-
+  // suspenders for callers that send Origin but a proxied/rewritten Host.)
+  const selfHost = req.headers.get("host");
+  if (selfHost) {
+    if (origin && origin === selfHost) return null;
+    if (referer && referer === selfHost) return null;
+  }
+
   // Also allow Cloudflare preview wildcard subdomain (preview-NN.unghost.com).
   if (origin && /^preview-\d+\.unghost\.com$/.test(origin)) return null;
   if (referer && /^preview-\d+\.unghost\.com$/.test(referer)) return null;
