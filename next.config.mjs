@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 
 // Production CSP. Aims for "no surprises" without breaking PhonePe redirects,
@@ -70,6 +72,10 @@ const nextConfig = {
   // Required by @sentry/nextjs to keep its instrumentation files external.
   experimental: {
     serverComponentsExternalPackages: ["pino", "pino-pretty"],
+    // Next 14.2 gates the `instrumentation.ts` register() hook behind this
+    // flag (stable in Next 15). Without it Sentry's server/edge init never
+    // runs and captureException is a silent no-op. Sentry needs this on.
+    instrumentationHook: true,
   },
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**" }],
@@ -95,4 +101,16 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Wrap with Sentry so build-time instrumentation is injected and (when a
+// SENTRY_AUTH_TOKEN is present) source maps upload for readable stack traces.
+// With no auth token the upload is skipped gracefully — runtime error capture
+// still works. `silent` keeps CI logs clean; tunnel route dodges ad-blockers.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  tunnelRoute: "/monitoring",
+  // Don't fail the build if source-map upload can't run (e.g. no auth token).
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+});
