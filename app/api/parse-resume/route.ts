@@ -31,13 +31,18 @@ async function extractText(file: File): Promise<string> {
 
   try {
     if (name.endsWith(".pdf")) {
-      // dynamic import — keeps cold start lean for non-PDF flows
-      const mod = await import("pdf-parse");
-      // pdf-parse exports default in v2+
-      const pdfParse: (b: Buffer) => Promise<{ text: string }> =
-        (mod as any).default ?? mod;
-      const { text } = await pdfParse(buffer);
-      return text.slice(0, 50_000);
+      // dynamic import — keeps cold start lean for non-PDF flows.
+      // pdf-parse v2 dropped the callable default export in favour of a
+      // PDFParse class: `new PDFParse({ data }).getText()`. Calling the old
+      // default signature threw "not a function" → 500 on every PDF upload.
+      const { PDFParse } = await import("pdf-parse");
+      const parser = new PDFParse({ data: buffer });
+      try {
+        const { text } = await parser.getText();
+        return text.slice(0, 50_000);
+      } finally {
+        await parser.destroy();
+      }
     }
     if (name.endsWith(".docx")) {
       const mod = await import("mammoth");
