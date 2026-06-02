@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { getAI } from "@/server/integrations/ai";
@@ -130,19 +131,35 @@ async function handler(req: Request) {
             "resume.upload_failed",
           );
         }
-        const patch: Partial<StudentProfile> = {
-          alias: parsed.alias,
-          contactEmail: parsed.contactEmail,
-          contactPhone: parsed.contactPhone,
-          city: parsed.city,
-          skills: parsed.skills,
-          history: parsed.history.map((h, i) => ({
-            id: `h_${Date.now().toString(36)}_${i}`,
-            ...h,
-          })),
-          ...(resumeUrl ? { resumeUrl } : {}),
-        };
-        await updateStudentProfile(session.user.id, patch);
+        // Persistence is SECONDARY — the parse already succeeded and is
+        // returned regardless. A profile write must never 500 the caller:
+        // the Mongo write can throw on serverless (mongo.ts uses
+        // bufferCommands:false, so a dropped/cold pooled connection rejects
+        // immediately instead of buffering), and the LLM output shape isn't
+        // guaranteed. Swallow + report so the student still gets their parse.
+        try {
+          const patch: Partial<StudentProfile> = {
+            alias: parsed.alias,
+            contactEmail: parsed.contactEmail,
+            contactPhone: parsed.contactPhone,
+            city: parsed.city,
+            skills: parsed.skills ?? [],
+            history: (parsed.history ?? []).map((h, i) => ({
+              id: `h_${Date.now().toString(36)}_${i}`,
+              ...h,
+            })),
+            ...(resumeUrl ? { resumeUrl } : {}),
+          };
+          await updateStudentProfile(session.user.id, patch);
+        } catch (persistErr) {
+          Sentry.captureException(persistErr, {
+            tags: { source: "api", path: "/api/parse-resume.persist" },
+          });
+          logger.error(
+            { err: persistErr, userId: session.user.id, fileName: file.name },
+            "resume.persist_failed",
+          );
+        }
       }
     }
     return NextResponse.json({
