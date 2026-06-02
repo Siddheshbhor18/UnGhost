@@ -25,3 +25,7 @@ coverage/
 
 # DB backups from cleanup-demo (PII/hashes — never commit)
 scripts/backups/
+
+# Launch seed inventory: holds the plaintext shared recruiter password — never commit
+server/db/seeds/launch-inventory.ts
+scripts/_gen-launch-inventory.py
