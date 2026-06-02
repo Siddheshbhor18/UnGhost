@@ -79,6 +79,21 @@ export function requireSameOrigin(req: Request): NextResponse | null {
     if (referer && referer === selfHost) return null;
   }
 
+  // On Vercel the serverless function's `Host` is often an internal/canonical
+  // name while the host the browser actually used arrives in
+  // `x-forwarded-host`. Compare against that too so same-origin uploads on a
+  // preview alias aren't falsely rejected.
+  const fwdHost = req.headers.get("x-forwarded-host");
+  if (fwdHost) {
+    if (origin && origin === fwdHost) return null;
+    if (referer && referer === fwdHost) return null;
+  }
+
+  // This project's Vercel preview/prod deploys (un-ghost.vercel.app and every
+  // branch alias like un-ghost-git-<branch>-<scope>.vercel.app).
+  if (origin && /^un-ghost[a-z0-9-]*\.vercel\.app$/.test(origin)) return null;
+  if (referer && /^un-ghost[a-z0-9-]*\.vercel\.app$/.test(referer)) return null;
+
   // Also allow Cloudflare preview wildcard subdomain (preview-NN.unghost.com).
   if (origin && /^preview-\d+\.unghost\.com$/.test(origin)) return null;
   if (referer && /^preview-\d+\.unghost\.com$/.test(referer)) return null;
