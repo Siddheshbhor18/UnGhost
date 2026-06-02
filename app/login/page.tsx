@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { signIn, getSession, useSession } from "next-auth/react";
+import { signIn, signOut, getSession, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -29,6 +29,14 @@ const HREF_BY_ROLE: Record<Role, string> = {
   recruiter: "/recruiter/command",
   instructor: "/instructor/today",
   admin: "/admin/today",
+};
+
+/** Human-readable role names for the role-mismatch error message. */
+const ROLE_LABEL: Record<Role, string> = {
+  student: "Student",
+  recruiter: "Recruiter",
+  instructor: "Instructor",
+  admin: "Admin",
 };
 
 const EASE_OUT_SOFT: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -120,21 +128,35 @@ function LoginInner() {
       return;
     }
 
-    // Auth OK. Greet by real first name + start the door-entering choreography
-    // on the hero. After ~550 ms the full-screen DoorAnimation overlay takes
-    // over and routes to the role's destination.
+    // Auth OK. Read the account's REAL role from the fresh session.
     const fresh = await getSession();
+    const realRole = (fresh?.user as any)?.role as Role | undefined;
+
+    // Enforce the role pill: the tab the visitor picked must match the
+    // account they're signing into. A recruiter account signing in under the
+    // "Student" tab (or vice-versa) is rejected — we sign the just-created
+    // session back out and tell them which tab to use. This keeps the picker
+    // honest instead of silently ignoring it.
+    if (realRole && realRole !== role) {
+      await signOut({ redirect: false });
+      setBusy(false);
+      setPhase("error");
+      setTimeout(() => setPhase("idle"), 1200);
+      setErr(
+        `That's a ${ROLE_LABEL[realRole]} account. Switch to the ${ROLE_LABEL[realRole]} tab to sign in.`,
+      );
+      void shakeError();
+      return;
+    }
+
+    // Greet by real first name + start the door-entering choreography on the
+    // hero. After ~550 ms the full-screen DoorAnimation overlay takes over and
+    // routes to the role's destination.
     const firstName =
       fresh?.user?.name?.split(" ")[0] ??
       email.split("@")[0].split(/[._-]/)[0] ??
       undefined;
     setDoorName(firstName);
-    // Route by the account's REAL role from the fresh session — not the
-    // role pill the visitor happened to have selected. The picker is a
-    // cosmetic filter (and a demo-login shortcut); trusting it here sent a
-    // student who clicked "Recruiter" to /recruiter/command, only to be
-    // bounced by the area guard. Fall back to the picker, then student.
-    const realRole = (fresh?.user as any)?.role as Role | undefined;
     setDest(nextParam ?? HREF_BY_ROLE[realRole ?? role]);
     setPhase("entering");
     setTimeout(() => setPlayDoor(true), reduced ? 0 : HERO_TO_OVERLAY_MS);
