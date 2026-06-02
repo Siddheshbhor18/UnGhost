@@ -138,10 +138,17 @@ async function handler(req: Request) {
         // immediately instead of buffering), and the LLM output shape isn't
         // guaranteed. Swallow + report so the student still gets their parse.
         try {
+          // NOTE: deliberately do NOT persist contactEmail / contactPhone from
+          // the parsed resume. Those are the user's VERIFIED signup/login/OTP
+          // identifiers — profile.contactPhone carries a partial UNIQUE index
+          // (ix_users_phone_unique, migration 20260517130000). Writing an
+          // LLM-extracted or placeholder phone (e.g. "+91 XXXXX XXXXX") here
+          // both clobbers the real login phone AND collides across users →
+          // E11000 duplicate key, which silently failed every resume persist.
+          // Resume parsing fills profile content (skills/history/city), never
+          // identity. (See Sentry UNGHOST-2.)
           const patch: Partial<StudentProfile> = {
             alias: parsed.alias,
-            contactEmail: parsed.contactEmail,
-            contactPhone: parsed.contactPhone,
             city: parsed.city,
             skills: parsed.skills ?? [],
             history: (parsed.history ?? []).map((h, i) => ({
