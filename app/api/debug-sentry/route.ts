@@ -8,6 +8,7 @@ export const runtime = "nodejs";
  * end-to-end capture chain (instrumentation.ts → server Sentry.init →
  * withApiErrorTracking → dashboard) actually fires on the live deploy.
  *
+ * Route: GET /api/debug-sentry?token=<TEST_TOKEN>
  * Gated by a one-time random token so the public / bots can't spam Sentry.
  * The route does nothing but throw a benign test error (no data access), so a
  * literal token here is acceptable. DELETE this file once verification passes.

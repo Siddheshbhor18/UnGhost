@@ -71,7 +71,10 @@ const nextConfig = {
   output: "standalone",
   // Required by @sentry/nextjs to keep its instrumentation files external.
   experimental: {
-    serverComponentsExternalPackages: ["pino", "pino-pretty"],
+    // pdf-parse / pdfjs load font + cmap assets from their own node_modules
+    // dir at runtime; bundling them breaks those paths in the serverless
+    // build, so keep the package external.
+    serverComponentsExternalPackages: ["pino", "pino-pretty", "pdf-parse"],
     // Next 14.2 gates the `instrumentation.ts` register() hook behind this
     // flag (stable in Next 15). Without it Sentry's server/edge init never
     // runs and captureException is a silent no-op. Sentry needs this on.
