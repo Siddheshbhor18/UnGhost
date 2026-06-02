@@ -99,7 +99,7 @@ export function EnrollForm({
         </div>
 
         <div className="grid sm:grid-cols-2 gap-6 p-6">
-          {/* QR — replace /public/merchant-qr.svg with your real PhonePe merchant QR before launch. */}
+          {/* Merchant QR (/public/merchant-qr.svg) encodes UPI VPA big9890@idfcbank (generic amount-less merchant QR); payer pays the exact total shown in the breakdown. */}
           <div className="flex flex-col items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -110,7 +110,7 @@ export function EnrollForm({
               className="rounded-2xl border border-brand-ink/10"
             />
             <p className="text-[11px] text-brand-muted mt-3 font-mono">
-              unghost@hdfcbank
+              big9890@idfcbank
             </p>
           </div>
 
@@ -209,7 +209,7 @@ export function EnrollForm({
 
           <p className="text-[11px] text-brand-muted text-center">
             By submitting, you confirm you've paid {totalAmountLabel} to{" "}
-            <span className="font-mono">unghost@hdfcbank</span> for{" "}
+            <span className="font-mono">big9890@idfcbank</span> for{" "}
             <span className="font-semibold">{bootcampTitle}</span>.
           </p>
         </div>

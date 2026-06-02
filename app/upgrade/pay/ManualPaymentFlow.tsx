@@ -43,8 +43,8 @@ interface Props {
 }
 
 // UPI ID for receiving payments — update this to your actual UPI ID
-const UPI_ID = "siddheshbhor2004@okicici";
-const UPI_NAME = "unGhost";
+const UPI_ID = "big9890@idfcbank";
+const UPI_NAME = "BIG VISION CONSULTANCY AND MARKETING";
 
 const UPI_APPS = [
   { value: "gpay", label: "Google Pay" },
