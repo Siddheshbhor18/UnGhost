@@ -39,6 +39,17 @@ export async function POST(
 
   const isPlanPurchase = submission.bootcampId.startsWith("plan:");
 
+  // "premium" is the only live plan. Legacy "pro" (and anything else) is no
+  // longer a valid tier — approving it would write an unrecognised plan that
+  // effectivePlan() treats as free, i.e. the student pays and gets nothing.
+  // Reject loudly instead of silently mis-activating.
+  if (isPlanPurchase && submission.bootcampId !== "plan:premium") {
+    return NextResponse.json(
+      { error: "unsupported_plan", detail: submission.bootcampId },
+      { status: 400 },
+    );
+  }
+
   // Run the writes in a transaction so they're atomic.
   const dbSession = await mongoose.startSession();
   try {
@@ -49,28 +60,20 @@ export async function POST(
       await submission.save({ session: dbSession });
 
       if (isPlanPurchase) {
-        // Plan subscription activation (pro/premium)
-        const planName = submission.bootcampId.replace("plan:", "") as
-          | "pro"
-          | "premium";
+        // Premium = one-time lifetime (no expiry). Guarded above to be the
+        // only plan that reaches here.
         const now = new Date();
-        const updateFields: Record<string, unknown> = {
-          plan: planName,
-          planType: planName,
-          planActivatedAt: now.toISOString(),
-          lastBillingTxnId: submission.utr,
-        };
-        if (planName === "pro") {
-          // Pro = 30-day rolling
-          const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-          updateFields.planExpiresAt = expires.toISOString();
-        } else {
-          // Premium = lifetime (no expiry)
-          updateFields.planExpiresAt = null;
-        }
         await UserModel.updateOne(
           { _id: submission.userId },
-          { $set: updateFields },
+          {
+            $set: {
+              plan: "premium",
+              planType: "premium",
+              planActivatedAt: now.toISOString(),
+              lastBillingTxnId: submission.utr,
+              planExpiresAt: null,
+            },
+          },
           { session: dbSession },
         );
       } else {
