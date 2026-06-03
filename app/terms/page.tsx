@@ -82,17 +82,18 @@ export default function TermsOfService() {
           </li>
         </ul>
         <p>
-          Premium is a one-time lifetime purchase — nothing auto-renews.
-          Bootcamp purchases are separate and non-refundable (see below).
+          Premium is a one-time lifetime purchase — nothing auto-renews. There
+          is no separate per-Bootcamp fee: one payment includes every Bootcamp.
         </p>
       </Section>
 
-      <Section title="5. Bootcamps — non-refundable">
+      <Section title="5. Purchases — non-refundable">
         <p>
-          All Bootcamp purchases are <strong>final and non-refundable</strong>.
-          You agree to this at checkout. The one exception: instructor cancels
-          the live session and cannot reschedule within 60 days → goodwill
-          credit (not cash) usable on any other Bootcamp. Full details:{" "}
+          The Premium purchase is <strong>final and non-refundable</strong>. You
+          agree to this at checkout. Because every Bootcamp is bundled into
+          Premium, there is no per-Bootcamp amount to refund. If an instructor
+          cancels a live session, we reschedule it or provide the recording;
+          your access to everything else is unaffected. Full details:{" "}
           <a href="/refund-policy" className="text-brand-primary underline">
             Refund Policy
           </a>
@@ -133,8 +134,8 @@ export default function TermsOfService() {
       <Section title="8. Disputes + jurisdiction">
         <p>
           Governed by the laws of India. Disputes resolved in Mumbai courts.
-          For consumer disputes (Bootcamp purchases) you also retain rights
-          under the Consumer Protection Act, 2019.
+          For consumer disputes you also retain rights under the Consumer
+          Protection Act, 2019.
         </p>
       </Section>
 

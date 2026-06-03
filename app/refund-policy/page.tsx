@@ -62,7 +62,8 @@ export default function RefundPolicy() {
           >
             billing@unghost.com
           </a>{" "}
-          within 7 days. We refund duplicate charges immediately.
+          within 7 days. We reverse duplicate or unauthorised charges
+          immediately — that is a billing correction, not a product refund.
         </p>
         <p>
           Filing a chargeback with your bank/UPI provider as a workaround for
