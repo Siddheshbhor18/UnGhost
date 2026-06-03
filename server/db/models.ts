@@ -221,6 +221,14 @@ const AssessmentSubmissionSchema = new Schema(
     response: String,
     submittedAt: String,
     grade: AssessmentGradeSchema,
+    // Proctoring / integrity signals. Previously omitted here, so Mongoose
+    // strict mode silently dropped them on write and recruiters never saw the
+    // tab-switch / paste counts the assessment UI captured.
+    integrityScore: Number,
+    integrityFlags: [String],
+    tabSwitches: Number,
+    pasteAttempts: Number,
+    timeTakenSec: Number,
   },
   { _id: false },
 );

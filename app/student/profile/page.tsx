@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import {
+  ArrowRight,
   Award,
+  Bookmark,
   CheckCircle2,
   Edit3,
   Eye,
@@ -21,7 +23,7 @@ import {
   GlassCard,
   GlassNavbar,
 } from "@/components/glass";
-import { getUserById } from "@/server/store";
+import { getUserById, listSavedJobs } from "@/server/store";
 
 const TRAJ_LABEL: Record<string, string> = {
   actively_hunting: "Actively hunting",
@@ -34,10 +36,14 @@ export default async function StudentProfilePage() {
   if (!session) redirect("/login?next=/student/profile");
   if (session.user.role !== "student") redirect("/");
 
-  const user = await getUserById(session.user.id);
+  const [user, savedJobs] = await Promise.all([
+    getUserById(session.user.id),
+    listSavedJobs(session.user.id),
+  ]);
   if (!user || !user.profile) {
     redirect("/onboarding");
   }
+  const savedCount = savedJobs.length;
   const p = user.profile!;
   const verified = new Set(
     (p.verifiedSkills ?? []).map((s) => s.toLowerCase()),
@@ -104,8 +110,10 @@ export default async function StudentProfilePage() {
         )}
 
         <div className="grid lg:grid-cols-12 gap-5">
+          {/* Left column: identity + saved jobs */}
+          <div className="lg:col-span-4 space-y-5">
           {/* Identity card */}
-          <GlassCard variant="strong" className="lg:col-span-4 !p-6 space-y-4">
+          <GlassCard variant="strong" className="!p-6 space-y-4">
             <div className="flex items-center gap-3">
               {isAnon ? (
                 <div className="grid place-items-center w-14 h-14 rounded-2xl bg-brand-ink/10 text-brand-ink">
@@ -169,6 +177,31 @@ export default async function StudentProfilePage() {
               </GlassBadge>
             </div>
           </GlassCard>
+
+          {/* Saved jobs — moved here from the navbar */}
+          <Link href="/student/saved" className="block">
+            <GlassCard interactive className="!p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid place-items-center w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600">
+                    <Bookmark size={16} />
+                  </span>
+                  <div>
+                    <p className="font-display font-bold text-brand-ink">
+                      Saved jobs
+                    </p>
+                    <p className="text-xs text-brand-muted">
+                      {savedCount === 0
+                        ? "Pin roles to revisit later"
+                        : `${savedCount} pinned role${savedCount === 1 ? "" : "s"}`}
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-brand-muted" />
+              </div>
+            </GlassCard>
+          </Link>
+          </div>
 
           {/* Skills + history */}
           <div className="lg:col-span-8 space-y-5">

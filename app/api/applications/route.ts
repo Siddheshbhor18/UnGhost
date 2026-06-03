@@ -125,6 +125,9 @@ export async function POST(req: Request) {
           grade,
           integrityScore,
           integrityFlags,
+          tabSwitches,
+          pasteAttempts,
+          timeTakenSec,
         }
       : undefined,
   });

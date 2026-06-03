@@ -538,6 +538,50 @@ function ActionDrawer({
                       </span>
                     </p>
                   )}
+                  {/* Proctoring counts — surfaced so recruiters can judge
+                      assessment integrity (tab-switching / pasting). */}
+                  {(app.assessment.tabSwitches !== undefined ||
+                    app.assessment.pasteAttempts !== undefined) && (
+                    <div className="mt-3 pt-3 border-t border-brand-ink/5">
+                      <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold mb-2">
+                        Proctoring
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <ProctorStat
+                          label="Tab switches"
+                          value={app.assessment.tabSwitches ?? 0}
+                          warn={(app.assessment.tabSwitches ?? 0) > 0}
+                        />
+                        <ProctorStat
+                          label="Paste attempts"
+                          value={app.assessment.pasteAttempts ?? 0}
+                          warn={(app.assessment.pasteAttempts ?? 0) > 0}
+                        />
+                        {app.assessment.timeTakenSec !== undefined && (
+                          <ProctorStat
+                            label="Time taken"
+                            value={`${Math.floor(
+                              app.assessment.timeTakenSec / 60,
+                            )}m ${app.assessment.timeTakenSec % 60}s`}
+                            warn={app.assessment.timeTakenSec < 60}
+                          />
+                        )}
+                      </div>
+                      {app.assessment.integrityFlags &&
+                        app.assessment.integrityFlags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {app.assessment.integrityFlags.map((f) => (
+                              <span
+                                key={f}
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 font-medium"
+                              >
+                                {f}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                    </div>
+                  )}
                 </GlassCard>
               </div>
             ) : (
@@ -896,6 +940,37 @@ function Stat({
         {label}
       </p>
       <p className={`font-display text-2xl font-bold ${cls}`}>{value}</p>
+    </div>
+  );
+}
+
+function ProctorStat({
+  label,
+  value,
+  warn,
+}: {
+  label: string;
+  value: string | number;
+  warn?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-lg px-2.5 py-1.5 border ${
+        warn
+          ? "bg-rose-500/10 border-rose-500/20"
+          : "bg-emerald-500/10 border-emerald-500/20"
+      }`}
+    >
+      <p className="text-[9px] uppercase tracking-wider text-brand-muted">
+        {label}
+      </p>
+      <p
+        className={`text-sm font-bold ${
+          warn ? "text-rose-600" : "text-emerald-600"
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }

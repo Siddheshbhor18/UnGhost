@@ -343,6 +343,11 @@ export interface AssessmentSubmission {
   /** 0-100. Decremented by tab switches, paste attempts, suspicious timing. */
   integrityScore?: number;
   integrityFlags?: string[];
+  /** Raw proctoring counts captured during the assessment, surfaced to recruiters. */
+  tabSwitches?: number;
+  pasteAttempts?: number;
+  /** Seconds the candidate spent on the assessment. */
+  timeTakenSec?: number;
 }
 
 export interface Application {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 import clsx from "clsx";
 import { GlassButton } from "./GlassButton";
 import { NotificationBell } from "./NotificationBell";
@@ -33,9 +34,9 @@ const NAV_BY_ROLE: Record<string, NavItem[]> = {
   ],
   student: [
     { href: "/dashboard", label: "Today" },
+    { href: "/student/jobs", label: "Jobs" },
     { href: "/student/applications", label: "Applications" },
     { href: "/student/messages", label: "Messages" },
-    { href: "/student/saved", label: "Saved" },
     { href: "/bootcamps", label: "Bootcamps" },
     { href: "/student/live", label: "Live" },
     { href: "/student/coach", label: "AI Coach" },
@@ -140,6 +141,17 @@ export function GlassNavbar() {
           <div className="flex items-center gap-2 shrink-0">
             {session ? (
               <>
+                {role === "student" && (
+                  <Link href="/upgrade" className="hidden sm:block">
+                    <GlassButton
+                      variant="brand"
+                      size="sm"
+                      className="whitespace-nowrap"
+                    >
+                      <Sparkles size={13} /> Premium
+                    </GlassButton>
+                  </Link>
+                )}
                 <NotificationBell />
                 <span className="hidden sm:inline text-xs font-medium text-brand-muted">
                   {session.user?.name}
