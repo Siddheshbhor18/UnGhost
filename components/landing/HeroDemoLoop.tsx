@@ -419,7 +419,7 @@ function FrameReply() {
                 call Thursday?
               </p>
             </div>
-            <p className="text-[11px] text-neutral-400 mt-1.5 flex items-center gap-1">
+            <p className="text-[11px] text-neutral-500 mt-1.5 flex items-center gap-1">
               <CheckCircle2 size={10} className="text-success" /> SLA met · 21h
               early
             </p>

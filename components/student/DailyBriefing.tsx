@@ -79,8 +79,8 @@ export function DailyBriefing(props: BriefingProps) {
     <div className="rounded-2xl bg-gradient-to-r from-brand-primary/10 via-white/60 to-white/40 backdrop-blur-xl border border-white/60 shadow-glass p-5 mb-6 relative">
       <button
         onClick={dismiss}
-        className="absolute top-3 right-3 text-brand-muted hover:text-brand-ink transition"
-        aria-label="Dismiss"
+        className="absolute top-2 right-2 grid place-items-center w-9 h-9 rounded-lg text-brand-muted hover:text-brand-ink hover:bg-black/5 transition"
+        aria-label="Dismiss today's briefing"
       >
         <X size={14} />
       </button>

@@ -111,6 +111,16 @@ body {
   background-clip: padding-box;
 }
 
+/* Global keyboard focus ring — applies to every interactive element that
+   doesn't define its own (.btn / .input set theirs and win on specificity).
+   :where() keeps specificity at 0 so component styles always override.
+   Mouse clicks don't trigger :focus-visible, so this is keyboard-only. */
+:where(a, button, [role="button"], [role="tab"], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* Honour reduced-motion globally */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -22,7 +22,7 @@ export function SectionLabel({
       className={clsx(
         "section-label inline-flex items-center gap-1.5",
         tone === "brand" && "text-brand-500",
-        tone === "muted" && "text-neutral-400",
+        tone === "muted" && "text-neutral-500",
         className,
       )}
       {...rest}

@@ -304,7 +304,7 @@ export function ManualPaymentFlow({
                     className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 font-mono focus:outline-none focus:border-neutral-400 transition"
                     autoFocus
                   />
-                  <p className="text-[10px] text-neutral-400 mt-1.5">
+                  <p className="text-[10px] text-neutral-500 mt-1.5">
                     Find this in your UPI app → Transaction history → tap the
                     payment → Transaction ID / Reference number
                   </p>
