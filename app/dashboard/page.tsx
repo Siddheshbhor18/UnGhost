@@ -117,10 +117,6 @@ export default async function DashboardPage() {
     ]),
   );
 
-  // KPI numbers
-  const activeAppsCount = apps.filter(
-    (a) => !["hired", "rejected"].includes(a.stage),
-  ).length;
   // PRD: SLA breach refunds the slot; withdrawn apps don't refund. We count
   // every app the student *currently owns* a slot for — i.e. everything except
   // SLA-breached and "refunded" rejections.
@@ -131,11 +127,6 @@ export default async function DashboardPage() {
   const planAppCap = PLAN_LIMITS[plan].applicationCap;
   const applicationsLimit =
     planAppCap.kind === "unlimited" ? -1 : planAppCap.count;
-  const avgMatch = jobsWithMatch.length
-    ? Math.round(
-        jobsWithMatch.reduce((s, j) => s + j.matchPct, 0) / jobsWithMatch.length,
-      )
-    : 0;
   const profileCompleteness = computeCompleteness(user).pct;
 
   // Daily Briefing inputs
@@ -200,13 +191,10 @@ export default async function DashboardPage() {
         <InMailInbox initial={inmails} />
         <SponsorshipInbox initial={sponsorships} bootcamps={bootcampIdx} />
 
-        {/* 4-KPI Stat Bar */}
+        {/* Applications-quota strip (the rest moved into the Daily Briefing) */}
         <StatBar
           applicationsUsed={applicationsUsed}
           applicationsLimit={applicationsLimit}
-          activeApps={activeAppsCount}
-          profileCompleteness={profileCompleteness}
-          avgMatch={avgMatch}
         />
 
         {/* 3-Column Body */}

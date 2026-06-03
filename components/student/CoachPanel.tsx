@@ -21,7 +21,9 @@ const STARTER_PROMPTS = [
  * (mocked echo for Phase 1). Real impl will use Claude with cross-session memory.
  */
 export function CoachPanel({ studentFirstName }: { studentFirstName: string }) {
-  const [open, setOpen] = useState(true);
+  // Start collapsed to its launcher button — an open 520px panel competes
+  // with the feed on every load. Students expand it when they want it.
+  const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
