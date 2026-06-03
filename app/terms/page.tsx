@@ -68,24 +68,22 @@ export default function TermsOfService() {
       <Section title="4. Free + paid tiers">
         <ul className="list-disc list-inside space-y-1.5">
           <li>
-            <strong>Free:</strong> 5 applications per calendar month · 15 AI
-            Coach messages per day. Resets on the 1st.
+            <strong>Free:</strong> 2 lifetime applications to try the platform.
+            Applications refunded after an SLA breach don&apos;t count against
+            this.
           </li>
           <li>
-            <strong>Hunt (₹299/mo):</strong> unlimited applications + unlimited
-            AI Coach + saved search alerts.
-          </li>
-          <li>
-            <strong>Stretch (₹599/mo):</strong> Hunt + 1 free Bootcamp / month.
+            <strong>Premium (₹4,999, one-time lifetime):</strong> unlimited
+            applications + AI Coach + Q&amp;A + every Bootcamp included. Pay
+            once, no renewals.
           </li>
           <li>
             <strong>Recruiters:</strong> free forever for posting and hiring.
           </li>
         </ul>
         <p>
-          Subscriptions auto-renew. Cancel any time in{" "}
-          <code>Settings → Subscription</code>. Refunds for unused subscription
-          time are pro-rated within 7 days of charge; no refunds after.
+          Premium is a one-time lifetime purchase — nothing auto-renews.
+          Bootcamp purchases are separate and non-refundable (see below).
         </p>
       </Section>
 

@@ -57,7 +57,7 @@ export function CoachPanel({ studentFirstName }: { studentFirstName: string }) {
           {
             role: "assistant",
             text:
-              "AI Coach is included with Pro (₹999/mo) and Premium (₹4,999 lifetime). [Upgrade →](/upgrade)",
+              "AI Coach is included with Premium (₹4,999, one-time lifetime). [Upgrade →](/upgrade)",
           },
         ]);
         return;
@@ -197,8 +197,8 @@ export function CoachPanel({ studentFirstName }: { studentFirstName: string }) {
         </button>
       </form>
       <p className="px-4 pb-2 text-[10px] text-brand-muted">
-        Free tier: 15 messages/day ·{" "}
-        <Link href="/pricing" className="text-brand-primary underline">
+        Included with Premium ·{" "}
+        <Link href="/upgrade" className="text-brand-primary underline">
           Upgrade
         </Link>
       </p>

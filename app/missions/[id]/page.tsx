@@ -34,12 +34,13 @@ import {
 } from "@/server/store";
 import { getAI } from "@/server/integrations/ai";
 import { computeMatchPct, skillDelta } from "@/server/lib/matching";
+import { effectivePlan } from "@/server/lib/quota";
+import { PLAN_LIMITS } from "@/shared/types";
 import {
   APPLY_THRESHOLD,
   computeCompleteness,
 } from "@/server/lib/profile-completeness";
 
-const FREE_APP_LIMIT = 5;
 
 function tierFor(matchPct: number): {
   label: string;
@@ -105,14 +106,20 @@ export default async function MissionBrief({
   const completeness = computeCompleteness(user);
   const canApply = completeness.pct >= APPLY_THRESHOLD;
 
-  // Quota
-  // SLA-breached apps get their slot returned (won't count against the cap)
+  // Quota — plan-driven (single source of truth: PLAN_LIMITS).
+  // SLA-breached apps get their slot returned (won't count against the cap).
   const applicationsUsed = allApps.filter((a) => !a.slaRefundIssued).length;
-  const quotaTight = applicationsUsed >= FREE_APP_LIMIT - 1;
-  const quotaUsedPct = Math.min(
-    100,
-    (applicationsUsed / FREE_APP_LIMIT) * 100,
-  );
+  const plan = user ? effectivePlan(user) : "free";
+  const planAppCap = PLAN_LIMITS[plan].applicationCap;
+  // -1 = unlimited (Premium): no ceiling, no upsell, no progress bar fill cap.
+  const applicationsLimit =
+    planAppCap.kind === "unlimited" ? -1 : planAppCap.count;
+  const unlimitedApps = applicationsLimit < 0;
+  const quotaTight =
+    !unlimitedApps && applicationsUsed >= applicationsLimit - 1;
+  const quotaUsedPct = unlimitedApps
+    ? 0
+    : Math.min(100, (applicationsUsed / applicationsLimit) * 100);
 
   // Already applied?
   const existingApp = allApps.find((a) => a.jobId === job.id);
@@ -604,36 +611,44 @@ export default async function MissionBrief({
                 <GlassCard className="!p-4">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
-                      Applications used
+                      {unlimitedApps ? "Applications sent" : "Applications used"}
                     </p>
                     <span
                       className={`text-xs font-display font-bold ${
                         quotaTight ? "text-rose-600" : "text-brand-ink"
                       }`}
                     >
-                      {applicationsUsed} of {FREE_APP_LIMIT}
+                      {unlimitedApps
+                        ? applicationsUsed
+                        : `${applicationsUsed} of ${applicationsLimit}`}
                     </span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-brand-ink/5 overflow-hidden mb-2">
-                    <div
-                      className={`h-full rounded-full ${
-                        quotaTight
-                          ? "bg-rose-500"
-                          : "bg-gradient-to-r from-brand-primary to-brand-secondary"
-                      }`}
-                      style={{ width: `${quotaUsedPct}%` }}
-                    />
-                  </div>
-                  {quotaTight ? (
+                  {!unlimitedApps && (
+                    <div className="h-1.5 rounded-full bg-brand-ink/5 overflow-hidden mb-2">
+                      <div
+                        className={`h-full rounded-full ${
+                          quotaTight
+                            ? "bg-rose-500"
+                            : "bg-gradient-to-r from-brand-primary to-brand-secondary"
+                        }`}
+                        style={{ width: `${quotaUsedPct}%` }}
+                      />
+                    </div>
+                  )}
+                  {unlimitedApps ? (
+                    <p className="text-[11px] text-emerald-600 font-semibold">
+                      Unlimited · Premium
+                    </p>
+                  ) : quotaTight ? (
                     <Link
-                      href="/pricing"
+                      href="/upgrade"
                       className="text-xs text-rose-600 font-semibold hover:underline"
                     >
-                      Subscribe for unlimited →
+                      Go Premium for unlimited →
                     </Link>
                   ) : (
                     <p className="text-[11px] text-brand-muted">
-                      Free tier · resets on the 1st
+                      Free tier · {applicationsLimit} lifetime applications
                     </p>
                   )}
                 </GlassCard>

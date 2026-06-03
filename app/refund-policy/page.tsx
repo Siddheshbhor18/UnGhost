@@ -46,19 +46,20 @@ export default function RefundPolicy() {
         </p>
       </Section>
 
-      <Section title="Subscriptions">
+      <Section title="Premium (one-time lifetime)">
         <p>
-          Subscription tiers (Hunt / Stretch) cancel any time in{" "}
-          <code>Settings → Subscription</code>.
+          Premium is a single ₹4,999 lifetime purchase — there is no recurring
+          subscription and nothing to cancel.
         </p>
         <ul className="list-disc list-inside space-y-1.5">
           <li>
-            <strong>Within 7 days of charge:</strong> pro-rated refund of
-            unused subscription time.
+            <strong>Within 7 days of purchase:</strong> full refund on request,
+            provided you have not exhausted the unlimited benefit through heavy
+            use.
           </li>
           <li>
-            <strong>After 7 days:</strong> no refunds. You keep access until
-            the billing period ends.
+            <strong>After 7 days:</strong> no refunds. Lifetime access stays
+            active permanently.
           </li>
         </ul>
       </Section>

@@ -26,6 +26,8 @@ import {
 } from "@/server/store";
 import { computeMatchPct } from "@/server/lib/matching";
 import { computeCompleteness } from "@/server/lib/profile-completeness";
+import { effectivePlan } from "@/server/lib/quota";
+import { PLAN_LIMITS } from "@/shared/types";
 import { ResumeDrop } from "@/components/student/ResumeDrop";
 import { JobFeed } from "@/components/student/JobFeed";
 import { BootcampGrid } from "@/components/student/BootcampGrid";
@@ -37,7 +39,6 @@ import { SponsorshipInbox } from "@/components/student/SponsorshipInbox";
 import { InMailInbox } from "@/components/student/InMailInbox";
 
 const MATCH_THRESHOLD = 60;
-const FREE_APP_LIMIT = 5;
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -124,6 +125,12 @@ export default async function DashboardPage() {
   // every app the student *currently owns* a slot for — i.e. everything except
   // SLA-breached and "refunded" rejections.
   const applicationsUsed = apps.filter((a) => !a.slaRefundIssued).length;
+  // Application cap is plan-driven (single source of truth: PLAN_LIMITS).
+  // Premium = unlimited → pass -1 so the StatBar drops the ceiling + upsell.
+  const plan = user ? effectivePlan(user) : "free";
+  const planAppCap = PLAN_LIMITS[plan].applicationCap;
+  const applicationsLimit =
+    planAppCap.kind === "unlimited" ? -1 : planAppCap.count;
   const avgMatch = jobsWithMatch.length
     ? Math.round(
         jobsWithMatch.reduce((s, j) => s + j.matchPct, 0) / jobsWithMatch.length,
@@ -196,7 +203,7 @@ export default async function DashboardPage() {
         {/* 4-KPI Stat Bar */}
         <StatBar
           applicationsUsed={applicationsUsed}
-          applicationsLimit={FREE_APP_LIMIT}
+          applicationsLimit={applicationsLimit}
           activeApps={activeAppsCount}
           profileCompleteness={profileCompleteness}
           avgMatch={avgMatch}

@@ -16,7 +16,7 @@ const FAQS = [
   },
   {
     q: "Is unGhost free to use?",
-    a: "Free tier: 5 applications per month, 15 AI Coach messages per day. Paid Hunt and Stretch tiers unlock unlimited applications and full AI Coach. Recruiters post and hire for free — no platform fees.",
+    a: "Free tier gives you 2 lifetime applications to try the platform. Premium is a one-time ₹4,999 lifetime purchase — unlimited applications, AI Coach, Q&A, and every Bootcamp included. Recruiters post and hire for free — no platform fees.",
   },
   {
     q: "Are Bootcamp purchases refundable?",

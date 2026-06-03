@@ -9,6 +9,7 @@ import { GlassCard } from "@/components/glass";
 
 interface StatBarProps {
   applicationsUsed: number;
+  /** Cap under the user's plan. `-1` means unlimited (Premium). */
   applicationsLimit: number;
   activeApps: number;
   profileCompleteness: number;
@@ -25,7 +26,9 @@ export function StatBar({
   profileCompleteness,
   avgMatch,
 }: StatBarProps) {
-  const quotaTight = applicationsUsed >= applicationsLimit - 1;
+  // Premium is unlimited (cap === -1) — never show a ceiling or upsell.
+  const unlimited = applicationsLimit < 0;
+  const quotaTight = !unlimited && applicationsUsed >= applicationsLimit - 1;
   const matchTone =
     avgMatch >= 75 ? "emerald" : avgMatch >= 55 ? "brand" : "amber";
 
@@ -33,21 +36,25 @@ export function StatBar({
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <Kpi
         icon={<Briefcase size={16} />}
-        label="Applications used"
-        value={`${applicationsUsed} of ${applicationsLimit}`}
+        label={unlimited ? "Applications sent" : "Applications used"}
+        value={unlimited ? applicationsUsed : `${applicationsUsed} of ${applicationsLimit}`}
         sub={
-          quotaTight ? (
+          unlimited ? (
+            <span className="text-emerald-600 font-semibold">
+              Unlimited · Premium
+            </span>
+          ) : quotaTight ? (
             <Link
-              href="/pricing"
+              href="/upgrade"
               className="text-rose-600 font-semibold hover:underline"
             >
-              Subscribe →
+              Go Premium →
             </Link>
           ) : (
             <span className="text-brand-muted">free tier</span>
           )
         }
-        tone={quotaTight ? "danger" : "brand"}
+        tone={unlimited ? "success" : quotaTight ? "danger" : "brand"}
       />
       <Kpi
         icon={<Target size={16} />}

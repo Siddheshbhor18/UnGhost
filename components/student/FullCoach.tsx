@@ -383,7 +383,7 @@ export function FullCoach({
             </button>
           </div>
           <p className="text-[10px] text-brand-muted mt-2">
-            Free tier: 15 messages/day · AI Coach cannot leak assessment answers or
+            Included with Premium · AI Coach cannot leak assessment answers or
             recruiter identities.
           </p>
         </form>

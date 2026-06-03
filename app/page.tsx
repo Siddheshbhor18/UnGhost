@@ -595,7 +595,7 @@ export default async function LandingPage() {
               ["Find Jobs", "/signup"],
               ["Bootcamps", "/bootcamps"],
               ["AI Coach", "/signup"],
-              ["Pricing", "/pricing"],
+              ["Pricing", "/upgrade"],
             ]}
           />
           <FootCol
