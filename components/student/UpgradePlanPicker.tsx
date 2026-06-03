@@ -5,11 +5,18 @@ import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import type { SubscriptionPlan } from "@/shared/types";
-import { PLAN_PRICING } from "@/shared/types";
 
 interface PickerProps {
   currentPlan: SubscriptionPlan;
   recommended: "premium" | null;
+  /** Base price label, e.g. "₹4,999" (exclusive of GST). */
+  premiumPriceLabel: string;
+  /** GST-inclusive note, e.g. "+ 18% GST · ₹5,898.82 total". */
+  premiumGstNote: string;
+  /** Lifetime offer is sold out — no new premium purchases. */
+  offerClosed: boolean;
+  /** Remaining lifetime seats (for a scarcity nudge); null when not shown. */
+  seatsLeft: number | null;
 }
 
 /**
@@ -17,7 +24,14 @@ interface PickerProps {
  * a /api/billing/checkout POST (currently routed to the manual QR payment
  * page) and, once paid + approved, unlocks lifetime access.
  */
-export function UpgradePlanPicker({ currentPlan, recommended }: PickerProps) {
+export function UpgradePlanPicker({
+  currentPlan,
+  recommended,
+  premiumPriceLabel,
+  premiumGstNote,
+  offerClosed,
+  seatsLeft,
+}: PickerProps) {
   const router = useRouter();
   const [submittingPlan, setSubmittingPlan] = useState<"premium" | null>(null);
 
@@ -37,7 +51,7 @@ export function UpgradePlanPicker({ currentPlan, recommended }: PickerProps) {
         features={[
           "2 applications (lifetime)",
           "Browse all jobs + bootcamps",
-          "Refunds on recruiter ghost",
+          "Application credit back if a recruiter ghosts",
         ]}
         currentPlan={currentPlan}
         recommended={false}
@@ -48,27 +62,38 @@ export function UpgradePlanPicker({ currentPlan, recommended }: PickerProps) {
       <Card
         tier="premium"
         title="Premium"
-        price={`₹${PLAN_PRICING.premium.amountINR.toLocaleString("en-IN")}`}
-        sub="one-time · lifetime"
+        price={premiumPriceLabel}
+        sub={premiumGstNote}
         features={[
           "Unlimited applications",
           "AI Coach + Q&A forever",
           "Every bootcamp included",
-          "Priority refund queue",
+          "Verified Skill badges from bootcamps",
         ]}
         currentPlan={currentPlan}
         recommended={recommended === "premium"}
       >
         {currentPlan === "premium" ? (
           <Cta state="current" />
+        ) : offerClosed ? (
+          <div className="w-full rounded-xl bg-neutral-100 text-neutral-500 text-body-sm font-medium py-3 text-center">
+            Lifetime offer closed
+          </div>
         ) : (
-          <button
-            disabled={submittingPlan !== null}
-            onClick={() => buy("premium")}
-            className="w-full rounded-xl bg-violet-600 text-white text-body-sm font-medium py-3 hover:bg-violet-700 disabled:opacity-50"
-          >
-            {submittingPlan === "premium" ? <Spinner /> : "Go Premium"}
-          </button>
+          <>
+            {seatsLeft !== null && seatsLeft <= 30 ? (
+              <p className="mb-2 text-center text-body-xs font-medium text-violet-700">
+                Only {seatsLeft} lifetime {seatsLeft === 1 ? "seat" : "seats"} left
+              </p>
+            ) : null}
+            <button
+              disabled={submittingPlan !== null}
+              onClick={() => buy("premium")}
+              className="w-full rounded-xl bg-violet-600 text-white text-body-sm font-medium py-3 hover:bg-violet-700 disabled:opacity-50"
+            >
+              {submittingPlan === "premium" ? <Spinner /> : "Go Premium"}
+            </button>
+          </>
         )}
       </Card>
     </div>

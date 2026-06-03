@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { getUserById } from "@/server/store";
-import { PLAN_PRICING } from "@/shared/types";
+import { PLAN_PRICING, PREMIUM_GST_PERCENT } from "@/shared/types";
+import { computeTotalPaise } from "@/server/payments/pricing";
 import { GlassNavbar } from "@/components/glass";
 import { BackdropMesh } from "@/components/ui";
 import { ManualPaymentFlow } from "./ManualPaymentFlow";
@@ -25,6 +26,10 @@ export default async function ManualPayPage({ searchParams }: Props) {
   if (!user) redirect("/login");
 
   const pricing = PLAN_PRICING[plan];
+  const { baseInPaise, gstInPaise, totalInPaise } = computeTotalPaise({
+    priceInPaise: pricing.amountINR * 100,
+    gstPercent: PREMIUM_GST_PERCENT,
+  });
 
   return (
     <div className="relative min-h-screen">
@@ -34,7 +39,10 @@ export default async function ManualPayPage({ searchParams }: Props) {
         <ManualPaymentFlow
           plan={plan}
           planLabel={pricing.label}
-          amountINR={pricing.amountINR}
+          baseInPaise={baseInPaise}
+          gstInPaise={gstInPaise}
+          totalInPaise={totalInPaise}
+          gstPercent={PREMIUM_GST_PERCENT}
           cadence={pricing.cadence}
           userName={user.name ?? ""}
           userEmail={user.email ?? ""}

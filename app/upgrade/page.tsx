@@ -2,12 +2,18 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { authOptions } from "@/server/auth";
-import { getUserById } from "@/server/store";
+import { getUserById, countPremiumUsers } from "@/server/store";
 import { effectivePlan } from "@/server/lib/quota";
 import { GlassNavbar } from "@/components/glass";
 import { BackdropMesh } from "@/components/ui";
 import { UpgradePlanPicker } from "@/components/student/UpgradePlanPicker";
-import { PLAN_LIMITS, PLAN_PRICING } from "@/shared/types";
+import {
+  PLAN_LIMITS,
+  PLAN_PRICING,
+  PREMIUM_GST_PERCENT,
+  PREMIUM_LIFETIME_SEATS,
+} from "@/shared/types";
+import { computeTotalPaise, formatPaiseAsINR } from "@/server/payments/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +42,19 @@ export default async function UpgradePage({ searchParams }: Props) {
 
   const currentPlan = effectivePlan(user);
   const errorCode = searchParams.error;
+
+  // Price is exclusive of tax — show base, GST, and the GST-inclusive total.
+  const { baseInPaise, gstInPaise, totalInPaise } = computeTotalPaise({
+    priceInPaise: PLAN_PRICING.premium.amountINR * 100,
+    gstPercent: PREMIUM_GST_PERCENT,
+  });
+  const premiumPriceLabel = formatPaiseAsINR(baseInPaise);
+  const premiumGstNote = `+ ${PREMIUM_GST_PERCENT}% GST · ${formatPaiseAsINR(totalInPaise, { withPaise: true })} total`;
+
+  // Launch offer: ₹4,999 lifetime is limited to the first N premium buyers.
+  const premiumCount = currentPlan === "premium" ? 0 : await countPremiumUsers();
+  const seatsLeft = Math.max(0, PREMIUM_LIFETIME_SEATS - premiumCount);
+  const offerClosed = currentPlan !== "premium" && seatsLeft <= 0;
 
   return (
     <div className="relative min-h-screen">
@@ -67,11 +86,15 @@ export default async function UpgradePage({ searchParams }: Props) {
         <UpgradePlanPicker
           currentPlan={currentPlan}
           recommended={searchParams.to === "premium" ? "premium" : null}
+          premiumPriceLabel={premiumPriceLabel}
+          premiumGstNote={premiumGstNote}
+          offerClosed={offerClosed}
+          seatsLeft={currentPlan === "premium" ? null : seatsLeft}
         />
 
         <div className="mt-14 text-center">
           <p className="text-body-xs text-neutral-500 mb-3">
-            GST 18% inclusive · UPI payment · All sales final.
+            Price excludes tax · {PREMIUM_GST_PERCENT}% GST added at checkout · UPI payment · All sales final.
           </p>
           <Link
             href="/refund-policy"

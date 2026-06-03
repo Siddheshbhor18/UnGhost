@@ -222,6 +222,19 @@ export const PLAN_PRICING: Record<
   premium: { label: "Premium", amountINR: 4999, cadence: "lifetime" },
 };
 
+/**
+ * Premium is priced **exclusive of tax**. `amountINR` above is the base; this
+ * GST is added on top and collected from the buyer at checkout.
+ */
+export const PREMIUM_GST_PERCENT = 18;
+
+/**
+ * The ₹4,999 one-time lifetime price is a launch offer limited to the first
+ * N students who actually purchase Premium. Once this many premium buyers
+ * exist, the offer is closed (no new lifetime purchases).
+ */
+export const PREMIUM_LIFETIME_SEATS = 150;
+
 export interface User {
   id: string;
   email: string;

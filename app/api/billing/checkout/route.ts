@@ -7,8 +7,14 @@ import { requireSameOrigin } from "@/server/lib/csrf";
 import { withRateLimit } from "@/server/lib/with-rate-limit";
 import { withApiErrorTracking } from "@/server/lib/api-error";
 import { createPayment, paymentsMode } from "@/server/integrations/payments";
-import { getUserById } from "@/server/store";
-import { PLAN_PRICING } from "@/shared/types";
+import { getUserById, countPremiumUsers } from "@/server/store";
+import { effectivePlan } from "@/server/lib/quota";
+import { computeTotalPaise } from "@/server/payments/pricing";
+import {
+  PLAN_PRICING,
+  PREMIUM_GST_PERCENT,
+  PREMIUM_LIFETIME_SEATS,
+} from "@/shared/types";
 
 export const runtime = "nodejs";
 
@@ -41,14 +47,34 @@ async function postHandler(req: Request) {
   const user = await getUserById(session.user.id);
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
+  // Launch offer: ₹4,999 lifetime is capped at the first N premium buyers.
+  // Skip the cap for users who already hold premium (no-op re-purchase).
+  if (effectivePlan(user) !== "premium") {
+    const premiumCount = await countPremiumUsers();
+    if (premiumCount >= PREMIUM_LIFETIME_SEATS) {
+      return NextResponse.json(
+        {
+          error: "offer_closed",
+          reason: `The lifetime offer is sold out (limited to the first ${PREMIUM_LIFETIME_SEATS} members).`,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const pricing = PLAN_PRICING[parsed.data.plan];
+  // Price is exclusive of tax; add GST on top and charge the total.
+  const { totalInPaise } = computeTotalPaise({
+    priceInPaise: pricing.amountINR * 100,
+    gstPercent: PREMIUM_GST_PERCENT,
+  });
   // Order id = `bill_<plan>_<userId>_<ts>` so the callback knows which plan to activate.
   const orderId = `bill_${parsed.data.plan}_${user.id}_${Date.now()}`;
   const redirectUrl = `${APP_URL}/api/billing/callback?orderId=${orderId}`;
 
   const result = await createPayment({
     orderId,
-    amountPaise: pricing.amountINR * 100,
+    amountPaise: totalInPaise,
     description: `unGhost ${pricing.label} plan`,
     redirectUrl,
     payerPhone: user.profile?.contactPhone,

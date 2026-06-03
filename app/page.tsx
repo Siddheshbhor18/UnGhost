@@ -446,8 +446,8 @@ export default async function LandingPage() {
                     <CountUp to={4999} prefix="₹" format duration={2} />
                   </span>
                 }
-                sub="one-time"
-                note="Lifetime access — first 1,000 students only."
+                sub="one-time + 18% GST"
+                note="Lifetime access — first 150 students only."
                 features={[
                   "Unlimited applications",
                   "AI Coach + Q&A forever",
@@ -462,7 +462,7 @@ export default async function LandingPage() {
           </StaggerItem>
         </StaggerGrid>
         <p className="text-center text-body-xs text-neutral-500 mt-6">
-          GST 18% inclusive · All sales final · Pay by UPI
+          Price excludes tax · 18% GST added at checkout · All sales final · Pay by UPI
         </p>
       </MotionSection>
 

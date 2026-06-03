@@ -29,13 +29,17 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
+import { formatPaiseAsINR } from "@/server/payments/pricing";
 
 type Step = "pay" | "confirm" | "done";
 
 interface Props {
   plan: "premium";
   planLabel: string;
-  amountINR: number;
+  baseInPaise: number;
+  gstInPaise: number;
+  totalInPaise: number;
+  gstPercent: number;
   cadence: string;
   userName: string;
   userEmail: string;
@@ -57,12 +61,21 @@ const UPI_APPS = [
 export function ManualPaymentFlow({
   plan,
   planLabel,
-  amountINR,
+  baseInPaise,
+  gstInPaise,
+  totalInPaise,
+  gstPercent,
   cadence,
   userName,
   userEmail,
   userPhone,
 }: Props) {
+  // Display strings. Total is the GST-inclusive amount actually collected.
+  const totalLabel = formatPaiseAsINR(totalInPaise);
+  const baseLabel = formatPaiseAsINR(baseInPaise);
+  const gstLabel = formatPaiseAsINR(gstInPaise, { withPaise: true });
+  // UPI `am=` wants rupees with 2 decimals (GST makes this fractional).
+  const totalRupees = (totalInPaise / 100).toFixed(2);
   const [step, setStep] = useState<Step>("pay");
   const [name, setName] = useState(userName);
   const [phone, setPhone] = useState(userPhone);
@@ -75,7 +88,7 @@ export function ManualPaymentFlow({
   const canSubmit = transactionId.trim().length >= 4 && upiApp;
 
   // Generate QR code client-side — no third-party API call, no UPI data leakage.
-  const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${amountINR}&cu=INR&tn=${encodeURIComponent(`unGhost ${planLabel} plan`)}`;
+  const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${totalRupees}&cu=INR&tn=${encodeURIComponent(`unGhost ${planLabel} plan`)}`;
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -131,10 +144,10 @@ export function ManualPaymentFlow({
           </div>
           <div className="text-right">
             <p className="font-display font-extrabold text-3xl">
-              ₹{amountINR.toLocaleString("en-IN")}
+              {totalLabel}
             </p>
             <p className="text-[11px] text-neutral-400">
-              {cadence === "monthly" ? "/month" : "one-time"}
+              incl. {gstPercent}% GST · {cadence === "monthly" ? "/month" : "one-time"}
             </p>
           </div>
         </div>
@@ -205,7 +218,7 @@ export function ManualPaymentFlow({
               {/* QR Code */}
               <div className="text-center mb-5">
                 <p className="text-[12px] font-semibold text-neutral-700 mb-3 flex items-center justify-center gap-1.5">
-                  <QrCode size={13} /> Scan to pay ₹{amountINR.toLocaleString("en-IN")}
+                  <QrCode size={13} /> Scan to pay {totalLabel}
                 </p>
                 <div className="inline-block rounded-2xl border-2 border-neutral-200 p-3 bg-white">
                   {qrDataUrl ? (
@@ -234,8 +247,8 @@ export function ManualPaymentFlow({
               {/* Important note */}
               <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 mb-5">
                 <p className="text-[11px] text-amber-800 leading-relaxed">
-                  <strong>Important:</strong> Pay exactly ₹
-                  {amountINR.toLocaleString("en-IN")} using any UPI app. After
+                  <strong>Important:</strong> Pay exactly {totalLabel}{" "}
+                  ({baseLabel} + {gstLabel} GST) using any UPI app. After
                   payment, click "I have paid" below and enter your Transaction
                   ID for verification.
                 </p>
@@ -334,10 +347,18 @@ export function ManualPaymentFlow({
                   <span>Email</span>
                   <span className="text-neutral-900">{userEmail}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Base price</span>
+                  <span className="text-neutral-900">{baseLabel}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>GST ({gstPercent}%)</span>
+                  <span className="text-neutral-900">{gstLabel}</span>
+                </div>
                 <div className="flex justify-between border-t border-neutral-200 pt-1.5 mt-1.5">
-                  <span className="font-semibold">Amount</span>
+                  <span className="font-semibold">Total</span>
                   <span className="font-display font-bold text-neutral-900">
-                    ₹{amountINR.toLocaleString("en-IN")}
+                    {totalLabel}
                   </span>
                 </div>
               </div>

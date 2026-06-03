@@ -143,6 +143,15 @@ export async function countUsersByRole(role?: Role): Promise<number> {
   return UserModel.countDocuments(q);
 }
 
+/**
+ * Count students who hold Premium. Drives the launch "first N lifetime buyers"
+ * offer cap (see PREMIUM_LIFETIME_SEATS). O(log N) on the plan index.
+ */
+export async function countPremiumUsers(): Promise<number> {
+  await db();
+  return UserModel.countDocuments({ plan: "premium" });
+}
+
 // Request-scoped memoisation — multiple components in the same RSC render
 // (navbar, page header, sidebar) often call getUserById(session.user.id)
 // independently. `react.cache` dedupes within one render so we hit Mongo

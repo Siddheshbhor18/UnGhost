@@ -20,7 +20,13 @@ import { withApiErrorTracking } from "@/server/lib/api-error";
 import { connectMongo } from "@/server/db/mongo";
 import { PaymentSubmissionModel, UserModel } from "@/server/db/models";
 import { sendPaymentReceived } from "@/server/integrations/email";
-import { PLAN_PRICING } from "@/shared/types";
+import { computeTotalPaise } from "@/server/payments/pricing";
+import {
+  PLAN_PRICING,
+  PREMIUM_GST_PERCENT,
+  PREMIUM_LIFETIME_SEATS,
+} from "@/shared/types";
+import { countPremiumUsers } from "@/server/store";
 import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
@@ -57,6 +63,21 @@ async function postHandler(req: Request) {
 
   await connectMongo();
 
+  // Launch offer: ₹4,999 lifetime is capped at the first N premium buyers.
+  const buyer = await UserModel.findById(session.user.id).select("plan").lean();
+  if (buyer?.plan !== "premium") {
+    const premiumCount = await countPremiumUsers();
+    if (premiumCount >= PREMIUM_LIFETIME_SEATS) {
+      return NextResponse.json(
+        {
+          error: "offer_closed",
+          reason: `The lifetime offer is sold out (limited to the first ${PREMIUM_LIFETIME_SEATS} members).`,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   // Check for duplicate active submission for same plan
   const existing = await PaymentSubmissionModel.findOne({
     userId: session.user.id,
@@ -90,7 +111,10 @@ async function postHandler(req: Request) {
     _id: crypto.randomUUID(),
     userId: session.user.id,
     bootcampId: `plan:${plan}`, // synthetic — identifies this as a plan purchase
-    expectedAmountInPaise: pricing.amountINR * 100,
+    expectedAmountInPaise: computeTotalPaise({
+      priceInPaise: pricing.amountINR * 100,
+      gstPercent: PREMIUM_GST_PERCENT,
+    }).totalInPaise,
     utr: transactionId.toUpperCase(),
     upiApp,
     payerMobile,

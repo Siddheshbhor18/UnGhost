@@ -7,61 +7,41 @@ export default function RefundPolicy() {
   return (
     <LegalShell
       title="Refund Policy"
-      badge="All sales final · with one exception"
+      badge="All sales final"
       effectiveDate="1 May 2026"
       intro="We keep the refund policy short on purpose. Read this before you check out — you'll see the same wording at the payment step."
     >
-      <Section title="Bootcamp purchases — non-refundable">
+      <Section title="Premium — one payment, non-refundable">
         <p className="text-base">
           <strong>
-            All Bootcamp purchases are final. We do not issue refunds.
+            Premium is a single one-time purchase and is non-refundable. We
+            do not issue money refunds.
           </strong>
         </p>
         <p>
+          One payment of ₹4,999 (plus 18% GST, collected at checkout) unlocks
+          everything permanently — unlimited applications, AI Coach, Q&amp;A,
+          and every Bootcamp included. There is no recurring subscription and
+          nothing to cancel. Access stays active for life.
+        </p>
+        <p>
           You consent to this at checkout by ticking the &ldquo;I understand
-          all Bootcamp purchases are final and non-refundable&rdquo; box. We
-          record the timestamp, your IP address, and the Terms version you
-          accepted. This consent is used as evidence in any chargeback
-          dispute.
-        </p>
-        <p>
-          We&apos;re strict about this for two reasons: (1) Bootcamps unlock
-          instantly — you get the content the moment you pay. (2) Refund
-          fraud destroys the economics for instructors who deliver the
-          content. Strict policy → better content quality.
+          this purchase is final and non-refundable&rdquo; box. We record the
+          timestamp, your IP address, and the Terms version you accepted. This
+          consent is used as evidence in any chargeback dispute.
         </p>
       </Section>
 
-      <Section title="The one exception · goodwill credit">
+      <Section title="Cancelled live sessions">
         <p>
-          If the instructor cancels the live session and cannot reschedule
-          within 60 days, we issue you a{" "}
-          <strong>goodwill credit of equal value</strong> usable toward any
-          other Bootcamp.
+          Bootcamps are included with Premium — you don&apos;t pay separately
+          for any single Bootcamp, so there is no per-Bootcamp amount to refund.
         </p>
         <p>
-          This is the only narrow exception — you genuinely received nothing
-          in this scenario. It&apos;s a credit, not cash. Auto-triggered;
-          surfaces in <code>Settings → Subscription</code>.
+          If an instructor cancels a live session, we reschedule it or provide
+          the recording. Your access to every other Bootcamp and to the rest of
+          the platform is unaffected, so no monetary refund applies.
         </p>
-      </Section>
-
-      <Section title="Premium (one-time lifetime)">
-        <p>
-          Premium is a single ₹4,999 lifetime purchase — there is no recurring
-          subscription and nothing to cancel.
-        </p>
-        <ul className="list-disc list-inside space-y-1.5">
-          <li>
-            <strong>Within 7 days of purchase:</strong> full refund on request,
-            provided you have not exhausted the unlimited benefit through heavy
-            use.
-          </li>
-          <li>
-            <strong>After 7 days:</strong> no refunds. Lifetime access stays
-            active permanently.
-          </li>
-        </ul>
       </Section>
 
       <Section title="Recruiter sponsorships">
@@ -93,8 +73,8 @@ export default function RefundPolicy() {
 
       <Section title="Tax invoices (GST)">
         <p>
-          Every Bootcamp purchase ships an 18% GST invoice (HSN 999293).
-          Invoices auto-email and are downloadable from{" "}
+          Every purchase ships an 18% GST invoice (HSN 999293) on top of the
+          base price. Invoices auto-email and are downloadable from{" "}
           <code>Settings → Invoices</code>. We file GSTR-1 monthly.
         </p>
       </Section>
