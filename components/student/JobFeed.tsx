@@ -207,6 +207,11 @@ function JobCard({
                 <span>
                   ₹{job.salaryMin}–{job.salaryMax} LPA
                 </span>
+                {job.experienceMax > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <Briefcase size={11} /> {job.experienceMin}–{job.experienceMax} yrs exp
+                  </span>
+                )}
               </p>
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {job.skills.slice(0, 4).map((s) => (

@@ -215,7 +215,9 @@ export default async function CompanyProfilePage({
                     <MapPin size={10} /> {j.location} · {j.remote}
                   </p>
                   <p className="text-xs text-brand-ink/80">
-                    ₹{j.salaryMin}–{j.salaryMax}L · {j.skills.length} skills
+                    ₹{j.salaryMin}–{j.salaryMax}L
+                    {j.experienceMax > 0 && ` · ${j.experienceMin}–${j.experienceMax} yrs exp`}
+                    {" · "}{j.skills.length} skills
                   </p>
                   <div className="flex flex-wrap gap-1 mt-3">
                     {j.skills.slice(0, 3).map((s) => (

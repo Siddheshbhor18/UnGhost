@@ -28,6 +28,8 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
   const [description, setDescription] = useState("");
   const [salaryMin, setSalaryMin] = useState(30);
   const [salaryMax, setSalaryMax] = useState(50);
+  const [experienceMin, setExperienceMin] = useState(2);
+  const [experienceMax, setExperienceMax] = useState(5);
 
   async function parse() {
     if (!jdText.trim()) return;
@@ -70,6 +72,8 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
         description,
         salaryMin,
         salaryMax,
+        experienceMin,
+        experienceMax,
       }),
     });
     if (!res.ok) {
@@ -238,6 +242,25 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
               type="number"
               value={salaryMax}
               onChange={(e) => setSalaryMax(+e.target.value)}
+            />
+          </Row>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <Row label="Experience — Min (years)">
+            <GlassInput
+              type="number"
+              min={0}
+              value={experienceMin}
+              onChange={(e) => setExperienceMin(+e.target.value)}
+            />
+          </Row>
+          <Row label="Experience — Max (years)">
+            <GlassInput
+              type="number"
+              min={0}
+              value={experienceMax}
+              onChange={(e) => setExperienceMax(+e.target.value)}
             />
           </Row>
         </div>

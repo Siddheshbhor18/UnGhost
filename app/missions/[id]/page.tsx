@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import {
   ArrowLeft,
   Banknote,
+  Briefcase,
   Building2,
   CheckCircle2,
   Clock,
@@ -178,7 +179,7 @@ export default async function MissionBrief({
               </div>
 
               {/* Key facts row */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-5 pt-5 border-t border-brand-ink/5">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-5 pt-5 border-t border-brand-ink/5">
                 <KeyFact
                   icon={<MapPin size={13} />}
                   label="Location"
@@ -188,6 +189,11 @@ export default async function MissionBrief({
                   icon={<Banknote size={13} />}
                   label="Salary"
                   value={`₹${job.salaryMin}–${job.salaryMax}L`}
+                />
+                <KeyFact
+                  icon={<Briefcase size={13} />}
+                  label="Experience"
+                  value={job.experienceMax > 0 ? `${job.experienceMin}–${job.experienceMax} yrs` : "Any"}
                 />
                 <KeyFact
                   icon={<Clock size={13} />}

@@ -195,6 +195,8 @@ const JobSchema = withJsonTransform(
       description: String,
       salaryMin: Number,
       salaryMax: Number,
+      experienceMin: { type: Number, default: 0 },
+      experienceMax: { type: Number, default: 0 },
       createdAt: String,
       active: { type: Boolean, default: true },
     },

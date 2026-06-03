@@ -321,6 +321,9 @@ export interface Job {
   description: string;
   salaryMin: number; // INR LPA
   salaryMax: number;
+  /** Required years of experience (range). 0/0 means unspecified. */
+  experienceMin: number;
+  experienceMax: number;
   createdAt: string;
   active: boolean;
 }

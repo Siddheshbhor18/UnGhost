@@ -29,11 +29,19 @@ const CreateJobInput = z.object({
   description: z.string().max(10000).default(""),
   salaryMin: z.number().min(0).max(100_000_000).default(0),
   salaryMax: z.number().min(0).max(100_000_000).default(0),
+  experienceMin: z.number().int().min(0).max(50).default(0),
+  experienceMax: z.number().int().min(0).max(50).default(0),
 }).refine(
   (b) => b.salaryMin === 0 || b.salaryMax === 0 || b.salaryMax >= b.salaryMin,
   {
     message: "salaryMax must be greater than or equal to salaryMin",
     path: ["salaryMax"],
+  },
+).refine(
+  (b) => b.experienceMax === 0 || b.experienceMax >= b.experienceMin,
+  {
+    message: "experienceMax must be greater than or equal to experienceMin",
+    path: ["experienceMax"],
   },
 );
 
@@ -107,6 +115,8 @@ async function handler(req: Request) {
     description: b.description,
     salaryMin: b.salaryMin,
     salaryMax: b.salaryMax,
+    experienceMin: b.experienceMin,
+    experienceMax: b.experienceMax,
     active: trusted,
   });
 
