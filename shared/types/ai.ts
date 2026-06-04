@@ -95,8 +95,24 @@ export interface DraftMessageContext {
   intent?: string;
 }
 
+export interface SkillCanon {
+  raw: string;
+  /** Canonical name, or the literal "UNMATCHED" if the model is unsure. */
+  canonical: string;
+}
+
 export interface AIAdapter {
   parseResume: (rawText: string) => Promise<ParsedResume>;
+  /**
+   * Map free-text skill labels to their standard canonical names. Same
+   * technology → identical canonical name; unsure → "UNMATCHED" (kept raw).
+   * `knownCanon` are canonical names already in use, for cross-call alignment.
+   * Must NEVER merge distinct technologies (Java≠JavaScript, C≠C++≠C#).
+   */
+  canonicalizeSkills: (
+    skills: string[],
+    knownCanon: string[],
+  ) => Promise<SkillCanon[]>;
   matchScore: (profile: StudentProfile, job: Job) => Promise<MatchResult>;
   whyMatch: (profile: StudentProfile, job: Job) => Promise<WhyMatchResult>;
   gradeAssessment: (prompt: string, response: string, job: Job) => Promise<GradeResult>;

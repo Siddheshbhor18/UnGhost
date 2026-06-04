@@ -1,5 +1,7 @@
 // Deterministic mock match-% so seeded demos stay consistent.
 
+import { canonicalizeSkills } from "@/server/lib/skill-canon";
+
 export function computeMatchPct(studentSkills: string[], jobSkills: string[]): number {
   if (jobSkills.length === 0) return 0;
   const studentSet = new Set(studentSkills.map((s) => s.toLowerCase()));
@@ -18,6 +20,31 @@ export function skillDelta(studentSkills: string[], jobSkills: string[]) {
     skill: s,
     has: studentSet.has(s.toLowerCase()),
   }));
+}
+
+// ── Canonical-aware variants ──────────────────────────────────────────────
+// Same logic as above, but both skill lists are first mapped through the
+// cached canonicalizer so format variants ("React.js" vs "React") match.
+// The pure fns above are kept intact (deterministic; used by the mock + tests).
+
+export async function computeMatchPctCanon(
+  studentSkills: string[],
+  jobSkills: string[],
+): Promise<number> {
+  const map = await canonicalizeSkills([...studentSkills, ...jobSkills]);
+  const sc = studentSkills.map((s) => map.get(s) ?? s);
+  const jc = jobSkills.map((s) => map.get(s) ?? s);
+  return computeMatchPct(sc, jc);
+}
+
+export async function skillDeltaCanon(
+  studentSkills: string[],
+  jobSkills: string[],
+): Promise<Array<{ skill: string; has: boolean }>> {
+  const map = await canonicalizeSkills([...studentSkills, ...jobSkills]);
+  const studentSet = new Set(studentSkills.map((s) => map.get(s) ?? s));
+  // `skill` keeps the original job string for display; `has` uses the canonical.
+  return jobSkills.map((s) => ({ skill: s, has: studentSet.has(map.get(s) ?? s) }));
 }
 
 export function depthScore(text: string): number {

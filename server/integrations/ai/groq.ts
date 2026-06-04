@@ -121,6 +121,17 @@ const AssignmentSchema = z.object({
   aiGeneratedLikelihood: int100,
 });
 
+const CanonSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        raw: z.coerce.string(),
+        canonical: z.coerce.string(),
+      }),
+    )
+    .default([]),
+});
+
 async function groqJSON<T>(
   system: string,
   user: string,
@@ -170,6 +181,22 @@ export const groqAdapter: AIAdapter = {
       );
     } catch {
       return geminiAdapter.parseResume(rawText);
+    }
+  },
+
+  async canonicalizeSkills(skills, knownCanon) {
+    if (skills.length === 0) return [];
+    try {
+      const out = await groqJSON(
+        "You map technical skill labels to their single most standard canonical name. If two inputs name the SAME technology, give them the IDENTICAL canonical name. If a skill has no clearer standard form, return it unchanged. If unsure, set canonical to \"UNMATCHED\". NEVER merge distinct technologies (e.g. Java vs JavaScript, C vs C++ vs C#, AWS vs anything). Return exactly one item per input.",
+        `Known canonical names already in use: ${knownCanon.join(", ") || "(none yet)"}\nSkills to canonicalize: ${skills.join(", ")}`,
+        `{ "items": [{ "raw": string, "canonical": string }] }`,
+        Math.min(2000, 200 + skills.length * 24),
+        CanonSchema,
+      );
+      return out.items;
+    } catch {
+      return geminiAdapter.canonicalizeSkills(skills, knownCanon);
     }
   },
 

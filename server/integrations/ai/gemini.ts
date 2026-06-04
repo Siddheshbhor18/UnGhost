@@ -84,6 +84,36 @@ export const geminiAdapter: AIAdapter = {
     }
   },
 
+  async canonicalizeSkills(skills, knownCanon) {
+    if (skills.length === 0) return [];
+    try {
+      const out = await jsonChat<{ items: Array<{ raw: string; canonical: string }> }>(
+        "You map technical skill labels to their single most standard canonical name. Same technology → identical canonical name; no clearer form → return unchanged; unsure → canonical \"UNMATCHED\". NEVER merge distinct technologies (Java vs JavaScript, C vs C++ vs C#). One item per input.",
+        `Known canonical names already in use: ${knownCanon.join(", ") || "(none yet)"}\nSkills to canonicalize: ${skills.join(", ")}`,
+        {
+          type: "object",
+          properties: {
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  raw: { type: "string" },
+                  canonical: { type: "string" },
+                },
+                required: ["raw", "canonical"],
+              },
+            },
+          },
+          required: ["items"],
+        },
+      );
+      return out.items ?? [];
+    } catch {
+      return mockAdapter.canonicalizeSkills(skills, knownCanon);
+    }
+  },
+
   async matchScore(profile, job) {
     try {
       return await jsonChat(

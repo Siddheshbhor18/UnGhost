@@ -49,6 +49,12 @@ function pickAlias(text: string): string {
 }
 
 export const mockAdapter: AIAdapter = {
+  // Identity: every skill is its own canonical. The resolver normalizes on
+  // top, so offline/fallback behaviour == today's lowercased exact matching.
+  async canonicalizeSkills(skills) {
+    return skills.map((s) => ({ raw: s, canonical: s }));
+  },
+
   async parseResume(rawText) {
     await new Promise((r) => setTimeout(r, 1100));
     const skills = extractSkills(rawText);
