@@ -40,7 +40,7 @@ export function ActiveMissions({ apps, jobs, companies }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand-muted">
+        <p className="text-sm font-semibold text-brand-ink">
           Active Missions
         </p>
         <Link

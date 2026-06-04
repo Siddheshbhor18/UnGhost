@@ -59,7 +59,7 @@ export function JobFeed({
       <div>
         <div className="flex items-end justify-between mb-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary">
+            <p className="text-xs font-semibold text-brand-primary">
               Top matches
             </p>
             <h3 className="font-display font-bold text-xl text-brand-ink">
@@ -108,11 +108,11 @@ export function JobFeed({
         <div>
           <div className="flex items-end justify-between mb-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-muted">
+              <p className="text-xs font-semibold text-brand-muted">
                 Stretch roles
               </p>
               <h3 className="font-display font-bold text-xl text-brand-ink">
-                Aim higher — apply anyway
+                Aim higher, apply anyway
               </h3>
             </div>
             <button
