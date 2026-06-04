@@ -103,6 +103,10 @@ function LoginInner() {
     const res = await signIn("credentials", {
       email,
       password,
+      // Selected role tab. The server (authorize) rejects the sign-in if it
+      // doesn't match the account's real role — enforced BEFORE a session is
+      // issued, so a role mismatch never mints a usable token.
+      role,
       redirect: false,
     });
     if (res?.error) {
@@ -118,7 +122,8 @@ function LoginInner() {
         res.error.toLowerCase().includes("suspended") ||
         res.error.toLowerCase().includes("banned") ||
         res.error.toLowerCase().includes("grace") ||
-        res.error.toLowerCase().includes("attempt")
+        res.error.toLowerCase().includes("attempt") ||
+        res.error.toLowerCase().includes("selected role")
       ) {
         setErr(res.error);
       } else {

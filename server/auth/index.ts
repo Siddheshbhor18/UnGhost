@@ -167,6 +167,28 @@ export const authOptions: AuthOptions = {
           );
         }
 
+        // Role-tab enforcement (server-side). The sign-in form sends the
+        // role tab the visitor picked. If it doesn't match the account's
+        // real role, reject HERE — before any session/JWT is issued. The
+        // old client-side getSession() check was racy (the cookie is already
+        // set by the time it runs) and could be skipped entirely, letting an
+        // admin account sign in under the Student tab. This check only ever
+        // restricts (it can't grant a role the account doesn't have), so a
+        // forged `role` param can't escalate — worst case it matches and is
+        // a no-op. We keep the message role-agnostic to avoid revealing that
+        // an email belongs to a privileged account.
+        const expectedRole =
+          typeof creds.role === "string" ? creds.role.trim() : "";
+        if (expectedRole && expectedRole !== user.role) {
+          logger.warn(
+            { ipPrefix: ip.slice(0, 7) },
+            "auth.role-tab-mismatch",
+          );
+          throw new Error(
+            "These credentials don't match the selected role. Pick the correct tab and sign in again.",
+          );
+        }
+
         // Phone-verification gate REMOVED. We dropped MSG91 / SMS OTP from
         // the platform — email is the sole identity factor. Password resets
         // use Resend, signup verifies the email but never the phone.
