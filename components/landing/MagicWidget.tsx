@@ -97,7 +97,7 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
   return (
     <div
       className={clsx(
-        "rounded-3xl border bg-white/70 backdrop-blur-2xl shadow-glass-lg p-6 transition",
+        "rounded-2xl border bg-white/70 backdrop-blur-2xl shadow-glass-lg p-6 transition",
         sticky && "fixed bottom-6 right-6 z-40 max-w-sm hidden md:block",
         dragOver
           ? "border-brand-primary shadow-brand-glow"

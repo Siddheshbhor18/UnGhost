@@ -62,9 +62,6 @@ export default async function UpgradePage({ searchParams }: Props) {
       <GlassNavbar />
       <main className="mx-auto max-w-content px-4 pt-28 pb-20">
         <header className="text-center mb-14">
-          <p className="text-body-xs uppercase tracking-widest text-neutral-500 mb-3">
-            Subscription
-          </p>
           <h1 className="font-display font-extrabold text-display-xl text-neutral-950 leading-tight mb-4">
             Unlock the platform.
           </h1>
