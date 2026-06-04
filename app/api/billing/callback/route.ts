@@ -4,10 +4,12 @@ import { authOptions } from "@/server/auth";
 import { getPaymentStatus } from "@/server/integrations/payments";
 import {
   activateUserPlan,
+  countPremiumUsers,
   notify,
   recordProcessedTxn,
   writeAuditLog,
 } from "@/server/store";
+import { PREMIUM_LIFETIME_SEATS } from "@/shared/types";
 import { logger } from "@/server/lib/logger";
 import { withApiErrorTracking } from "@/server/lib/api-error";
 
@@ -72,6 +74,16 @@ async function handler(req: Request) {
   });
 
   if (record.firstTime) {
+    // The 150-seat cap is gated at checkout-init. By callback the user has
+    // already paid, so we honour the payment (refusing would strand a payer)
+    // but log an overshoot so ops can spot a boundary race.
+    const premiumCount = await countPremiumUsers();
+    if (premiumCount >= PREMIUM_LIFETIME_SEATS) {
+      logger.warn(
+        { userId, txnId, premiumCount },
+        "billing.callback-over-lifetime-cap",
+      );
+    }
     await activateUserPlan(userId, plan, txnId);
     await notify({
       userId,

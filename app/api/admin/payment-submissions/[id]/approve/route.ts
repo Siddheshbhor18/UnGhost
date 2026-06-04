@@ -23,6 +23,8 @@ import {
   UserModel,
 } from "@/server/db/models";
 import { sendEnrollmentApproved } from "@/server/integrations/email";
+import { countPremiumUsers } from "@/server/store";
+import { PREMIUM_LIFETIME_SEATS } from "@/shared/types";
 import { logger } from "@/server/lib/logger";
 import { adminLoadSubmission } from "../_shared";
 
@@ -48,6 +50,24 @@ export async function POST(
       { error: "unsupported_plan", detail: submission.bootcampId },
       { status: 400 },
     );
+  }
+
+  // Re-enforce the 150-seat lifetime cap at the moment of activation. The
+  // /upgrade + checkout gate is checked at submit time, but submissions sit
+  // pending until approved, so concurrent claims can pile up past the cap.
+  // Block here so a click can't mint the 151st premium; the admin handles
+  // the over-cap payment manually (refund / waitlist).
+  if (isPlanPurchase) {
+    const premiumCount = await countPremiumUsers();
+    if (premiumCount >= PREMIUM_LIFETIME_SEATS) {
+      return NextResponse.json(
+        {
+          error: "offer_closed",
+          detail: `Lifetime cap reached (${PREMIUM_LIFETIME_SEATS}). Do not approve — refund the payer.`,
+        },
+        { status: 409 },
+      );
+    }
   }
 
   // Run the writes in a transaction so they're atomic.
