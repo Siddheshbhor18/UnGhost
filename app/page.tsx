@@ -471,7 +471,7 @@ export default async function LandingPage() {
         className="mx-auto max-w-content px-4 py-20"
         amount={0.15}
       >
-        <SectionHeader eyebrow="FAQ" title="The honest questions." />
+        <SectionHeader title="The honest questions." />
         <div className="mt-10">
           <FAQ />
         </div>

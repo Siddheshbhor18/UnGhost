@@ -18,7 +18,7 @@ export function ScrollPrompt() {
       style={reduce ? undefined : { opacity }}
       className="flex flex-col items-center gap-2 pt-10 pb-2"
     >
-      <span className="text-[11px] uppercase tracking-widest font-semibold text-neutral-500">
+      <span className="text-xs font-medium text-neutral-500">
         See how it works
       </span>
       <motion.div

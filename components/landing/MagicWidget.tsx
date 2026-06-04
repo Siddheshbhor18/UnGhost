@@ -106,7 +106,7 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
     >
       <div className="flex items-center gap-2 mb-3">
         <Sparkles size={16} className="text-brand-primary" />
-        <p className="text-xs uppercase tracking-wider font-semibold text-brand-primary">
+        <p className="text-xs font-semibold text-brand-primary">
           Resume Parser
         </p>
       </div>
