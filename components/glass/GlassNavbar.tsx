@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import clsx from "clsx";
 import { GlassButton } from "./GlassButton";
 import { NotificationBell } from "./NotificationBell";
+import { AccountMenu } from "./AccountMenu";
 
 /**
  * Top navigation bar (glass). Single source of truth for in-app wayfinding.
@@ -153,17 +154,12 @@ export function GlassNavbar() {
                   </Link>
                 )}
                 <NotificationBell />
-                <span className="hidden sm:inline text-xs font-medium text-brand-muted">
-                  {session.user?.name}
-                </span>
-                <GlassButton
-                  variant="glass"
-                  size="sm"
-                  className="whitespace-nowrap"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                >
-                  Sign out
-                </GlassButton>
+                <AccountMenu
+                  name={session.user?.name}
+                  email={session.user?.email}
+                  image={session.user?.image}
+                  role={role}
+                />
               </>
             ) : (
               <>

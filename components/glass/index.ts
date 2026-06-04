@@ -14,6 +14,7 @@ export { Logo } from "./Logo";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./Tabs";
 export { DemoModeBadge } from "./DemoModeBadge";
 export { NotificationBell } from "./NotificationBell";
+export { AccountMenu } from "./AccountMenu";
 export { DoorAnimation } from "./DoorAnimation";
 
 // Pass-through re-exports of the new editorial primitives. This lets
