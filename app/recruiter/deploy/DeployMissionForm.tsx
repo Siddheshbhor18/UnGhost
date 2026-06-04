@@ -10,6 +10,7 @@ import {
   GlassTextarea,
 } from "@/components/glass";
 import { Sparkles, Plus, X, Rocket } from "lucide-react";
+import { normalizeSkill } from "@/shared/skills";
 
 export default function DeployMissionForm({ companyId }: { companyId: string }) {
   const router = useRouter();
@@ -51,7 +52,11 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
 
   function addSkill() {
     const s = skillInput.trim();
-    if (s && !skills.includes(s)) setSkills([...skills, s]);
+    // Dedup by normalized form so "React" and "react" / "React.js" aren't
+    // both added to the same job.
+    if (s && !skills.some((x) => normalizeSkill(x) === normalizeSkill(s))) {
+      setSkills([...skills, s]);
+    }
     setSkillInput("");
   }
 

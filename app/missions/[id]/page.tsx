@@ -33,7 +33,8 @@ import {
   listJobs,
 } from "@/server/store";
 import { getAI } from "@/server/integrations/ai";
-import { computeMatchPct, skillDelta } from "@/server/lib/matching";
+import { computeMatchPctCanon, skillDeltaCanon } from "@/server/lib/matching";
+import { normalizeSkill } from "@/shared/skills";
 import { effectivePlan } from "@/server/lib/quota";
 import { PLAN_LIMITS } from "@/shared/types";
 import {
@@ -86,14 +87,14 @@ export default async function MissionBrief({
   ]);
   const studentSkills = user?.profile?.skills ?? [];
   const verifiedLow = new Set(
-    (user?.profile?.verifiedSkills ?? []).map((s) => s.toLowerCase()),
+    (user?.profile?.verifiedSkills ?? []).map(normalizeSkill),
   );
-  const matchPct = computeMatchPct(studentSkills, job.skills);
-  const delta = skillDelta(studentSkills, job.skills);
+  const matchPct = await computeMatchPctCanon(studentSkills, job.skills);
+  const delta = await skillDeltaCanon(studentSkills, job.skills);
   const rows = await Promise.all(
     delta.map(async (d) => ({
       ...d,
-      verified: verifiedLow.has(d.skill.toLowerCase()),
+      verified: verifiedLow.has(normalizeSkill(d.skill)),
       bootcampId: d.has ? undefined : (await getBootcampForSkill(d.skill))?.id,
     })),
   );
@@ -124,12 +125,14 @@ export default async function MissionBrief({
   // Already applied?
   const existingApp = allApps.find((a) => a.jobId === job.id);
 
-  // Similar missions: same role family heuristic via skill overlap
+  // Similar missions: same role family heuristic via skill overlap.
+  // Normalize keys so "React.js" vs "React" still counts as overlap.
+  const jobSkillKeys = new Set(job.skills.map(normalizeSkill));
   const similar = allJobs
     .filter((j) => j.id !== job.id)
     .map((j) => ({
       job: j,
-      overlap: j.skills.filter((s) => job.skills.includes(s)).length,
+      overlap: j.skills.filter((s) => jobSkillKeys.has(normalizeSkill(s))).length,
     }))
     .filter((x) => x.overlap > 0)
     .sort((a, b) => b.overlap - a.overlap)

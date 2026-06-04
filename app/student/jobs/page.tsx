@@ -11,6 +11,7 @@ import {
   listSavedJobs,
 } from "@/server/store";
 import { computeMatchPct } from "@/server/lib/matching";
+import { canonicalizeSkills } from "@/server/lib/skill-canon";
 import { JobsExplorer } from "@/components/student/JobsExplorer";
 
 export default async function StudentJobsPage() {
@@ -32,9 +33,18 @@ export default async function StudentJobsPage() {
   const hasSkills = skills.length > 0;
 
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c]));
-  const jobsWithMatch = jobs
-    .filter((j) => !dismissed.has(j.id))
-    .map((j) => ({ ...j, matchPct: computeMatchPct(skills, j.skills) }));
+  const visible = jobs.filter((j) => !dismissed.has(j.id));
+  // One cached canonicalization batch for the whole list, then match.
+  const skillCanon = await canonicalizeSkills([
+    ...skills,
+    ...visible.flatMap((j) => j.skills),
+  ]);
+  const toCanon = (arr: string[]) => arr.map((s) => skillCanon.get(s) ?? s);
+  const skillsCanon = toCanon(skills);
+  const jobsWithMatch = visible.map((j) => ({
+    ...j,
+    matchPct: computeMatchPct(skillsCanon, toCanon(j.skills)),
+  }));
 
   const savedIds = savedJobs.map((s) => s.jobId);
 

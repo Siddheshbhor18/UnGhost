@@ -22,6 +22,7 @@ import {
   listSavedJobs,
 } from "@/server/store";
 import { computeMatchPct } from "@/server/lib/matching";
+import { canonicalizeSkills } from "@/server/lib/skill-canon";
 
 export default async function SavedJobsPage() {
   const session = await getServerSession(authOptions);
@@ -38,6 +39,17 @@ export default async function SavedJobsPage() {
   const coIdx = Object.fromEntries(companies.map((c) => [c.id, c]));
   const studentSkills = user?.profile?.skills ?? [];
 
+  // Canonicalize once across the saved jobs, then match on canonical forms.
+  const savedJobsList = saved
+    .map((s) => jobIdx[s.jobId])
+    .filter((j): j is NonNullable<typeof j> => Boolean(j));
+  const skillCanon = await canonicalizeSkills([
+    ...studentSkills,
+    ...savedJobsList.flatMap((j) => j.skills),
+  ]);
+  const toCanon = (arr: string[]) => arr.map((s) => skillCanon.get(s) ?? s);
+  const studentCanon = toCanon(studentSkills);
+
   // Hydrate saved jobs with match% + filter out any saved-but-since-deleted jobs
   const cards = saved
     .map((s) => {
@@ -47,7 +59,7 @@ export default async function SavedJobsPage() {
         savedAt: s.savedAt,
         job,
         company: coIdx[job.companyId],
-        matchPct: computeMatchPct(studentSkills, job.skills),
+        matchPct: computeMatchPct(studentCanon, toCanon(job.skills)),
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);

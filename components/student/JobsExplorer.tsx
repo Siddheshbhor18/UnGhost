@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { GlassBadge, GlassCard } from "@/components/glass";
 import type { Job, CompanyProfile } from "@/shared/types";
+import { normalizeSkill } from "@/shared/skills";
 
 interface JobWithMatch extends Job {
   matchPct: number;
@@ -60,16 +61,26 @@ export function JobsExplorer({ jobs, companies, savedIds, hasSkills }: Props) {
   // Distinct facet values, frequency-ranked.
   const { topCities, topSkills } = useMemo(() => {
     const cityCount = new Map<string, number>();
+    // Key skill facets by normalized form so "Python"/"python"/"React.js"/
+    // "React" collapse to one chip; keep the first-seen raw for display.
     const skillCount = new Map<string, number>();
+    const skillDisplay = new Map<string, string>();
     for (const j of jobs) {
       for (const c of cityTokens(j.location))
         cityCount.set(c, (cityCount.get(c) ?? 0) + 1);
-      for (const s of j.skills)
-        skillCount.set(s, (skillCount.get(s) ?? 0) + 1);
+      for (const s of j.skills) {
+        const k = normalizeSkill(s);
+        if (!k) continue;
+        skillCount.set(k, (skillCount.get(k) ?? 0) + 1);
+        if (!skillDisplay.has(k)) skillDisplay.set(k, s);
+      }
     }
     const rank = (m: Map<string, number>, n: number) =>
       [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map((e) => e[0]);
-    return { topCities: rank(cityCount, 12), topSkills: rank(skillCount, 24) };
+    return {
+      topCities: rank(cityCount, 12),
+      topSkills: rank(skillCount, 24).map((k) => skillDisplay.get(k) ?? k),
+    };
   }, [jobs]);
 
   const filtered = useMemo(() => {
@@ -86,9 +97,8 @@ export function JobsExplorer({ jobs, companies, savedIds, hasSkills }: Props) {
         if (!toks.some((t) => cities.has(t))) return false;
       }
       if (skills.size) {
-        const js = j.skills.map((s) => s.toLowerCase());
-        if (![...skills].every((s) => js.includes(s.toLowerCase())))
-          return false;
+        const js = new Set(j.skills.map(normalizeSkill));
+        if (![...skills].every((s) => js.has(normalizeSkill(s)))) return false;
       }
       if (minSalary > 0 && (j.salaryMax || j.salaryMin) < minSalary)
         return false;
