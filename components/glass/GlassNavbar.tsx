@@ -42,7 +42,8 @@ const NAV_BY_ROLE: Record<string, NavItem[]> = {
     { href: "/bootcamps", label: "Bootcamps" },
     { href: "/student/live", label: "Live" },
     { href: "/student/coach", label: "AI Coach" },
-    { href: "/student/profile", label: "Profile" },
+    // Profile + Settings live in the account dropdown (avatar, top-right),
+    // not the center nav — keeps them in one place across desktop + mobile.
   ],
   instructor: [
     { href: "/instructor/today", label: "Today" },
