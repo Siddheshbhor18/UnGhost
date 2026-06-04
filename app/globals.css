@@ -121,6 +121,14 @@ body {
   border-radius: 4px;
 }
 
+/* Mobile bottom tab bar: reserve space so the fixed bar never overlaps page
+   content. Applied only while the bar is mounted (signed-in) and below md. */
+@media (max-width: 767px) {
+  body.has-mobile-nav {
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* Honour reduced-motion globally */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -9,6 +9,7 @@ import clsx from "clsx";
 import { GlassButton } from "./GlassButton";
 import { NotificationBell } from "./NotificationBell";
 import { AccountMenu } from "./AccountMenu";
+import { MobileTabBar } from "./MobileTabBar";
 
 /**
  * Top navigation bar (glass). Single source of truth for in-app wayfinding.
@@ -88,6 +89,7 @@ export function GlassNavbar() {
       : [];
 
   return (
+    <>
     <header className="sticky top-0 z-40">
       <div className="mx-auto max-w-7xl px-4 pt-4">
         <nav className="glass-panel flex items-center justify-between gap-2 px-4 sm:px-5 py-3">
@@ -188,5 +190,9 @@ export function GlassNavbar() {
         </nav>
       </div>
     </header>
+    {session && items.length > 0 && (
+      <MobileTabBar items={items} pathname={pathname} />
+    )}
+    </>
   );
 }
