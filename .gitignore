@@ -30,6 +30,9 @@ server/db/backups/
 # Admin / destructive ops scripts — provisioning tools, keep out of the repo
 scripts/create-admin.ts
 scripts/delete-user.ts
+scripts/prune-to-25-jobs.ts
+scripts/seed-launch-inventory-2.ts
+scripts/unseed-launch-inventory-2.ts
 
 # Launch seed inventory: holds the plaintext shared recruiter password — never commit
 server/db/seeds/launch-inventory.ts
