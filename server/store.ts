@@ -77,6 +77,7 @@ import type {
   Stage,
   User,
 } from "@/shared/types";
+import { PLAN_PRICING } from "@/shared/types";
 
 async function db() {
   await connectMongo();
@@ -529,9 +530,11 @@ export async function getPartnerStats(
     }),
   ]);
 
-  // Pricing matches PLAN_PRICING in shared/types/index.ts (₹4,999 Premium).
-  // Inlined here to avoid client-bundling that constant.
-  const estCommissionINR = Math.round(paidPremium * 4999 * (pct / 100));
+  // Commission is on the ex-GST base price (the tax is remitted, not earned).
+  // Sourced from PLAN_PRICING so it tracks any future price change.
+  const estCommissionINR = Math.round(
+    paidPremium * PLAN_PRICING.premium.amountINR * (pct / 100),
+  );
   return {
     partnerId,
     signups,
