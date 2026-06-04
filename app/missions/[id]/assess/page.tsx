@@ -64,10 +64,25 @@ export default function AssessmentPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [jobRes, profRes] = await Promise.all([
+        const [jobRes, profRes, quotaRes] = await Promise.all([
           fetch(`/api/jobs/${params.id}`),
           fetch("/api/student/profile"),
+          fetch("/api/applications/quota"),
         ]);
+        // Quota gate: a free student who has used all their applications can't
+        // apply, so they must not be able to take the assessment either —
+        // send them to upgrade. Fail open: only redirect on an explicit "no".
+        try {
+          if (quotaRes.ok) {
+            const q = await quotaRes.json();
+            if (q && q.allowed === false) {
+              router.replace("/upgrade?to=premium");
+              return;
+            }
+          }
+        } catch {
+          /* fail open — the apply POST still enforces the cap server-side */
+        }
         if (profRes.ok) {
           // Inline check — mirrors server-side computeCompleteness
           const me = await profRes.json();

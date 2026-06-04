@@ -12,6 +12,7 @@ import {
 } from "@/server/store";
 import { computeMatchPct } from "@/server/lib/matching";
 import { canonicalizeSkills } from "@/server/lib/skill-canon";
+import { checkApplyQuota } from "@/server/lib/quota";
 import { JobsExplorer } from "@/components/student/JobsExplorer";
 
 export default async function StudentJobsPage() {
@@ -31,6 +32,9 @@ export default async function StudentJobsPage() {
   const dismissed = new Set(notInterestedIds);
   const skills = user?.profile?.skills ?? [];
   const hasSkills = skills.length > 0;
+  // Free student who has used every application → apply CTAs become upgrade.
+  const quota = user ? await checkApplyQuota(user) : null;
+  const quotaExhausted = quota ? !quota.allowed : false;
 
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c]));
   const visible = jobs.filter((j) => !dismissed.has(j.id));
@@ -71,6 +75,7 @@ export default async function StudentJobsPage() {
           companies={companyMap}
           savedIds={savedIds}
           hasSkills={hasSkills}
+          quotaExhausted={quotaExhausted}
         />
       </div>
     </main>

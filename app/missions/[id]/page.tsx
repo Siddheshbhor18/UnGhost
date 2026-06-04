@@ -121,6 +121,10 @@ export default async function MissionBrief({
   const quotaUsedPct = unlimitedApps
     ? 0
     : Math.min(100, (applicationsUsed / applicationsLimit) * 100);
+  // Free user who has used every application: even a complete profile can't
+  // apply, so the assessment entry must become an upgrade prompt (the server
+  // also 402s the apply itself; this gates the UI before they waste effort).
+  const quotaExhausted = !unlimitedApps && applicationsUsed >= applicationsLimit;
 
   // Already applied?
   const existingApp = allApps.find((a) => a.jobId === job.id);
@@ -553,6 +557,20 @@ export default async function MissionBrief({
                       Track status →
                     </Link>
                   </div>
+                ) : quotaExhausted ? (
+                  <>
+                    <Link
+                      href="/upgrade?to=premium"
+                      className="btn-brand mt-5 w-full justify-center"
+                      style={{ minHeight: 56 }}
+                    >
+                      <Sparkles size={16} /> Go Premium to Apply →
+                    </Link>
+                    <p className="text-[11px] text-brand-muted mt-3">
+                      You&apos;ve used all {applicationsLimit} free
+                      applications. Premium unlocks unlimited.
+                    </p>
+                  </>
                 ) : canApply ? (
                   <>
                     <Link

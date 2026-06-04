@@ -27,6 +27,8 @@ interface Props {
   companies: Record<string, CompanyProfile>;
   savedIds: string[];
   hasSkills: boolean;
+  /** Free student who has used all applications → apply CTAs become upgrade. */
+  quotaExhausted: boolean;
 }
 
 type SortKey = "match" | "newest" | "salary";
@@ -46,7 +48,13 @@ function cityTokens(loc: string): string[] {
     .filter(Boolean);
 }
 
-export function JobsExplorer({ jobs, companies, savedIds, hasSkills }: Props) {
+export function JobsExplorer({
+  jobs,
+  companies,
+  savedIds,
+  hasSkills,
+  quotaExhausted,
+}: Props) {
   const [query, setQuery] = useState("");
   const [modes, setModes] = useState<Set<string>>(new Set());
   const [cities, setCities] = useState<Set<string>>(new Set());
@@ -323,6 +331,7 @@ export function JobsExplorer({ jobs, companies, savedIds, hasSkills }: Props) {
                 company={companies[j.companyId]}
                 saved={saved.has(j.id)}
                 hasSkills={hasSkills}
+                quotaExhausted={quotaExhausted}
                 onToggleSave={() => onToggleSave(j.id)}
               />
             ))}
@@ -378,12 +387,14 @@ function JobCard({
   company,
   saved,
   hasSkills,
+  quotaExhausted,
   onToggleSave,
 }: {
   job: JobWithMatch;
   company?: CompanyProfile;
   saved: boolean;
   hasSkills: boolean;
+  quotaExhausted?: boolean;
   onToggleSave: () => void;
 }) {
   return (
@@ -404,7 +415,10 @@ function JobCard({
         {saved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
       </button>
 
-      <Link href={`/missions/${job.id}`} className="block h-full">
+      <Link
+        href={quotaExhausted ? "/upgrade?to=premium" : `/missions/${job.id}`}
+        className="block h-full"
+      >
         <GlassCard interactive className="h-full flex flex-col">
           <div className="flex-1 min-w-0 pr-9">
             <GlassBadge tone="neutral" className="mb-2">
@@ -460,8 +474,13 @@ function JobCard({
                 <Clock size={10} /> {job.slaHours}h SLA
               </GlassBadge>
             </div>
-            <span className="text-xs font-semibold text-brand-primary inline-flex items-center gap-1">
-              View &amp; apply <ArrowRight size={12} />
+            <span
+              className={`text-xs font-semibold inline-flex items-center gap-1 ${
+                quotaExhausted ? "text-violet-600" : "text-brand-primary"
+              }`}
+            >
+              {quotaExhausted ? "Go Premium" : "View & apply"}{" "}
+              <ArrowRight size={12} />
             </span>
           </div>
         </GlassCard>
