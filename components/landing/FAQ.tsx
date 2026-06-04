@@ -19,8 +19,8 @@ const FAQS = [
     a: "Free tier gives you 2 lifetime applications to try the platform. Premium is a one-time ₹4,999 lifetime purchase — unlimited applications, AI Coach, Q&A, and every Bootcamp included. Recruiters post and hire for free — no platform fees.",
   },
   {
-    q: "Are Bootcamp purchases refundable?",
-    a: "No. All Bootcamp sales are final and non-refundable. You consent to this at checkout, persisted with timestamp + IP for legal protection. The single exception: if the instructor cancels a live session and cannot reschedule within 60 days, we issue a goodwill credit usable on another Bootcamp.",
+    q: "Is the Premium purchase refundable?",
+    a: "Bootcamps aren't sold separately: every Bootcamp is included in the one-time Premium purchase. That purchase is final and non-refundable, and you consent at checkout (timestamp + IP recorded). If an instructor cancels a live session, we reschedule it or share the recording; your access to everything else is unaffected.",
   },
   {
     q: "How does the AI grade my assessment?",
