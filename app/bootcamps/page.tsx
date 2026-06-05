@@ -13,6 +13,11 @@ import { BackdropMesh, SectionLabel } from "@/components/ui";
 import { listBootcamps } from "@/server/store";
 import { ROOMS, type BootcampCategory } from "@/shared/rooms";
 
+// Fetches the live bootcamp catalogue (behind a Redis cache); render per
+// request instead of prerendering at build, so a transient DB/cache blip
+// can't fail the build. The cached() layer keeps the per-request cost low.
+export const dynamic = "force-dynamic";
+
 const ROOM_ICON: Record<BootcampCategory, React.ReactNode> = {
   ai: <Brain size={22} />,
   marketing: <Megaphone size={22} />,
