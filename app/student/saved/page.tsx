@@ -21,7 +21,7 @@ import {
   listJobs,
   listSavedJobs,
 } from "@/server/store";
-import { computeMatchPct } from "@/server/lib/matching";
+import { computeMatchScore } from "@/server/lib/matching";
 import { canonicalizeSkills } from "@/server/lib/skill-canon";
 
 export default async function SavedJobsPage() {
@@ -43,12 +43,12 @@ export default async function SavedJobsPage() {
   const savedJobsList = saved
     .map((s) => jobIdx[s.jobId])
     .filter((j): j is NonNullable<typeof j> => Boolean(j));
+  const verified = user?.profile?.verifiedSkills ?? [];
   const skillCanon = await canonicalizeSkills([
     ...studentSkills,
+    ...verified,
     ...savedJobsList.flatMap((j) => j.skills),
   ]);
-  const toCanon = (arr: string[]) => arr.map((s) => skillCanon.get(s) ?? s);
-  const studentCanon = toCanon(studentSkills);
 
   // Hydrate saved jobs with match% + filter out any saved-but-since-deleted jobs
   const cards = saved
@@ -59,7 +59,9 @@ export default async function SavedJobsPage() {
         savedAt: s.savedAt,
         job,
         company: coIdx[job.companyId],
-        matchPct: computeMatchPct(studentCanon, toCanon(job.skills)),
+        matchPct: user?.profile
+          ? computeMatchScore(user.profile, job, skillCanon)
+          : 0,
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);

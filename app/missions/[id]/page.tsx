@@ -33,7 +33,8 @@ import {
   listJobs,
 } from "@/server/store";
 import { getAI } from "@/server/integrations/ai";
-import { computeMatchPctCanon, skillDeltaCanon } from "@/server/lib/matching";
+import { computeMatchScore, skillDeltaCanon } from "@/server/lib/matching";
+import { canonicalizeSkills } from "@/server/lib/skill-canon";
 import { normalizeSkill } from "@/shared/skills";
 import { effectivePlan } from "@/server/lib/quota";
 import { PLAN_LIMITS } from "@/shared/types";
@@ -89,7 +90,14 @@ export default async function MissionBrief({
   const verifiedLow = new Set(
     (user?.profile?.verifiedSkills ?? []).map(normalizeSkill),
   );
-  const matchPct = await computeMatchPctCanon(studentSkills, job.skills);
+  const matchCanon = await canonicalizeSkills([
+    ...studentSkills,
+    ...(user?.profile?.verifiedSkills ?? []),
+    ...job.skills,
+  ]);
+  const matchPct = user?.profile
+    ? computeMatchScore(user.profile, job, matchCanon)
+    : 0;
   const delta = await skillDeltaCanon(studentSkills, job.skills);
   const rows = await Promise.all(
     delta.map(async (d) => ({

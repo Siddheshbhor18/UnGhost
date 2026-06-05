@@ -24,7 +24,7 @@ import {
   listUpcomingLiveForStudent,
   maybeRunSlaSweep,
 } from "@/server/store";
-import { computeMatchPct } from "@/server/lib/matching";
+import { computeMatchScore } from "@/server/lib/matching";
 import { canonicalizeSkills } from "@/server/lib/skill-canon";
 import { computeCompleteness } from "@/server/lib/profile-completeness";
 import { effectivePlan } from "@/server/lib/quota";
@@ -94,17 +94,17 @@ export default async function DashboardPage() {
   const studentSkills = user?.profile?.skills ?? [];
   const enrolledBcs = user?.profile?.enrolledBootcamps ?? [];
 
-  // Canonicalize student + all job skills once (one cached batch), then match
-  // on the canonical forms so "React.js" vs "React" no longer reads as a gap.
+  // Canonicalize student + verified + all job skills once (one cached batch),
+  // then score each job on the canonical forms (skills/experience/location).
+  const verifiedSkills = user?.profile?.verifiedSkills ?? [];
   const skillCanon = await canonicalizeSkills([
     ...studentSkills,
+    ...verifiedSkills,
     ...jobs.flatMap((j) => j.skills),
   ]);
-  const toCanon = (arr: string[]) => arr.map((s) => skillCanon.get(s) ?? s);
-  const studentCanon = toCanon(studentSkills);
   const jobsWithMatch = jobs.map((j) => ({
     ...j,
-    matchPct: computeMatchPct(studentCanon, toCanon(j.skills)),
+    matchPct: user?.profile ? computeMatchScore(user.profile, j, skillCanon) : 0,
   }));
   const matched = jobsWithMatch
     .filter((j) => j.matchPct >= MATCH_THRESHOLD)
