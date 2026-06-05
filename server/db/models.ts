@@ -15,6 +15,8 @@ import type {
   Message,
   MessageThread,
   ModerationFlag,
+  Skill,
+  PendingSkill,
   NotInterestedFeedback,
   RoomLecture,
   SavedJob,
@@ -81,6 +83,7 @@ const StudentProfileSchema = new Schema(
     trajectory: String,
     skills: [String],
     verifiedSkills: [String],
+    skillIds: [String],
     enrolledBootcamps: [String],
     history: [HistoryEntrySchema],
     resumeUrl: String,
@@ -188,6 +191,7 @@ const JobSchema = withJsonTransform(
       recruiterId: { type: String, index: true },
       title: String,
       skills: [String],
+      skillIds: [String],
       location: String,
       remote: String,
       slaHours: Number,
@@ -717,6 +721,48 @@ export const AuditLogModel: Model<AuditLog> =
 export const ModerationFlagModel: Model<ModerationFlag> =
   (mongoose.models.ModerationFlag as Model<ModerationFlag>) ||
   mongoose.model<ModerationFlag>("ModerationFlag", ModerationFlagSchema);
+
+// ── Phase 2 skill taxonomy ────────────────────────────────────────────────
+// `_id` is the normalized canonical key (e.g. "react"); aliases fold variants
+// in at read time so a merge never has to rewrite stored skillIds.
+const SkillSchema = withJsonTransform(
+  new Schema(
+    {
+      _id: { type: String, required: true },
+      canonicalName: { type: String, required: true },
+      aliases: { type: [String], default: [], index: true },
+      category: String,
+      source: String,
+      createdAt: String,
+    },
+    { versionKey: false },
+  ),
+);
+
+// Skills seen in the wild but not yet in the taxonomy — admin curates these.
+const PendingSkillSchema = withJsonTransform(
+  new Schema(
+    {
+      _id: { type: String, required: true },
+      rawSamples: { type: [String], default: [] },
+      occurrences: { type: Number, default: 0 },
+      decision: { type: String, index: true, default: "pending" },
+      suggestedCanonical: String,
+      decidedBy: String,
+      decidedAt: String,
+      createdAt: { type: String, index: true },
+    },
+    { versionKey: false },
+  ),
+);
+
+export const SkillModel: Model<Skill> =
+  (mongoose.models.Skill as Model<Skill>) ||
+  mongoose.model<Skill>("Skill", SkillSchema);
+
+export const PendingSkillModel: Model<PendingSkill> =
+  (mongoose.models.PendingSkill as Model<PendingSkill>) ||
+  mongoose.model<PendingSkill>("PendingSkill", PendingSkillSchema);
 
 // ---------- Saved searches + Job templates ----------
 const SavedSearchSchema = withJsonTransform(

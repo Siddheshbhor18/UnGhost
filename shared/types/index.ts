@@ -81,6 +81,8 @@ export interface StudentProfile {
   trajectory: Trajectory;
   skills: string[];
   verifiedSkills: string[];
+  /** Canonical skill keys (Phase 2 taxonomy). Display still uses `skills`. */
+  skillIds?: string[];
   enrolledBootcamps: string[]; // bootcamp ids
   history: HistoryEntry[];
   resumeUrl?: string;
@@ -327,6 +329,8 @@ export interface Job {
   recruiterId: string;
   title: string;
   skills: string[];
+  /** Canonical skill keys (Phase 2 taxonomy). Display still uses `skills`. */
+  skillIds?: string[];
   location: string;
   remote: "remote" | "hybrid" | "onsite";
   slaHours: SLAHours;
@@ -339,6 +343,28 @@ export interface Job {
   experienceMax: number;
   createdAt: string;
   active: boolean;
+}
+
+/** Phase 2 canonical skill taxonomy entry. `id` == the normalized canonical key. */
+export interface Skill {
+  id: string;
+  canonicalName: string;
+  aliases: string[];
+  category?: string;
+  source?: string;
+  createdAt?: string;
+}
+
+/** A skill seen in the wild that isn't in the taxonomy yet — admin-curated. */
+export interface PendingSkill {
+  id: string;
+  rawSamples: string[];
+  occurrences: number;
+  decision: "pending" | "approved" | "rejected" | "merged";
+  suggestedCanonical?: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  createdAt: string;
 }
 
 export interface AssessmentGrade {
