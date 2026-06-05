@@ -39,10 +39,11 @@ export function InMailModal({
   const [subject, setSubject] = useState(
     jobTitle ? `Quick chat about ${jobTitle}?` : "Quick chat?",
   );
+  const topSkills = candidate.skills.slice(0, 2).filter(Boolean);
   const [body, setBody] = useState(
     `Hi${candidate.publicName ? " " + candidate.publicName.split(" ")[0] : ""},\n\nYour profile lines up well with what we're hiring for${
       jobTitle ? ` (${jobTitle})` : ""
-    }. Strong on ${candidate.skills.slice(0, 2).join(" + ")}.\n\nOpen to a 15-min intro chat this week?\n\n— `,
+    }.${topSkills.length ? ` Strong on ${topSkills.join(" + ")}.` : ""}\n\nOpen to a 15-min intro chat this week?\n\n— `,
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -76,10 +77,11 @@ export function InMailModal({
 
   function aiDraft() {
     // Phase 1: client-side template fill. Real impl calls Claude.
+    const opener = topSkills.length
+      ? `I noticed your work on ${topSkills.join(" and ")} — exactly the depth we're looking for${jobTitle ? ` for our ${jobTitle} role` : ""}.`
+      : `Your background looks like a strong fit${jobTitle ? ` for our ${jobTitle} role` : ""}.`;
     setBody(
-      `Hi${candidate.publicName ? " " + candidate.publicName.split(" ")[0] : ""},\n\nI noticed your work on ${candidate.skills.slice(0, 2).join(" and ")} — exactly the depth we're looking for${
-        jobTitle ? ` for our ${jobTitle} role` : ""
-      }.\n\nWe're SLA-bound — if you reply, I'll respond within 24 hours, guaranteed. No black holes.\n\nWould a 15-minute intro chat this week make sense? Happy to share more about the role + comp upfront.\n\nLooking forward,\n— `,
+      `Hi${candidate.publicName ? " " + candidate.publicName.split(" ")[0] : ""},\n\n${opener}\n\nWe're SLA-bound — if you reply, I'll respond within 24 hours, guaranteed. No black holes.\n\nWould a 15-minute intro chat this week make sense? Happy to share more about the role + comp upfront.\n\nLooking forward,\n— `,
     );
   }
 
