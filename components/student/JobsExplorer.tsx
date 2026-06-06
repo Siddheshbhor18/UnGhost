@@ -172,7 +172,7 @@ export function JobsExplorer({
           mobileFiltersOpen ? "block" : "hidden"
         } lg:block`}
       >
-        <div className="lg:sticky lg:top-24 space-y-4">
+        <div className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1 space-y-4">
           <GlassCard className="!p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="font-display font-bold text-brand-ink inline-flex items-center gap-2">
