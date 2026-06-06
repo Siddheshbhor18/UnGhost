@@ -97,18 +97,24 @@ export function SkillCheckModal({
           body: JSON.stringify(payload),
         },
       );
+      // Never blindly res.json() — a 5xx can return an empty body, which made
+      // json() throw "Unexpected end of JSON input" and crash the page
+      // (Sentry UNGHOST-4). Parse defensively and surface a clean message.
       const data: {
-        grade: SkillCheckGrade;
-        attemptsLeft: number;
+        grade?: SkillCheckGrade;
+        attemptsLeft?: number;
         error?: string;
-      } = await res.json();
-      if (data.error) {
-        alert(data.error);
+      } | null = await res.json().catch(() => null);
+      if (!res.ok || !data || data.error || !data.grade) {
+        alert(
+          data?.error ??
+            "Couldn't submit your skill check just now. Please try again.",
+        );
         onClose();
         return;
       }
       setResult(data.grade);
-      setAttemptsLeft(data.attemptsLeft);
+      setAttemptsLeft(data.attemptsLeft ?? null);
       if (data.grade.passed) {
         setTimeout(onPassed, 1800);
       }
