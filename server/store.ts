@@ -1043,7 +1043,23 @@ export async function getBootcampProgress(
   if (!prof) return undefined;
   const list: import("@/shared/types").BootcampProgress[] =
     prof.bootcampProgress ?? [];
-  return list.find((p) => p.bootcampId === bootcampId);
+  const found = list.find((p) => p.bootcampId === bootcampId);
+  if (!found) return undefined;
+  // `.lean()` does NOT apply Mongoose schema defaults, so a subdoc persisted
+  // before a field existed (or via a partial write) can come back missing
+  // required keys. Normalize so every consumer gets a complete shape — the
+  // skill-check route indexes `skillCheckAttempts[videoId]` directly, which
+  // threw "Cannot read properties of undefined" on such records (Sentry
+  // UNGHOST-4).
+  return {
+    ...found,
+    videosWatched: found.videosWatched ?? [],
+    skillChecksPassed: found.skillChecksPassed ?? [],
+    skillCheckAttempts: found.skillCheckAttempts ?? {},
+    notes: found.notes ?? {},
+    liveAttended: found.liveAttended ?? false,
+    verifiedBadgeIssued: found.verifiedBadgeIssued ?? false,
+  };
 }
 
 /**
