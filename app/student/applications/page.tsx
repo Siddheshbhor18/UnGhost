@@ -23,7 +23,10 @@ export default async function ApplicationsListPage() {
   // pre-step adding a full applications scan to the critical path). Durable
   // mechanism is the /api/cron/sla-sweep cron; this is a best-effort top-up.
   const [, apps, jobs, companies] = await Promise.all([
-    maybeRunSlaSweep(),
+    // Best-effort top-up only — a transient DB/network blip in the sweep must
+    // never 500 the whole applications page, so swallow its rejection. The
+    // durable mechanism is the /api/cron/sla-sweep cron.
+    maybeRunSlaSweep().catch(() => null),
     listApplicationsByStudent(session.user.id),
     listJobs(),
     listCompanies(),
