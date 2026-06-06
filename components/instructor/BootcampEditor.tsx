@@ -244,7 +244,6 @@ export function BootcampEditor({ bootcamp }: Props) {
   if (!draft.description?.trim() || draft.description.length < 100)
     missing.push("description (≥100 chars)");
   if ((draft.videos ?? []).length === 0) missing.push("at least 1 video");
-  if (!draft.priceINR || draft.priceINR <= 0) missing.push("price");
   const isReady = missing.length === 0;
 
   const isPublished = draft.status === "published";
@@ -341,16 +340,6 @@ export function BootcampEditor({ bootcamp }: Props) {
                 </option>
               ))}
             </GlassSelect>
-          </Field>
-          <Field label="Price (₹)">
-            <GlassInput
-              type="number"
-              min={0}
-              max={99999}
-              value={draft.priceINR}
-              onChange={(e) => patch("priceINR", Number(e.target.value))}
-              disabled={isInReview}
-            />
           </Field>
           <Field label="Duration (weeks)">
             <GlassInput

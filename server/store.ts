@@ -2717,7 +2717,10 @@ export async function createBootcamp(input: {
 }): Promise<Bootcamp> {
   await db();
   const id = genId("bc");
-  const priceINR = input.priceINR ?? 2499;
+  // Students never pay per-bootcamp (flat ₹4,999 Premium unlocks everything).
+  // priceINR survives only as the recruiter-sponsorship value + admin revenue
+  // basis, so it defaults to the Premium price rather than an instructor input.
+  const priceINR = input.priceINR ?? 4999;
   const bc: Bootcamp = {
     id,
     skill: input.skill,

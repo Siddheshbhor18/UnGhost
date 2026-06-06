@@ -220,7 +220,6 @@ export default async function ContentStudio({
                   <Calendar size={10} />
                   {b.durationWeeks}w · {b.liveSlots.length} live
                 </span>
-                <span>₹{b.priceINR.toLocaleString("en-IN")}</span>
               </div>
 
               <div className="flex gap-2 pt-1">

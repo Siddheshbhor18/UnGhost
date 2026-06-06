@@ -43,7 +43,6 @@ export async function POST(
   if (!bc.description?.trim() || bc.description.length < 100)
     missing.push("description (≥100 chars)");
   if (!bc.videos || bc.videos.length === 0) missing.push("at least 1 video");
-  if (bc.priceINR === undefined || bc.priceINR <= 0) missing.push("price");
   if (missing.length > 0) {
     return NextResponse.json(
       {
