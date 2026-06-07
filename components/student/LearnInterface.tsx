@@ -214,17 +214,9 @@ export function LearnInterface({
                 </span>
               </Link>
             ) : (
-              <div
-                className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs ${
-                  allChecksDone ? "text-brand-ink" : "text-brand-muted"
-                }`}
-              >
-                {allChecksDone ? (
-                  <Video size={11} className="text-brand-primary" />
-                ) : (
-                  <Lock size={11} />
-                )}
-                <span className="flex-1">Live workshop</span>
+              <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-brand-muted">
+                <Video size={11} className="text-brand-primary/70" />
+                <span className="flex-1">Live session · optional</span>
                 <span className="text-[10px]">Not scheduled</span>
               </div>
             )}
@@ -360,7 +352,7 @@ export function LearnInterface({
                   <span className="font-semibold">Up next:</span>{" "}
                   {activeIdx + 1 < totalLessons
                     ? `${bootcamp.videos[activeIdx + 1].title}`
-                    : "Live workshop + post-session assignment"}
+                    : "The post-session assignment (plus an optional live session)"}
                 </p>
               </div>
             )}
