@@ -9,8 +9,10 @@ import {
   getJobById,
   getUserById,
   listApplicationsByStudent,
+  updateApplicationFields,
   notify,
 } from "@/server/store";
+import type { Application } from "@/shared/types";
 import {
   APPLY_THRESHOLD,
   computeCompleteness,
@@ -68,24 +70,59 @@ export async function POST(req: Request) {
     );
   }
 
-  // Subscription gate — enforce per-plan application quota.
-  const quota = await checkApplyQuota(user);
-  if (!quota.allowed) {
+  // S4 — a closed/inactive job can't accept new applications.
+  if (!job.active) {
     return NextResponse.json(
       {
-        error: "quota_exceeded",
-        plan: effectivePlan(user),
-        reason: quota.reason,
-        cap: quota.cap,
-        remaining: quota.remaining,
-        windowKind: quota.windowKind,
-        message:
-          quota.reason === "trial_exhausted"
-            ? `You've used all ${quota.cap} free applications. Go Premium for unlimited applications.`
-            : `You've used all ${quota.cap} applications for this window. Go Premium for unlimited, or wait for the window to refresh.`,
+        error: "job_inactive",
+        message: "This mission is no longer accepting applications.",
       },
-      { status: 402 },
+      { status: 409 },
     );
+  }
+
+  // One application per (student, job). A failed first attempt the recruiter
+  // hasn't acted on yet is retried IN PLACE (re-graded below, no extra quota);
+  // anything else (already passed, advanced, or withdrawn) is a duplicate.
+  const priorApps = await listApplicationsByStudent(user.id);
+  const prior = priorApps.find((a) => a.jobId === job.id);
+  const priorGrade = prior?.assessment?.grade;
+  const priorFailed =
+    !!priorGrade && (priorGrade.verdict === "reject" || priorGrade.score < 55);
+  const isRetry =
+    !!prior && priorFailed && prior.stage === "new_matches" && !prior.withdrawnAt;
+  if (prior && !isRetry) {
+    return NextResponse.json(
+      {
+        error: "already_applied",
+        applicationId: prior.id,
+        message: "You've already applied to this mission.",
+      },
+      { status: 409 },
+    );
+  }
+
+  // Subscription gate — per-plan quota applies only to NEW applications. A
+  // retry of a failed attempt reuses the slot already spent, so it's exempt.
+  if (!isRetry) {
+    const quota = await checkApplyQuota(user);
+    if (!quota.allowed) {
+      return NextResponse.json(
+        {
+          error: "quota_exceeded",
+          plan: effectivePlan(user),
+          reason: quota.reason,
+          cap: quota.cap,
+          remaining: quota.remaining,
+          windowKind: quota.windowKind,
+          message:
+            quota.reason === "trial_exhausted"
+              ? `You've used all ${quota.cap} free applications. Go Premium for unlimited applications.`
+              : `You've used all ${quota.cap} applications for this window. Go Premium for unlimited, or wait for the window to refresh.`,
+        },
+        { status: 402 },
+      );
+    }
   }
   const ai = getAI();
   const match = await ai.matchScore(user.profile, job);
@@ -113,24 +150,43 @@ export async function POST(req: Request) {
   const passed =
     grade && grade.verdict !== "reject" && grade.score >= 55;
 
-  const app = await createApplication({
-    jobId: job.id,
-    studentId: user.id,
-    matchPct: match.matchPct,
-    assessment: b.response
-      ? {
-          prompt: job.gauntletPrompt,
-          response: b.response,
-          submittedAt: new Date().toISOString(),
-          grade,
-          integrityScore,
-          integrityFlags,
-          tabSwitches,
-          pasteAttempts,
-          timeTakenSec,
-        }
-      : undefined,
-  });
+  const assessment = b.response
+    ? {
+        prompt: job.gauntletPrompt,
+        response: b.response,
+        submittedAt: new Date().toISOString(),
+        grade,
+        integrityScore,
+        integrityFlags,
+        tabSwitches,
+        pasteAttempts,
+        timeTakenSec,
+      }
+    : undefined;
+
+  // Retry → re-grade the existing record in place (fresh SLA clock, reset to
+  // new_matches). First attempt → create a new application.
+  let app: Application;
+  if (isRetry && prior) {
+    const slaH = job.slaHours ?? 48;
+    const slaDeadline = new Date(
+      Date.now() + slaH * 3600 * 1000,
+    ).toISOString();
+    app =
+      (await updateApplicationFields(prior.id, {
+        matchPct: match.matchPct,
+        assessment,
+        stage: "new_matches",
+        slaDeadline,
+      })) ?? prior;
+  } else {
+    app = await createApplication({
+      jobId: job.id,
+      studentId: user.id,
+      matchPct: match.matchPct,
+      assessment,
+    });
+  }
   // Notify student of grading outcome
   if (grade) {
     await notify({
