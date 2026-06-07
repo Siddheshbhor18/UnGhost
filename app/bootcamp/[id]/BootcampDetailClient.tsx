@@ -214,6 +214,9 @@ export function BootcampDetailClient({
                 >
                   <p className="text-[10px] uppercase font-semibold tracking-wider text-brand-muted">
                     Lesson {String(i + 1).padStart(2, "0")} · {vid.durationMin} min
+                    {vid.moduleTitle?.trim()
+                      ? ` · ${vid.moduleTitle.trim()}`
+                      : ""}
                   </p>
                   <p className="text-sm text-brand-ink font-semibold line-clamp-1 mt-0.5">
                     {vid.title}
@@ -222,7 +225,7 @@ export function BootcampDetailClient({
               ))}
               <div className="rounded-xl px-3 py-2.5 border border-brand-primary/30 bg-brand-primary/5">
                 <p className="text-[10px] uppercase font-semibold tracking-wider text-brand-primary">
-                  Live · alignment session
+                  Live session · optional
                 </p>
                 <p className="text-sm text-brand-ink font-semibold mt-0.5">
                   Pick a slot on the right →
