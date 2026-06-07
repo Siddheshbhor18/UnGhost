@@ -1,12 +1,20 @@
 import { GlassBadge, GlassCard } from "@/components/glass";
-import { listCompanies, listJobs, listUsers, listApplications } from "@/server/store";
+import {
+  listCompanies,
+  listJobs,
+  listUsers,
+  listApplications,
+  listUnlinkedRecruiters,
+} from "@/server/store";
+import { AssignRecruiterPanel } from "@/components/admin/AssignRecruiterPanel";
 
 export default async function RecruitersAdmin() {
-  const [cos, jobs, apps, recruiters] = await Promise.all([
+  const [cos, jobs, apps, recruiters, unlinked] = await Promise.all([
     listCompanies(),
     listJobs(),
     listApplications(),
     listUsers("recruiter"),
+    listUnlinkedRecruiters(),
   ]);
   return (
     <div className="p-8 space-y-6 max-w-7xl">
@@ -19,6 +27,19 @@ export default async function RecruitersAdmin() {
           Every employer on unGhost — SLA compliance, applicant flow, hire rate.
         </p>
       </div>
+
+      <AssignRecruiterPanel
+        recruiters={unlinked.map((r) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+        }))}
+        companies={cos.map((c) => ({
+          id: c.id,
+          name: c.name,
+          domain: c.domain,
+        }))}
+      />
 
       <div className="grid md:grid-cols-2 gap-5">
         {cos.map((co) => {

@@ -3361,6 +3361,73 @@ export async function removeRecruiterFromCompany(
   );
 }
 
+/** Recruiters with no company yet — they're blocked from posting jobs until an
+ *  admin links them (the "ops assigns you to a company" onboarding step). */
+export async function listUnlinkedRecruiters(): Promise<User[]> {
+  await db();
+  const docs = await UserModel.find({
+    role: "recruiter",
+    $or: [{ companyId: { $exists: false } }, { companyId: null }],
+  })
+    .sort({ createdAt: 1 })
+    .lean();
+  return unwrapAll(docs as unknown as User[]);
+}
+
+/** Create a company record. Used by the admin recruiter-onboarding flow. */
+export async function createCompany(input: {
+  name: string;
+  domain: string;
+  description?: string;
+  logoUrl?: string;
+}): Promise<CompanyProfile> {
+  await db();
+  const id = genId("co");
+  const company: CompanyProfile = {
+    id,
+    name: input.name,
+    domain: input.domain.trim().toLowerCase(),
+    description: input.description ?? "",
+    logoUrl: input.logoUrl ?? "",
+    recruiterIds: [],
+    verified: false,
+    status: "active",
+  };
+  await CompanyModel.create({ _id: id, ...company });
+  await invalidate("companies:all", "companies:all:lite");
+  return company;
+}
+
+/** Link a recruiter to a company (the missing half of recruiter onboarding):
+ *  set the user's companyId (+ optional admin flag) and record them on the
+ *  company's recruiterIds. Validates both sides exist and the target is a
+ *  recruiter. Returns a reason on failure so the caller can surface it. */
+export async function assignRecruiterToCompany(
+  recruiterId: string,
+  companyId: string,
+  makeAdmin = false,
+): Promise<{ ok: boolean; reason?: string }> {
+  await db();
+  const [recruiter, company] = await Promise.all([
+    UserModel.findById(recruiterId).lean() as Promise<any>,
+    CompanyModel.findById(companyId).lean() as Promise<any>,
+  ]);
+  if (!recruiter) return { ok: false, reason: "recruiter_not_found" };
+  if (recruiter.role !== "recruiter") return { ok: false, reason: "not_a_recruiter" };
+  if (!company) return { ok: false, reason: "company_not_found" };
+
+  await UserModel.updateOne(
+    { _id: recruiterId },
+    { $set: { companyId, isCompanyAdmin: makeAdmin } },
+  );
+  await CompanyModel.updateOne(
+    { _id: companyId },
+    { $addToSet: { recruiterIds: recruiterId } },
+  );
+  await invalidate("companies:all", "companies:all:lite");
+  return { ok: true };
+}
+
 // ---------- AI COACH CONVERSATIONS + PERSONA + MEMORY ----------
 
 export async function listCoachConversations(
