@@ -18,9 +18,10 @@ const CSP = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://*.sentry.io https://*.pusher.com wss://*.pusher.com https://api.phonepe.com https://api-preprod.phonepe.com https://*.100ms.live wss://*.100ms.live https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.youtube.com",
-  // R2 public CDN + uploaded video playback. Adjust the literal host below
-  // to match your R2_PUBLIC_BASE_URL if you serve via a custom domain.
-  "media-src 'self' blob: https://*.r2.cloudflarestorage.com",
+  // R2 public CDN + uploaded video playback. Must include the custom domain
+  // bound to the R2 bucket (R2_PUBLIC_BASE_URL); without it the browser
+  // silently blocks <video> playback and the lesson player renders black.
+  "media-src 'self' blob: https://uploads.unghost.in https://*.r2.cloudflarestorage.com",
   // PhonePe may bounce through a hosted checkout. Allow it as a frame source.
   "frame-src 'self' https://*.phonepe.com https://www.youtube.com",
   // Block our app being embedded anywhere — defeats clickjacking.

@@ -39,3 +39,5 @@ server/db/seeds/launch-inventory.ts
 scripts/_gen-launch-inventory.py
 server/db/seeds/launch-inventory-2.ts
 scripts/_gen-launch-inventory-2.py
+
+scripts/clear-bootcamp-videos.ts
