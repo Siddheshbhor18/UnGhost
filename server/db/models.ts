@@ -322,17 +322,9 @@ const BootcampSchema = withJsonTransform(
       status: { type: String, index: true, default: "published" },
       submittedForReviewAt: String,
       reviewFeedback: String,
-      // ── Enrollment window + capacity (added by qr-payments-and-meet plan) ──
-      enrollmentOpensAt: { type: Date, default: null },
-      enrollmentClosesAt: { type: Date, default: null },
-      startsAt: { type: Date, default: null },
-      endsAt: { type: Date, default: null },
-      // Google Meet caps per-event attendees at 500 — reserve 5 for staff
-      // so default ceiling is 495. Per-bootcamp override allowed.
-      maxStudents: { type: Number, default: 495 },
-      // Atomic counter incremented by /api/enrollments POST inside a
-      // findOneAndUpdate guard (count < maxStudents). Decremented on
-      // admin reject so a rejected slot frees up. Approval keeps it counted.
+      // Manual-payment seat counter — incremented when a QR payment submission
+      // is created, decremented on admin reject. Used by the payment-approval
+      // flow only.
       currentSubmissionCount: { type: Number, default: 0 },
       sessions: { type: [BootcampSessionSchema], default: [] },
     },

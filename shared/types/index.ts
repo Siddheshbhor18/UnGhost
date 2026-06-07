@@ -485,15 +485,8 @@ export interface Bootcamp {
   submittedForReviewAt?: string;
   /** Set when admin requests changes — instructor sees the feedback. */
   reviewFeedback?: string;
-  // ── QR-payment + Meet enrollment fields ───────────────────────────────
-  /** ISO timestamp. Enrollment POST is rejected outside [opensAt, closesAt]. */
-  enrollmentOpensAt: string | null;
-  enrollmentClosesAt: string | null;
-  startsAt: string | null;
-  endsAt: string | null;
-  /** Capacity ceiling — Google Meet caps at 500, reserve 5 for staff. */
-  maxStudents: number;
-  /** Atomic counter for capacity check. Reads via findOneAndUpdate guard. */
+  /** Manual-payment seat counter — incremented when a QR payment submission is
+   *  created, decremented on reject. Used by the payment-approval flow. */
   currentSubmissionCount: number;
   /** Live sessions schedule. Meet URLs filled by daily cron. */
   sessions: BootcampSession[];

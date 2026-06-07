@@ -2757,12 +2757,6 @@ export async function createBootcamp(input: {
     rating: 0,
     coverColor: "#0191FC",
     status: "draft",
-    // Enrollment + scheduling fields — admin fills before publishing.
-    enrollmentOpensAt: null,
-    enrollmentClosesAt: null,
-    startsAt: null,
-    endsAt: null,
-    maxStudents: 495,
     currentSubmissionCount: 0,
     sessions: [],
   };
