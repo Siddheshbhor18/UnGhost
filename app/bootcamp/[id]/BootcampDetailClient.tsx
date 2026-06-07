@@ -22,6 +22,7 @@ import {
   GlassButton,
   GlassCard,
 } from "@/components/glass";
+import { VideoPlayer } from "@/components/bootcamp/VideoPlayer";
 import type { Bootcamp, SessionRecording } from "@/shared/types";
 import clsx from "clsx";
 
@@ -167,33 +168,35 @@ export function BootcampDetailClient({
         {/* Player + verify */}
         <div className="lg:col-span-2 space-y-4">
           <GlassCard className="p-5">
-            <div className="relative aspect-video rounded-2xl bg-brand-gradient overflow-hidden flex items-center justify-center text-white">
-              {enrolled && hasVideo ? (
-                <div className="text-center">
-                  <PlayCircle className="mx-auto opacity-90" size={72} />
-                  <p className="font-display font-bold mt-3">{v.title}</p>
-                  <p className="text-xs opacity-80 mt-1">
-                    {v.durationMin} min · playback simulated
-                  </p>
-                </div>
-              ) : enrolled ? (
-                <div className="text-center">
-                  <PlayCircle className="mx-auto opacity-90" size={72} />
-                  <p className="font-display font-bold mt-3">Modules coming soon</p>
-                  <p className="text-xs opacity-80 mt-1">
-                    Instructor hasn't uploaded videos yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <Lock className="mx-auto opacity-80" size={48} />
-                  <p className="font-display font-bold mt-3">Locked</p>
-                  <p className="text-xs opacity-80">
-                    Enroll to unlock recorded modules
-                  </p>
-                </div>
-              )}
-            </div>
+            {enrolled && hasVideo ? (
+              <VideoPlayer
+                url={v.url ?? null}
+                posterUrl={v.posterUrl}
+                title={v.title}
+              />
+            ) : (
+              <div className="relative aspect-video rounded-2xl bg-brand-gradient overflow-hidden flex items-center justify-center text-white">
+                {enrolled ? (
+                  <div className="text-center">
+                    <PlayCircle className="mx-auto opacity-90" size={72} />
+                    <p className="font-display font-bold mt-3">
+                      Lessons coming soon
+                    </p>
+                    <p className="text-xs opacity-80 mt-1">
+                      The instructor hasn&apos;t uploaded videos yet.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <Lock className="mx-auto opacity-80" size={48} />
+                    <p className="font-display font-bold mt-3">Locked</p>
+                    <p className="text-xs opacity-80">
+                      Enroll to unlock the lessons
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mt-4 grid sm:grid-cols-2 gap-2">
               {bc.videos.map((vid, i) => (
