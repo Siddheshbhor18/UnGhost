@@ -30,6 +30,16 @@ export default async function BootcampPage({ params }: Props) {
     !!session?.user?.id &&
     (bootcamp.enrolledStudentIds ?? []).includes(session.user.id);
 
+  // Only published bootcamps are public. Drafts / in-review / changes-requested
+  // / archived are visible to the owning instructor, admins, or already-enrolled
+  // students — everyone else gets a 404 (don't leak unpublished content).
+  const isPublished = (bootcamp.status ?? "published") === "published";
+  const canViewUnpublished =
+    session?.user?.id === bootcamp.instructorId ||
+    session?.user?.role === "admin" ||
+    initialEnrolled;
+  if (!isPublished && !canViewUnpublished) notFound();
+
   // Only surface scheduled + live sessions — ended/cancelled clutter UI.
   const visibleSessions = liveSessions
     .filter((s) => s.status === "scheduled" || s.status === "live")

@@ -20,18 +20,19 @@ export default async function LearnPage({
   if (!session) redirect(`/login?next=/student/my-bootcamps/${params.id}/learn`);
   if (session.user.role !== "student") redirect("/");
 
-  const [bootcamp, instructor] = await Promise.all([
-    getBootcampById(params.id),
-    (async () => {
-      const bc = await getBootcampById(params.id);
-      return bc ? getUserById(bc.instructorId) : undefined;
-    })(),
-  ]);
+  const bootcamp = await getBootcampById(params.id);
   if (!bootcamp) notFound();
   if (!bootcamp.enrolledStudentIds.includes(session.user.id)) {
     redirect(`/bootcamp/${params.id}`);
   }
-  const liveSessions = await listLiveSessionsByBootcamp(params.id);
+  // Fetch the bootcamp once above, then parallelize the rest. (Previously this
+  // re-fetched the bootcamp a second time just to read instructorId, and ran
+  // live-sessions + progress serially.)
+  const [instructor, liveSessions, existing] = await Promise.all([
+    getUserById(bootcamp.instructorId),
+    listLiveSessionsByBootcamp(params.id),
+    getBootcampProgress(session.user.id, params.id),
+  ]);
   const upcomingLive = liveSessions
     .filter((s) => s.status === "scheduled" || s.status === "live")
     .sort(
@@ -46,7 +47,6 @@ export default async function LearnPage({
       status: s.status,
       roomCode: s.roomCode,
     }));
-  const existing = await getBootcampProgress(session.user.id, params.id);
   const progress: BootcampProgress = existing ?? {
     bootcampId: params.id,
     videosWatched: [],
