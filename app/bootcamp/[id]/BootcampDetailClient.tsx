@@ -11,7 +11,7 @@ import {
   Film,
   Lock,
   PlayCircle,
-  Send,
+  ShieldCheck,
   Sparkles,
   Star,
   Users,
@@ -21,7 +21,6 @@ import {
   GlassBadge,
   GlassButton,
   GlassCard,
-  GlassTextarea,
 } from "@/components/glass";
 import type { Bootcamp, SessionRecording } from "@/shared/types";
 import clsx from "clsx";
@@ -61,12 +60,6 @@ export function BootcampDetailClient({
   // Modal state for the replay player. Null = closed.
   const [replay, setReplay] = useState<SessionRecording | null>(null);
   const [activeVideo, setActiveVideo] = useState(0);
-  const [verifyText, setVerifyText] = useState("");
-  const [verifyResult, setVerifyResult] = useState<{
-    passed: boolean;
-    message: string;
-    skill?: string;
-  } | null>(null);
 
   async function enrolNow() {
     setEnrolError(null);
@@ -88,15 +81,6 @@ export function BootcampDetailClient({
     } finally {
       setEnrolling(false);
     }
-  }
-
-  async function verify() {
-    const r = await fetch("/api/bootcamps/verify", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ bootcampId: bc.id, response: verifyText }),
-    });
-    setVerifyResult(await r.json());
   }
 
   const v = bc.videos[activeVideo];
@@ -244,39 +228,29 @@ export function BootcampDetailClient({
             </div>
           </GlassCard>
 
+          {/* Skill verification happens inside the learn flow — watch each
+              lesson, pass its skill-check, submit the graded assignment. The
+              badge is issued there, never from a one-off free-text box here. */}
           {enrolled && hasVideo && (
-            <GlassCard className="p-6 border border-brand-primary/20">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary mb-2">
-                Skill verify gate
-              </p>
-              <p className="text-sm text-brand-ink/80 mb-3">{v.verifyPrompt}</p>
-              <GlassTextarea
-                value={verifyText}
-                onChange={(e) => setVerifyText(e.target.value)}
-                className="min-h-[140px]"
-                placeholder="Type your understanding. Concrete and specific beats long-winded."
+            <GlassCard className="p-6 border border-brand-primary/20 text-center">
+              <ShieldCheck
+                size={22}
+                className="mx-auto text-brand-primary mb-2"
               />
-              <div className="mt-3 flex justify-between items-center">
-                <p className="text-xs text-brand-muted">{verifyText.length} chars</p>
-                <GlassButton variant="brand" size="sm" onClick={verify}>
-                  <Send size={12} /> Verify comprehension
-                </GlassButton>
-              </div>
-              {verifyResult && (
-                <div
-                  className={clsx(
-                    "mt-3 rounded-xl px-3 py-2.5 text-sm",
-                    verifyResult.passed
-                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-700"
-                      : "bg-rose-500/10 border border-rose-500/20 text-rose-700",
-                  )}
-                >
-                  <p className="font-semibold">
-                    {verifyResult.passed ? "Verified ✓" : "Not yet"}
-                  </p>
-                  <p className="mt-1">{verifyResult.message}</p>
-                </div>
-              )}
+              <p className="font-display font-bold text-brand-ink">
+                Earn your Verified {bc.skill} badge
+              </p>
+              <p className="text-sm text-brand-muted mt-1 mb-4 max-w-md mx-auto">
+                Work through the lessons, clear each skill-check, and submit the
+                graded assignment. Your badge unlocks when the bootcamp is
+                complete.
+              </p>
+              <a
+                href={`/student/my-bootcamps/${bc.id}/learn`}
+                className="btn-brand inline-flex"
+              >
+                Continue learning →
+              </a>
             </GlassCard>
           )}
         </div>
