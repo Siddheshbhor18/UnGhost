@@ -1056,6 +1056,7 @@ export async function getBootcampProgress(
     videosWatched: found.videosWatched ?? [],
     skillChecksPassed: found.skillChecksPassed ?? [],
     skillCheckAttempts: found.skillCheckAttempts ?? {},
+    skillCheckLastAttempt: found.skillCheckLastAttempt ?? {},
     notes: found.notes ?? {},
     liveAttended: found.liveAttended ?? false,
     verifiedBadgeIssued: found.verifiedBadgeIssued ?? false,

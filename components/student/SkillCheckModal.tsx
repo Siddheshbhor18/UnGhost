@@ -104,10 +104,12 @@ export function SkillCheckModal({
         grade?: SkillCheckGrade;
         attemptsLeft?: number;
         error?: string;
+        message?: string;
       } | null = await res.json().catch(() => null);
       if (!res.ok || !data || data.error || !data.grade) {
         alert(
-          data?.error ??
+          data?.message ??
+            data?.error ??
             "Couldn't submit your skill check just now. Please try again.",
         );
         onClose();

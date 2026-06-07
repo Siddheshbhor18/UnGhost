@@ -29,8 +29,11 @@ export interface BootcampProgress {
   videosWatched: string[];
   /** lesson ids whose skill-check passed (≥70%) */
   skillChecksPassed: string[];
-  /** failed attempt count per lesson — gates retry cooldown */
+  /** attempt count per lesson in the current window — resets after cooldown */
   skillCheckAttempts: Record<string, number>;
+  /** ISO timestamp of the last skill-check attempt per lesson. Used to enforce
+   *  the retry cooldown and reset the attempt counter once it elapses. */
+  skillCheckLastAttempt?: Record<string, string>;
   /** student notes per lesson (auto-saved) */
   notes: Record<string, string>;
   liveAttended: boolean;

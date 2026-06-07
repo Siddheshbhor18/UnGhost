@@ -94,13 +94,32 @@ export async function POST(
   // Cooldown / attempt check
   const existing =
     (await getBootcampProgress(studentId, params.id)) ?? initialProgress(params.id);
-  const attempts = existing.skillCheckAttempts[body.videoId] ?? 0;
-  if (attempts >= MAX_ATTEMPTS && !existing.skillChecksPassed.includes(body.videoId)) {
+  const alreadyPassed = existing.skillChecksPassed.includes(body.videoId);
+  const rawAttempts = existing.skillCheckAttempts[body.videoId] ?? 0;
+  const lastAtStr = existing.skillCheckLastAttempt?.[body.videoId];
+  const cooldownMs = RETRY_COOLDOWN_MIN * 60_000;
+  const elapsedMs = lastAtStr
+    ? Date.now() - new Date(lastAtStr).getTime()
+    : Number.POSITIVE_INFINITY;
+  const cooledDown = elapsedMs >= cooldownMs;
+
+  // Out of attempts in the current window → wait out the cooldown, no permanent
+  // lockout. Once the cooldown elapses the counter resets and they retry.
+  if (!alreadyPassed && rawAttempts >= MAX_ATTEMPTS && !cooledDown) {
+    const waitMin = Math.max(1, Math.ceil((cooldownMs - elapsedMs) / 60_000));
     return NextResponse.json(
-      { error: "max attempts reached — contact instructor" },
+      {
+        error: "cooldown",
+        cooldownMin: waitMin,
+        message: `You've used your attempts for now. Try again in ${waitMin} min.`,
+      },
       { status: 429 },
     );
   }
+
+  // Reset the window if the cooldown has elapsed since the last attempt.
+  const attempts =
+    !alreadyPassed && rawAttempts >= MAX_ATTEMPTS && cooledDown ? 0 : rawAttempts;
 
   // Grade against the authoritative server-side questions.
   const grade = await getAI().gradeSkillCheck(body.answers, questions);
@@ -111,6 +130,10 @@ export async function POST(
     skillCheckAttempts: {
       ...existing.skillCheckAttempts,
       [body.videoId]: attempts + 1,
+    },
+    skillCheckLastAttempt: {
+      ...(existing.skillCheckLastAttempt ?? {}),
+      [body.videoId]: new Date().toISOString(),
     },
     skillChecksPassed: grade.passed
       ? Array.from(new Set([...existing.skillChecksPassed, body.videoId]))
@@ -140,6 +163,7 @@ function initialProgress(bootcampId: string): BootcampProgress {
     videosWatched: [],
     skillChecksPassed: [],
     skillCheckAttempts: {},
+    skillCheckLastAttempt: {},
     notes: {},
     liveAttended: false,
     verifiedBadgeIssued: false,

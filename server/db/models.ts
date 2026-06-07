@@ -66,6 +66,7 @@ const BootcampProgressSchema = new Schema(
     videosWatched: [String],
     skillChecksPassed: [String],
     skillCheckAttempts: { type: Schema.Types.Mixed, default: {} },
+    skillCheckLastAttempt: { type: Schema.Types.Mixed, default: {} },
     notes: { type: Schema.Types.Mixed, default: {} },
     liveAttended: { type: Boolean, default: false },
     liveAttendancePct: Number,

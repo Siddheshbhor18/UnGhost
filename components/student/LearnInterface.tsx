@@ -48,9 +48,9 @@ export function LearnInterface({
 }: Props) {
   const nextLive = upcomingLive[0];
   const liveNow = upcomingLive.find((s) => s.status === "live");
-  // Treat each video as a sub-module. Unlock pattern: must pass previous video's
-  // skill-check (or be first lesson). Live session and assignment unlock once
-  // all video skill-checks pass.
+  // Free navigation: students can watch any lesson in any order. Skill-checks
+  // still track progress, and the live session + assignment + Verified badge
+  // unlock only once every lesson's skill-check passes.
   const [progress, setProgress] = useState<BootcampProgress>(initialProgress);
   const [activeVideoId, setActiveVideoId] = useState<string>(
     bootcamp.videos[0]?.id ?? "",
@@ -63,10 +63,6 @@ export function LearnInterface({
 
   const activeVideo = bootcamp.videos.find((v) => v.id === activeVideoId);
   const activeIdx = bootcamp.videos.findIndex((v) => v.id === activeVideoId);
-  const previousVideo =
-    activeIdx > 0 ? bootcamp.videos[activeIdx - 1] : undefined;
-  const isLocked =
-    !!previousVideo && !progress.skillChecksPassed.includes(previousVideo.id);
 
   // Load notes for active video
   useEffect(() => {
@@ -143,29 +139,21 @@ export function LearnInterface({
             Lessons
           </p>
           <ul className="space-y-1 mb-4">
-            {bootcamp.videos.map((v, i) => {
+            {bootcamp.videos.map((v) => {
               const watched = progress.videosWatched.includes(v.id);
               const passed = progress.skillChecksPassed.includes(v.id);
-              const locked =
-                i > 0 &&
-                !progress.skillChecksPassed.includes(bootcamp.videos[i - 1].id);
               const active = v.id === activeVideoId;
               return (
                 <li key={v.id}>
                   <button
-                    onClick={() => !locked && setActiveVideoId(v.id)}
-                    disabled={locked}
+                    onClick={() => setActiveVideoId(v.id)}
                     className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs transition ${
                       active
                         ? "bg-brand-primary/10 text-brand-primary border border-brand-primary/20"
-                        : locked
-                        ? "text-brand-muted cursor-not-allowed"
                         : "text-brand-ink hover:bg-white/40"
                     }`}
                   >
-                    {locked ? (
-                      <Lock size={11} className="shrink-0" />
-                    ) : passed ? (
+                    {passed ? (
                       <CheckCircle2 size={11} className="text-emerald-600 shrink-0" />
                     ) : watched ? (
                       <PlayCircle size={11} className="text-amber-600 shrink-0" />
@@ -274,23 +262,11 @@ export function LearnInterface({
         {/* Video stage — VideoPlayer auto-routes YouTube embed vs HTML5
             video vs "coming soon" placeholder depending on the URL shape. */}
         <GlassCard className="!p-0 overflow-hidden">
-          {isLocked ? (
-            <div className="relative aspect-video bg-brand-ink grid place-items-center text-white/80 text-center p-6">
-              <div>
-                <Lock size={28} className="mx-auto mb-3" />
-                <p className="font-display font-bold text-lg">Locked</p>
-                <p className="text-sm text-white/60 mt-1">
-                  Pass the previous lesson&apos;s skill check to unlock this video.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <VideoPlayer
-              url={activeVideo?.url ?? null}
-              posterUrl={activeVideo?.posterUrl}
-              title={activeVideo?.title}
-            />
-          )}
+          <VideoPlayer
+            url={activeVideo?.url ?? null}
+            posterUrl={activeVideo?.posterUrl}
+            title={activeVideo?.title}
+          />
           <div className="p-4 flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold">
@@ -305,10 +281,7 @@ export function LearnInterface({
                 variant="glass"
                 size="sm"
                 onClick={markWatched}
-                disabled={
-                  isLocked ||
-                  progress.videosWatched.includes(activeVideoId)
-                }
+                disabled={progress.videosWatched.includes(activeVideoId)}
               >
                 <CheckCircle2 size={12} />
                 {progress.videosWatched.includes(activeVideoId)
@@ -320,7 +293,6 @@ export function LearnInterface({
                 size="sm"
                 onClick={() => setSkillCheckOpen(true)}
                 disabled={
-                  isLocked ||
                   !progress.videosWatched.includes(activeVideoId) ||
                   progress.skillChecksPassed.includes(activeVideoId)
                 }
