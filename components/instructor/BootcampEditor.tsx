@@ -414,6 +414,15 @@ export function BootcampEditor({ bootcamp }: Props) {
                     <X size={14} />
                   </button>
                 </div>
+                <GlassInput
+                  value={v.moduleTitle ?? ""}
+                  onChange={(e) =>
+                    updateVideo(v.id, "moduleTitle", e.target.value)
+                  }
+                  placeholder="Module / section (optional) — e.g. Foundations. Consecutive lessons with the same name group together."
+                  disabled={isInReview}
+                  className="mb-2"
+                />
                 <div className="grid md:grid-cols-[1fr_auto] gap-2 mb-2">
                   <GlassInput
                     value={v.title}

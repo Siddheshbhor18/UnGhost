@@ -418,6 +418,10 @@ export interface BootcampVideo {
   durationMin: number;
   posterUrl: string;
   verifyPrompt: string;
+  /** Optional instructor-defined module/section name. Consecutive lessons
+   *  sharing a moduleTitle render under one heading on the learn page;
+   *  lessons without one fall under a default "Lessons" group. */
+  moduleTitle?: string;
   /** Instructor-written lesson summary shown on the learn page's Overview
    *  tab. Optional — the UI falls back to the bootcamp description. */
   description?: string;

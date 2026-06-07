@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -63,6 +63,19 @@ export function LearnInterface({
 
   const activeVideo = bootcamp.videos.find((v) => v.id === activeVideoId);
   const activeIdx = bootcamp.videos.findIndex((v) => v.id === activeVideoId);
+
+  // Group lessons into instructor-defined modules. Consecutive lessons sharing
+  // a moduleTitle form one section; lessons without one fall under "Lessons".
+  const moduleSections = useMemo(() => {
+    const sections: { title: string; videos: typeof bootcamp.videos }[] = [];
+    for (const v of bootcamp.videos) {
+      const key = v.moduleTitle?.trim() || "Lessons";
+      const last = sections[sections.length - 1];
+      if (last && last.title === key) last.videos.push(v);
+      else sections.push({ title: key, videos: [v] });
+    }
+    return sections;
+  }, [bootcamp.videos]);
 
   // Load notes for active video
   useEffect(() => {
@@ -135,40 +148,44 @@ export function LearnInterface({
             />
           </div>
 
-          <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold mb-2">
-            Lessons
-          </p>
-          <ul className="space-y-1 mb-4">
-            {bootcamp.videos.map((v) => {
-              const watched = progress.videosWatched.includes(v.id);
-              const passed = progress.skillChecksPassed.includes(v.id);
-              const active = v.id === activeVideoId;
-              return (
-                <li key={v.id}>
-                  <button
-                    onClick={() => setActiveVideoId(v.id)}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs transition ${
-                      active
-                        ? "bg-brand-primary/10 text-brand-primary border border-brand-primary/20"
-                        : "text-brand-ink hover:bg-white/40"
-                    }`}
-                  >
-                    {passed ? (
-                      <CheckCircle2 size={11} className="text-emerald-600 shrink-0" />
-                    ) : watched ? (
-                      <PlayCircle size={11} className="text-amber-600 shrink-0" />
-                    ) : (
-                      <PlayCircle size={11} className="shrink-0" />
-                    )}
-                    <span className="flex-1 line-clamp-1">{v.title}</span>
-                    <span className="text-[10px] text-brand-muted">
-                      {v.durationMin}m
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {moduleSections.map((section, si) => (
+            <div key={`${section.title}-${si}`} className="mb-4">
+              <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold mb-2">
+                {section.title}
+              </p>
+              <ul className="space-y-1">
+                {section.videos.map((v) => {
+                  const watched = progress.videosWatched.includes(v.id);
+                  const passed = progress.skillChecksPassed.includes(v.id);
+                  const active = v.id === activeVideoId;
+                  return (
+                    <li key={v.id}>
+                      <button
+                        onClick={() => setActiveVideoId(v.id)}
+                        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs transition ${
+                          active
+                            ? "bg-brand-primary/10 text-brand-primary border border-brand-primary/20"
+                            : "text-brand-ink hover:bg-white/40"
+                        }`}
+                      >
+                        {passed ? (
+                          <CheckCircle2 size={11} className="text-emerald-600 shrink-0" />
+                        ) : watched ? (
+                          <PlayCircle size={11} className="text-amber-600 shrink-0" />
+                        ) : (
+                          <PlayCircle size={11} className="shrink-0" />
+                        )}
+                        <span className="flex-1 line-clamp-1">{v.title}</span>
+                        <span className="text-[10px] text-brand-muted">
+                          {v.durationMin}m
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
 
           <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold mb-2">
             Live &amp; assignment

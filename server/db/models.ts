@@ -268,6 +268,7 @@ const BootcampVideoSchema = new Schema(
     durationMin: Number,
     posterUrl: String,
     verifyPrompt: String,
+    moduleTitle: String,
     description: String,
     // Playback URL. Direct file (R2/S3 .mp4/.m3u8) OR a YouTube watch/share
     // URL. The student-side player auto-picks: YouTube embeds in an iframe,
