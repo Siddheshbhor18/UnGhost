@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
   Award,
   CheckCircle2,
   ChevronLeft,
-  Clock,
   FileText,
   GraduationCap,
-  Pause,
   Save,
   Send,
   Trophy,
@@ -60,39 +58,8 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
     [reflection],
   );
 
-  // ── Expiration countdown ────────────────────────────────────
-  const expiresAt = progress.assignment?.expiresAt;
-  const [secondsLeft, setSecondsLeft] = useState<number>(0);
-  useEffect(() => {
-    if (!expiresAt || isSubmitted) return;
-    const tick = () => {
-      const diff =
-        new Date(expiresAt).getTime() - Date.now();
-      setSecondsLeft(Math.max(0, Math.floor(diff / 1000)));
-    };
-    tick();
-    const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
-  }, [expiresAt, isSubmitted]);
-
-  const countdownLabel = useMemo(() => {
-    if (!secondsLeft) return "—";
-    const d = Math.floor(secondsLeft / 86400);
-    const h = Math.floor((secondsLeft % 86400) / 3600);
-    const m = Math.floor((secondsLeft % 3600) / 60);
-    if (d > 0) return `${d}d ${h}h ${m}m`;
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
-  }, [secondsLeft]);
-
-  const countdownTone =
-    secondsLeft <= 0
-      ? "text-rose-600"
-      : secondsLeft < 86400
-      ? "text-rose-600"
-      : secondsLeft < 3 * 86400
-      ? "text-amber-600"
-      : "text-emerald-600";
+  // The assignment is self-paced — no deadline countdown. The badge is earned
+  // by passing the graded submission whenever the student is ready.
 
   // ── Submit ──────────────────────────────────────────────────
   async function submit() {
@@ -124,23 +91,6 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
     }
   }
 
-  async function healthPause() {
-    if (progress.assignment?.healthPauseUsed) return;
-    // Real impl: POST /api/student/assignments/{id}/health-pause
-    setProgress((p) => ({
-      ...p,
-      assignment: p.assignment
-        ? {
-            ...p.assignment,
-            healthPauseUsed: true,
-            expiresAt: new Date(
-              new Date(p.assignment.expiresAt).getTime() + 14 * 86400_000,
-            ).toISOString(),
-          }
-        : undefined,
-    }));
-  }
-
   // ── Submitted → Results screen ──────────────────────────────
   if (isSubmitted && grade && !retrying) {
     return (
@@ -167,34 +117,17 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
 
         {/* Header / countdown */}
         <GlassCard>
-          <div className="flex items-start justify-between flex-wrap gap-3">
-            <div>
-              <GlassBadge tone="brand">Post-session assignment</GlassBadge>
-              <h1 className="font-display font-extrabold text-2xl md:text-3xl text-brand-ink mt-2">
-                Apply what you learned
-              </h1>
-              <p className="text-sm text-brand-muted mt-1 max-w-xl">
-                Submit a focused write-up plus a short reflection. AI grades 5
-                rubric criteria. Score 70+ to earn the Verified Skill badge —
-                you can resubmit if you fall short.
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
-                Expires in
-              </p>
-              <p
-                className={`font-display font-bold text-2xl flex items-center gap-1 ${countdownTone}`}
-              >
-                <Clock size={18} />
-                {countdownLabel}
-              </p>
-              {progress.assignment?.healthPauseUsed && (
-                <p className="text-[10px] text-amber-600 font-semibold mt-1">
-                  Health Pause active
-                </p>
-              )}
-            </div>
+          <div>
+            <GlassBadge tone="brand">Post-session assignment</GlassBadge>
+            <h1 className="font-display font-extrabold text-2xl md:text-3xl text-brand-ink mt-2">
+              Apply what you learned
+            </h1>
+            <p className="text-sm text-brand-muted mt-1 max-w-xl">
+              Self-paced — submit whenever you&apos;re ready. A focused write-up
+              plus a short reflection; AI grades 5 rubric criteria. Score 70+ to
+              earn the Verified Skill badge, and you can resubmit if you fall
+              short.
+            </p>
           </div>
         </GlassCard>
 
@@ -325,20 +258,7 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
         </GlassCard>
 
         {/* Sticky action bar */}
-        <div className="sticky bottom-3 bg-white/85 backdrop-blur-2xl border border-white/60 rounded-2xl shadow-glass-lg px-5 py-3 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex gap-2">
-            <GlassButton
-              variant="glass"
-              size="sm"
-              onClick={healthPause}
-              disabled={progress.assignment?.healthPauseUsed}
-            >
-              <Pause size={12} />
-              {progress.assignment?.healthPauseUsed
-                ? "Health Pause used"
-                : "Pause my timer (14d)"}
-            </GlassButton>
-          </div>
+        <div className="sticky bottom-3 bg-white/85 backdrop-blur-2xl border border-white/60 rounded-2xl shadow-glass-lg px-5 py-3 flex items-center justify-end flex-wrap gap-3">
           <div className="flex gap-2 items-center">
             <span className="text-xs text-brand-muted hidden md:inline">
               <Save size={11} className="inline mr-1" />
