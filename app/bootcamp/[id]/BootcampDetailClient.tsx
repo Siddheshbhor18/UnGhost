@@ -213,7 +213,7 @@ export function BootcampDetailClient({
                   disabled={!enrolled}
                 >
                   <p className="text-[10px] uppercase font-semibold tracking-wider text-brand-muted">
-                    Module {String(i + 1).padStart(2, "0")} · {vid.durationMin} min
+                    Lesson {String(i + 1).padStart(2, "0")} · {vid.durationMin} min
                   </p>
                   <p className="text-sm text-brand-ink font-semibold line-clamp-1 mt-0.5">
                     {vid.title}
@@ -416,7 +416,7 @@ export function BootcampDetailClient({
               </li>
               <li>· Recruiters can filter on verified-skill</li>
               <li>· Bridges 2-3 missions you couldn&apos;t apply to before</li>
-              <li>· Lifetime access to recorded modules</li>
+              <li>· Lifetime access to recorded lessons</li>
             </ul>
           </GlassCard>
         </aside>

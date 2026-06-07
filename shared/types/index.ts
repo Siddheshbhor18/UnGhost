@@ -415,6 +415,9 @@ export interface BootcampVideo {
   durationMin: number;
   posterUrl: string;
   verifyPrompt: string;
+  /** Instructor-written lesson summary shown on the learn page's Overview
+   *  tab. Optional — the UI falls back to the bootcamp description. */
+  description?: string;
   /** Playback URL — either a direct video file (R2/S3 .mp4/.m3u8) or a
    *  YouTube watch/share URL. The student "learn" player auto-routes:
    *  YouTube URLs render in a chrome-stripped iframe, everything else

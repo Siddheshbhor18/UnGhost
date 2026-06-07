@@ -38,7 +38,7 @@ interface Props {
   upcomingLive?: UpcomingLive[];
 }
 
-type ContentTab = "overview" | "transcript" | "notes";
+type ContentTab = "overview" | "notes";
 
 export function LearnInterface({
   bootcamp,
@@ -140,7 +140,7 @@ export function LearnInterface({
           </div>
 
           <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold mb-2">
-            Module 1 — Foundations
+            Lessons
           </p>
           <ul className="space-y-1 mb-4">
             {bootcamp.videos.map((v, i) => {
@@ -183,7 +183,7 @@ export function LearnInterface({
           </ul>
 
           <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold mb-2">
-            Module 2 — Live + Assignment
+            Live &amp; assignment
           </p>
           <div className="space-y-1">
             {liveNow ? (
@@ -344,12 +344,6 @@ export function LearnInterface({
               label="Overview"
             />
             <TabBtn
-              active={contentTab === "transcript"}
-              onClick={() => setContentTab("transcript")}
-              icon={<FileText size={13} />}
-              label="Transcript"
-            />
-            <TabBtn
               active={contentTab === "notes"}
               onClick={() => setContentTab("notes")}
               icon={<PenSquare size={13} />}
@@ -361,55 +355,23 @@ export function LearnInterface({
           <div className="p-5">
             {contentTab === "overview" && (
               <div className="space-y-3 text-sm text-brand-ink/90 leading-relaxed">
-                <p>
-                  <span className="font-semibold">{activeVideo?.title}</span> — part
-                  of <em>{bootcamp.title}</em>. This lesson covers the foundational
-                  concept of <span className="text-brand-primary font-semibold">
-                    {bootcamp.skill}
-                  </span>{" "}
-                  with worked examples and a verification check at the end.
-                </p>
-                <p>
-                  <span className="font-semibold">What you'll learn:</span> the
-                  trade-offs, when to apply each technique, and how to validate your
-                  implementation before shipping.
-                </p>
+                {activeVideo?.description?.trim() ? (
+                  <p className="whitespace-pre-line">
+                    {activeVideo.description}
+                  </p>
+                ) : bootcamp.description?.trim() ? (
+                  <p className="whitespace-pre-line">{bootcamp.description}</p>
+                ) : (
+                  <p className="text-brand-muted">
+                    The instructor hasn&apos;t added a summary for this lesson
+                    yet.
+                  </p>
+                )}
                 <p>
                   <span className="font-semibold">Up next:</span>{" "}
                   {activeIdx + 1 < totalLessons
                     ? `${bootcamp.videos[activeIdx + 1].title}`
                     : "Live workshop + post-session assignment"}
-                </p>
-              </div>
-            )}
-            {contentTab === "transcript" && (
-              <div className="text-sm text-brand-ink/80 leading-relaxed font-mono space-y-2 max-h-80 overflow-y-auto">
-                <p>
-                  <span className="text-brand-muted">[00:00]</span> Welcome to{" "}
-                  {activeVideo?.title}. Today we're going to unpack the core idea
-                  behind {bootcamp.skill}.
-                </p>
-                <p>
-                  <span className="text-brand-muted">[01:24]</span> The fundamental
-                  trade-off here is precision over coverage. Most people get this
-                  backwards.
-                </p>
-                <p>
-                  <span className="text-brand-muted">[04:30]</span> Let's walk
-                  through a worked example…
-                </p>
-                <p>
-                  <span className="text-brand-muted">[09:45]</span> Notice how this
-                  cuts noise by 3× but loses a small fraction of valid hits.
-                </p>
-                <p>
-                  <span className="text-brand-muted">[14:10]</span> Wrapping up —
-                  the verification gate after this video tests whether you can
-                  reason about the trade-offs.
-                </p>
-                <p className="text-brand-muted italic">
-                  Real impl: auto-generated transcript synced to current playback
-                  position via Cloudflare Stream tracks.
                 </p>
               </div>
             )}

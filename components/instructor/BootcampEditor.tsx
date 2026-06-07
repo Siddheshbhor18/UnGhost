@@ -437,6 +437,16 @@ export function BootcampEditor({ bootcamp }: Props) {
                   />
                 </div>
                 <GlassTextarea
+                  value={v.description ?? ""}
+                  onChange={(e) =>
+                    updateVideo(v.id, "description", e.target.value)
+                  }
+                  rows={2}
+                  placeholder="Lesson summary — what this lesson covers. Shown to students on the Overview tab."
+                  disabled={isInReview}
+                  className="mb-2"
+                />
+                <GlassTextarea
                   value={v.verifyPrompt}
                   onChange={(e) =>
                     updateVideo(v.id, "verifyPrompt", e.target.value)
