@@ -94,6 +94,20 @@ export async function POST(
 
   const existing =
     (await getBootcampProgress(studentId, params.id)) ?? seed(params.id);
+
+  // Gate: the assignment is the final step — every lesson's skill-check must be
+  // passed first. The learn UI hides the link until then, but enforce it here
+  // too so a direct POST can't skip the lessons and still earn the badge.
+  const allChecksPassed =
+    bootcamp.videos.length > 0 &&
+    bootcamp.videos.every((v) => existing.skillChecksPassed.includes(v.id));
+  if (!allChecksPassed) {
+    return NextResponse.json(
+      { error: "complete every lesson skill-check before the assignment" },
+      { status: 403 },
+    );
+  }
+
   // Lock only once the badge is actually earned. A failing submission can be
   // resubmitted — otherwise a low score would permanently bar the student.
   if (existing.verifiedBadgeIssued) {

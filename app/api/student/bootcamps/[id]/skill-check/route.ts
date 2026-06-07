@@ -7,7 +7,6 @@ import {
   getBootcampById,
   getBootcampProgress,
   upsertBootcampProgress,
-  markSkillVerified,
 } from "@/server/store";
 import type { BootcampProgress } from "@/shared/types";
 import {
@@ -144,10 +143,11 @@ export async function POST(
   };
   await upsertBootcampProgress(studentId, nextProgress);
 
-  // On pass, mark the bootcamp's skill verified on the student profile too.
-  if (grade.passed) {
-    await markSkillVerified(studentId, bootcamp.skill);
-  }
+  // NOTE: passing a single lesson's skill-check does NOT verify the skill on
+  // the student's profile. The recruiter-visible verified-skill badge is
+  // issued only on full completion (all lesson skill-checks + a passing graded
+  // assignment) in the assignment route — so the signal recruiters filter on
+  // can't be earned from one lesson's quiz.
 
   return NextResponse.json({
     grade,
