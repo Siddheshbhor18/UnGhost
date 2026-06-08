@@ -81,12 +81,25 @@ export async function POST(req: Request) {
     ? await getCompanyById(recruiter.companyId)
     : undefined;
 
+  // R2 — a recruiter with no company can't reach out as "A company". Block
+  // until an admin links them (matches the job-posting "no company" gate).
+  if (!company) {
+    return NextResponse.json(
+      {
+        error: "no_company",
+        message:
+          "Link your account to a company before sending InMail. Contact ops to get assigned.",
+      },
+      { status: 403 },
+    );
+  }
+
   // Create the InMail FIRST, then charge — so a failed send can never burn a
   // paid credit (credits were pre-checked > 0 above).
   const im = await createInMail({
     recruiterId: session.user.id,
     recruiterName: recruiter?.name ?? "Recruiter",
-    companyName: company?.name ?? "A company",
+    companyName: company.name,
     studentId: body.studentId,
     jobId: body.jobId,
     jobTitle: job?.title,
