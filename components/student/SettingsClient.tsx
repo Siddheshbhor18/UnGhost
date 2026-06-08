@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -33,6 +34,8 @@ export function SettingsClient({ user }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteText, setDeleteText] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function persist(patch: Partial<StudentProfile>) {
@@ -56,9 +59,32 @@ export function SettingsClient({ user }: Props) {
   async function deleteAccount() {
     if (deleteText !== "DELETE") return;
     setBusy(true);
+    setDeleteError(null);
     try {
-      await fetch("/api/student/me/delete", { method: "POST" });
+      // Hardened endpoint: confirms password, strips PII, marks soft_deleted,
+      // and revokes live sessions. (The old /api/student/me/delete only set a
+      // flag — the account stayed fully usable.)
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteError(
+          data.error === "wrong_password"
+            ? "Incorrect password."
+            : data.error === "password_required"
+            ? "Enter your password to confirm."
+            : data.message ?? data.error ?? "Couldn't delete. Try again.",
+        );
+        return;
+      }
+      // Session is revoked server-side; sign out clears the client cookie too.
+      await signOut({ redirect: false }).catch(() => {});
       router.push("/login");
+    } catch {
+      setDeleteError("Network error. Try again.");
     } finally {
       setBusy(false);
     }
@@ -175,21 +201,36 @@ export function SettingsClient({ user }: Props) {
         ) : (
           <div className="rounded-2xl bg-white/40 border border-rose-500/20 p-4">
             <p className="text-sm text-brand-ink/90 mb-3">
-              Type <span className="font-mono font-bold">DELETE</span> to
-              confirm:
+              Type <span className="font-mono font-bold">DELETE</span> and enter
+              your password to confirm:
             </p>
             <input
               value={deleteText}
               onChange={(e) => setDeleteText(e.target.value)}
-              className="w-full bg-white/60 border border-rose-500/30 rounded-xl px-3 py-2 text-sm text-brand-ink mb-3 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+              className="w-full bg-white/60 border border-rose-500/30 rounded-xl px-3 py-2 text-sm text-brand-ink mb-2 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
               placeholder="DELETE"
             />
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              autoComplete="current-password"
+              className="w-full bg-white/60 border border-rose-500/30 rounded-xl px-3 py-2 text-sm text-brand-ink mb-3 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+              placeholder="Your password"
+            />
+            {deleteError && (
+              <p className="text-xs text-rose-700 font-semibold mb-3">
+                {deleteError}
+              </p>
+            )}
             <div className="flex gap-2">
               <GlassButton
                 variant="glass"
                 onClick={() => {
                   setConfirmDelete(false);
                   setDeleteText("");
+                  setDeletePassword("");
+                  setDeleteError(null);
                 }}
               >
                 Cancel

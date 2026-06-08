@@ -25,6 +25,7 @@ import {
 } from "@/server/db/models";
 import { redis } from "@/server/db/redis";
 import { logger } from "@/server/lib/logger";
+import { bumpSessionEpoch } from "@/server/auth/session-epoch";
 
 export interface DpdpExport {
   exportedAt: string;
@@ -116,11 +117,15 @@ function emptyExport(): DpdpExport {
 export async function softDeleteUser(userId: string, reason?: string): Promise<void> {
   const now = new Date().toISOString();
   const purgeAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
+  // Revoke every live session immediately — without this, the deleted user's
+  // existing JWT keeps passing the middleware epoch gate for up to 30 days.
+  const epoch = await bumpSessionEpoch(userId);
   await UserModel.updateOne(
     { _id: userId },
     {
       $set: {
         status: "soft_deleted",
+        sessionEpoch: epoch,
         suspendedAt: now,
         suspendedReason: reason ?? "DPDP § 13 erasure",
         // Strip personal fields immediately; audit + reference data stays.
@@ -185,6 +190,9 @@ export async function sweepHardDeletes(): Promise<string[]> {
  * grace window by the SLA sweep. Idempotent.
  */
 export async function hardDeleteUser(userId: string): Promise<void> {
+  // Keep the revocation epoch bumped so any lingering token stays dead even
+  // though the user row is about to be removed (epoch lives in Redis).
+  await bumpSessionEpoch(userId);
   await Promise.all([
     ApplicationModel.deleteMany({ studentId: userId }),
     SavedJobModel.deleteMany({ studentId: userId }),

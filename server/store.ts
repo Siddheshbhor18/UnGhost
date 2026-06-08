@@ -2492,20 +2492,9 @@ export async function updateStudentProfile(
   return getUserById(studentId);
 }
 
-/** Soft-delete: mark user as inactive. PRD: 30-day grace then hard-delete cron. */
-export async function softDeleteUser(userId: string): Promise<void> {
-  await db();
-  await UserModel.updateOne(
-    { _id: userId },
-    {
-      $set: {
-        "profile.searchVisibility": false,
-        "profile.lastActiveAt": new Date().toISOString(),
-        deletedAt: new Date().toISOString(),
-      },
-    },
-  );
-}
+// Account deletion lives in server/auth/dpdp.ts (softDeleteUser/hardDeleteUser):
+// it strips PII, marks status soft_deleted, revokes sessions, and schedules the
+// 30-day purge. The old weak store-level softDeleteUser (flag-only) was removed.
 
 // ---------- COMPANY METRICS ----------
 
