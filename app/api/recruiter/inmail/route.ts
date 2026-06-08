@@ -13,6 +13,7 @@ import {
   listInMailsByRecruiter,
   notify,
 } from "@/server/store";
+import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -80,9 +81,8 @@ export async function POST(req: Request) {
     ? await getCompanyById(recruiter.companyId)
     : undefined;
 
-  // Spend 1 credit
-  await adjustInMailCredits(session.user.id, -1);
-
+  // Create the InMail FIRST, then charge — so a failed send can never burn a
+  // paid credit (credits were pre-checked > 0 above).
   const im = await createInMail({
     recruiterId: session.user.id,
     recruiterName: recruiter?.name ?? "Recruiter",
@@ -93,6 +93,19 @@ export async function POST(req: Request) {
     subject: body.subject,
     body: body.body,
   });
+
+  // Spend 1 credit. The InMail is already persisted, so if the charge throws
+  // we don't fail the request (favours the recruiter over losing the message);
+  // log it for reconciliation instead.
+  let creditsRemaining = credits - 1;
+  try {
+    creditsRemaining = await adjustInMailCredits(session.user.id, -1);
+  } catch (err) {
+    logger.error(
+      { err, recruiterId: session.user.id, inMailId: im.id },
+      "inmail.charge_failed",
+    );
+  }
 
   await notify({
     userId: body.studentId,
@@ -105,5 +118,5 @@ export async function POST(req: Request) {
     actionRequired: true,
   });
 
-  return NextResponse.json({ inmail: im, creditsRemaining: credits - 1 });
+  return NextResponse.json({ inmail: im, creditsRemaining });
 }
