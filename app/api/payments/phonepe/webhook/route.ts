@@ -3,12 +3,15 @@ import { createHash } from "node:crypto";
 import { paymentsMode, getPaymentStatus } from "@/server/integrations/payments";
 import {
   activateUserPlan,
+  countPremiumUsers,
   notify,
   recordProcessedTxn,
   writeAuditLog,
 } from "@/server/store";
 import { logger } from "@/server/lib/logger";
 import { withApiErrorTracking } from "@/server/lib/api-error";
+import { computeTotalPaise } from "@/server/payments/pricing";
+import { PLAN_PRICING, PREMIUM_GST_PERCENT, PREMIUM_LIFETIME_SEATS } from "@/shared/types";
 
 export const runtime = "nodejs";
 
@@ -132,6 +135,30 @@ async function handler(req: Request) {
   });
 
   if (record.firstTime) {
+    // Mirror the callback: the payer has already paid, so honour the payment
+    // even past the 150-seat cap (refusing would strand a payer + we can't
+    // refund inline), but log an overshoot so ops can catch a boundary race.
+    const premiumCount = await countPremiumUsers();
+    if (premiumCount >= PREMIUM_LIFETIME_SEATS) {
+      logger.warn(
+        { userId, txnId, premiumCount },
+        "phonepe.webhook-over-lifetime-cap",
+      );
+    }
+    // Defense-in-depth: flag (don't reject) if the captured amount is below the
+    // expected premium total — the order amount is server-locked at checkout,
+    // so a shortfall means something's off and ops should look.
+    const expectedPaise = computeTotalPaise({
+      priceInPaise: PLAN_PRICING[plan].amountINR * 100,
+      gstPercent: PREMIUM_GST_PERCENT,
+    }).totalInPaise;
+    const paidPaise = decoded.data?.amount ?? 0;
+    if (paidPaise > 0 && paidPaise < expectedPaise) {
+      logger.warn(
+        { userId, txnId, paidPaise, expectedPaise },
+        "phonepe.webhook-amount-short",
+      );
+    }
     await activateUserPlan(userId, plan, txnId);
     await notify({
       userId,
