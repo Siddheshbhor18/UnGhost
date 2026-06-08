@@ -972,6 +972,12 @@ export async function updateApplicationStage(
   if (!a) return undefined;
   const update: any = { stage };
   if (outcomeNotes) update.outcomeNotes = outcomeNotes;
+  // Record the first time the recruiter acts on the application (any move off
+  // new_matches). This is the real anchor for "time to first response" — set
+  // once, never overwritten.
+  if (stage !== "new_matches" && !a.firstResponseAt) {
+    update.firstResponseAt = new Date().toISOString();
+  }
   if (stage === "interview" && !a.interviewScheduledAt) {
     const t = new Date();
     t.setDate(t.getDate() + 3);
@@ -2521,7 +2527,6 @@ export interface CompanyMetrics {
 }
 
 const NINETY_DAYS_MS = 90 * 86400_000;
-const INDUSTRY_GHOSTING_BENCHMARK_PCT = 38;
 
 export async function computeCompanyMetrics(
   companyId: string,
@@ -2546,22 +2551,21 @@ export async function computeCompanyMetrics(
   const ghostingRatePct =
     recent.length > 0 ? Math.round((breaches90d / recent.length) * 1000) / 10 : 0;
 
-  // Avg response: time from app.createdAt → first non-new_matches stage entry.
-  // We don't track stage history, so approximate: for apps that left new_matches,
-  // use SLA hours × 0.7 as a stand-in for "responded ahead of SLA".
-  const responded = recent.filter(
-    (a) => a.stage !== "new_matches" && a.stage !== "rejected",
-  );
+  // Avg response: real time from app.createdAt → firstResponseAt (the moment a
+  // recruiter first moved it off new_matches). Only applications with a recorded
+  // first response count; returns 0 when there's no measured data yet (the UI
+  // shows "—" rather than inventing a number).
   let totalHours = 0;
-  for (const a of responded) {
-    const job = jobs.find(
-      (j: any) => j._id === a.jobId,
-    );
-    const slaH = (job as any)?.slaHours ?? 48;
-    totalHours += slaH * 0.7;
+  let respondedCount = 0;
+  for (const a of recent) {
+    if (!a.firstResponseAt) continue;
+    const ms = new Date(a.firstResponseAt).getTime() - new Date(a.createdAt).getTime();
+    if (ms < 0) continue;
+    totalHours += ms / 3_600_000;
+    respondedCount++;
   }
   const avgResponseHours =
-    responded.length > 0 ? Math.round(totalHours / responded.length) : 0;
+    respondedCount > 0 ? Math.round(totalHours / respondedCount) : 0;
 
   const recruiterCount = await UserModel.countDocuments({
     role: "recruiter",
@@ -2578,8 +2582,6 @@ export async function computeCompanyMetrics(
     recruiterCount,
   };
 }
-
-export const INDUSTRY_GHOSTING_BENCHMARK = INDUSTRY_GHOSTING_BENCHMARK_PCT;
 
 // ---------- SAVED JOBS + NOT INTERESTED ----------
 

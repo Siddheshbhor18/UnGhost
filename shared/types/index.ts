@@ -407,6 +407,9 @@ export interface Application {
   withdrawnAt?: string;
   /** Set when student fires the one-shot "request update" ping. */
   updateRequestedAt?: string;
+  /** Set the first time a recruiter moves the application off new_matches —
+   *  the real "time to first response" anchor for analytics. */
+  firstResponseAt?: string;
   /** Set when SLA cron flags a breach and credit refund is issued. */
   slaBreachedAt?: string;
   slaRefundIssued?: boolean;

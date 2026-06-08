@@ -21,7 +21,6 @@ import {
   computeCompanyMetrics,
   getCompanyById,
   getUserById,
-  INDUSTRY_GHOSTING_BENCHMARK,
   listApplicationsByRecruiter,
   listJobsByRecruiter,
 } from "@/server/store";
@@ -158,11 +157,7 @@ export default async function RecruiterAnalytics() {
               {myGhostRate.toFixed(1)}%
             </p>
             <p className="text-sm text-brand-muted mt-2 leading-relaxed">
-              {breached} breached SLA out of {totalApps}. Industry avg{" "}
-              <span className="text-brand-ink font-semibold">
-                {INDUSTRY_GHOSTING_BENCHMARK}%
-              </span>{" "}
-              · Company avg{" "}
+              {breached} breached SLA out of {totalApps}. Company avg{" "}
               <span className="text-brand-ink font-semibold">
                 {companyMetrics?.ghostingRatePct.toFixed(1) ?? "—"}%
               </span>
@@ -182,11 +177,14 @@ export default async function RecruiterAnalytics() {
               <Clock size={11} /> Response speed
             </p>
             <p className="font-display font-extrabold text-5xl text-brand-primary">
-              {companyMetrics?.avgResponseHours ?? "—"}h
+              {companyMetrics && companyMetrics.avgResponseHours > 0
+                ? `${companyMetrics.avgResponseHours}h`
+                : "—"}
             </p>
             <p className="text-sm text-brand-muted mt-2 leading-relaxed">
-              Avg response across{" "}
-              {jobs.length} mission{jobs.length === 1 ? "" : "s"}.
+              {companyMetrics && companyMetrics.avgResponseHours > 0
+                ? "Measured time to first recruiter response."
+                : "No measured responses yet."}
               {jobs.length > 0 && (
                 <>
                   {" "}Tightest SLA:{" "}

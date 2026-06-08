@@ -22,7 +22,6 @@ import {
 import {
   computeCompanyMetrics,
   getCompanyById,
-  INDUSTRY_GHOSTING_BENCHMARK,
   listJobs,
 } from "@/server/store";
 
@@ -117,7 +116,7 @@ export default async function CompanyProfilePage({
               tone={ghostTone}
               label="90-day ghost rate"
               value={`${metrics.ghostingRatePct.toFixed(1)}%`}
-              hint={`Industry avg: ${INDUSTRY_GHOSTING_BENCHMARK}%`}
+              hint="Lower is better"
             />
             <ScoreCell
               tone="brand"
@@ -135,22 +134,7 @@ export default async function CompanyProfilePage({
           <p className="text-xs text-brand-muted mt-4 leading-relaxed">
             Every application here is bound to an SLA — miss it and the
             candidate&apos;s credit is refunded automatically, and this
-            company&apos;s ghost rate increments. Lower is better.{" "}
-            {metrics.ghostingRatePct < INDUSTRY_GHOSTING_BENCHMARK ? (
-              <span className="text-emerald-700 font-semibold">
-                {company.name} is{" "}
-                {(
-                  ((INDUSTRY_GHOSTING_BENCHMARK - metrics.ghostingRatePct) /
-                    INDUSTRY_GHOSTING_BENCHMARK) *
-                  100
-                ).toFixed(0)}
-                % better than industry average.
-              </span>
-            ) : (
-              <span className="text-amber-700 font-semibold">
-                Currently above industry avg — under review.
-              </span>
-            )}
+            company&apos;s ghost rate increments. Lower is better.
           </p>
         </GlassCard>
 
