@@ -163,13 +163,13 @@ export async function POST(req: Request) {
   // recent assessment outcomes, top matched open missions) so advice is
   // specific instead of generic. DB-only; same pattern as the catalog block.
   const studentContext = await buildCoachContext(session.user.id);
-  if (studentContext) {
+  if (studentContext.text) {
     coachHistory.push({
       role: "coach",
       content:
         `[student] Live, factual context about THIS student — use it to ` +
         `personalize and reference their real applications, gaps, and matched ` +
-        `missions; never contradict it or invent details beyond it: ${studentContext}`,
+        `missions; never contradict it or invent details beyond it: ${studentContext.text}`,
     });
   }
 
@@ -199,6 +199,8 @@ export async function POST(req: Request) {
     persona: personaDef.id,
     message: replyText,
     suggestions: typeof reply === "object" ? reply?.suggestions ?? [] : [],
+    // Deterministic one-tap next steps derived from the student's real data.
+    actions: studentContext.actions,
   });
 }
 

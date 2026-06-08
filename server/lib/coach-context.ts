@@ -4,7 +4,8 @@
  * block. DB-only (no LLM): profile, application pipeline + SLA status, recent
  * assessment outcomes, and the top open missions matched to them.
  *
- * Returns a single-line summary string, or "" if there's nothing useful.
+ * Also derives a small set of deterministic deep-link `actions` from that same
+ * real data (never model-invented), so the UI can offer one-tap next steps.
  */
 import {
   getUserById,
@@ -13,17 +14,32 @@ import {
 } from "@/server/store";
 import { computeMatchScore, skillDelta } from "@/server/lib/matching";
 
-export async function buildCoachContext(studentId: string): Promise<string> {
+export interface CoachAction {
+  label: string;
+  href: string;
+}
+
+export interface CoachContext {
+  /** One-line grounding summary injected into the model context. "" if empty. */
+  text: string;
+  /** Deterministic deep-link next steps derived from the student's real data. */
+  actions: CoachAction[];
+}
+
+export async function buildCoachContext(
+  studentId: string,
+): Promise<CoachContext> {
   const [user, apps, jobs] = await Promise.all([
     getUserById(studentId),
     listApplicationsByStudent(studentId),
     listJobs(), // active jobs only (cached)
   ]);
-  if (!user?.profile) return "";
+  if (!user?.profile) return { text: "", actions: [] };
   const p = user.profile;
   const now = Date.now();
   const jobById = new Map(jobs.map((j) => [j.id, j]));
   const parts: string[] = [];
+  const actions: CoachAction[] = [];
 
   // ── Skills + basics ──────────────────────────────────────────────
   const skills = p.skills ?? [];
@@ -45,11 +61,11 @@ export async function buildCoachContext(studentId: string): Promise<string> {
   }
 
   // ── Application pipeline + SLA + recent fails ─────────────────────
+  let breaching = 0;
   if (apps.length === 0) {
     parts.push("Has not applied to any missions yet.");
   } else {
     const stageCounts: Record<string, number> = {};
-    let breaching = 0;
     const failed: string[] = [];
     for (const a of apps) {
       stageCounts[a.stage] = (stageCounts[a.stage] ?? 0) + 1;
@@ -123,5 +139,16 @@ export async function buildCoachContext(studentId: string): Promise<string> {
     parts.push(`Top open missions for this student: ${lines.join("; ")}.`);
   }
 
-  return parts.join(" ");
+  // ── Deterministic deep-link actions (built from the real data) ────
+  if (breaching > 0) {
+    actions.push({ label: "View my applications", href: "/student/applications" });
+  }
+  for (const { j } of scored.slice(0, 2)) {
+    actions.push({ label: `Apply: ${j.title}`, href: `/missions/${j.id}` });
+  }
+  if (apps.length === 0 && scored.length === 0) {
+    actions.push({ label: "Browse missions", href: "/student/jobs" });
+  }
+
+  return { text: parts.join(" "), actions };
 }

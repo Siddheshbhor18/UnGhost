@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Send,
@@ -20,6 +21,8 @@ import type { AICoachConversation, CoachPersona } from "@/shared/types";
 interface Msg {
   role: "user" | "assistant";
   text: string;
+  /** Deterministic one-tap next steps from the server (deep links). */
+  actions?: { label: string; href: string }[];
 }
 
 const STARTERS = [
@@ -163,7 +166,8 @@ export function FullCoach({
         const list = await fetch("/api/coach").then((r) => r.json());
         setConversations(list.conversations ?? []);
       }
-      setMessages([...next, { role: "assistant", text: reply }]);
+      const actions = Array.isArray(data?.actions) ? data.actions : undefined;
+      setMessages([...next, { role: "assistant", text: reply, actions }]);
     } catch {
       setMessages([
         ...next,
@@ -313,6 +317,21 @@ export function FullCoach({
                 )}
               >
                 {m.text}
+                {m.role === "assistant" &&
+                  m.actions &&
+                  m.actions.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {m.actions.map((a) => (
+                        <Link
+                          key={`${a.href}-${a.label}`}
+                          href={a.href}
+                          className="text-xs px-3 py-1.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 hover:bg-brand-primary hover:text-white transition no-underline"
+                        >
+                          {a.label} →
+                        </Link>
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
           ))}
