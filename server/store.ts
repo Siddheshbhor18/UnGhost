@@ -2776,15 +2776,30 @@ export async function updateBootcamp(
   await db();
   const bc = await getBootcampById(id);
   if (!bc || bc.instructorId !== instructorId) return undefined;
-  const safe: any = { ...patch };
-  // Never let the editor overwrite ownership / enrolment / rating
-  delete safe.id;
-  delete safe.instructorId;
-  delete safe.enrolledStudentIds;
-  delete safe.rating;
+  // WHITELIST the fields an instructor may edit. A blacklist let a crafted
+  // PATCH set `status` (self-publish, bypassing admin review), `reviewFeedback`,
+  // `priceInPaise`/`gstPercent` (checkout math), `submittedForReviewAt`, etc.
+  // Lifecycle transitions go only through setBootcampStatus / submit / admin
+  // decision routes — never here.
+  const EDITABLE: (keyof Bootcamp)[] = [
+    "title",
+    "skill",
+    "category",
+    "description",
+    "durationWeeks",
+    "videos",
+    "liveSlots",
+    "priceINR",
+  ];
+  const safe: Record<string, unknown> = {};
+  for (const k of EDITABLE) {
+    if (k in patch && (patch as Record<string, unknown>)[k] !== undefined) {
+      safe[k] = (patch as Record<string, unknown>)[k];
+    }
+  }
   await BootcampModel.updateOne({ _id: id }, { $set: safe });
   await invalidate("bootcamps:all", "bootcamps:all:lite");
-  return { ...bc, ...safe };
+  return { ...bc, ...safe } as Bootcamp;
 }
 
 /**
