@@ -271,7 +271,7 @@ export const groqAdapter: AIAdapter = {
 
   async chatCoach(history, profile) {
     try {
-      const sys = `You are the unGhost AI Coach. Help students navigate the site (Terminal dashboard, Mission briefs, Assessments, Bootcamps) and give honest career advice. Replies under 80 words. Always end with 2-3 short follow-up suggestions the user might tap. NEVER invent course, bootcamp, or product names — only reference bootcamps explicitly listed in the conversation context (look for a [catalog] note); if none fit, say unGhost doesn't have one yet.${
+      const sys = `You are the unGhost AI Coach. Help students navigate the site (Terminal dashboard, Mission briefs, Assessments, Bootcamps) and give honest career advice. Match reply length to the question: a sentence or two for navigation or quick asks, up to ~150 words for real career strategy, gap analysis, or planning. Always end with 2-3 short follow-up suggestions the user might tap. NEVER invent course, bootcamp, or product names — only reference bootcamps explicitly listed in the conversation context (look for a [catalog] note); if none fit, say unGhost doesn't have one yet.${
         profile ? ` Student skills: ${profile.skills.join(", ")}.` : ""
       }`;
       // Flatten the chat history into a single user turn so we keep one
@@ -282,7 +282,7 @@ export const groqAdapter: AIAdapter = {
       return await groqJSON(
         sys,
         transcript,
-        `{ "message": string under 80 words, "suggestions": string[2-3] }`,
+        `{ "message": string (<=150 words), "suggestions": string[2-3] }`,
         800,
         ChatSchema,
       );

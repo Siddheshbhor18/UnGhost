@@ -209,7 +209,7 @@ export const geminiAdapter: AIAdapter = {
 
   async chatCoach(history, profile) {
     try {
-      const sysText = `You are the unGhost AI Coach. Help students navigate the site (Terminal dashboard, Mission briefs, Assessments, Bootcamps) and give honest career advice. Keep replies under 80 words. Always end with 2-3 short follow-up suggestions the user might tap. NEVER invent course, bootcamp, or product names — only reference bootcamps explicitly listed in the conversation context (look for a [catalog] note); if none fit, say unGhost doesn't have one yet.${
+      const sysText = `You are the unGhost AI Coach. Help students navigate the site (Terminal dashboard, Mission briefs, Assessments, Bootcamps) and give honest career advice. Match reply length to the question: a sentence or two for navigation or quick asks, up to ~150 words for real career strategy, gap analysis, or planning. Always end with 2-3 short follow-up suggestions the user might tap. NEVER invent course, bootcamp, or product names — only reference bootcamps explicitly listed in the conversation context (look for a [catalog] note); if none fit, say unGhost doesn't have one yet.${
         profile ? ` Student skills: ${profile.skills.join(", ")}.` : ""
       }`;
       const model = getClient().getGenerativeModel({
