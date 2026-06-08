@@ -62,7 +62,7 @@ export function InMailModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Couldn't send.");
+        setError(data.message ?? data.error ?? "Couldn't send.");
         setPhase("error");
         return;
       }

@@ -180,6 +180,31 @@ export default function AssessmentPage() {
       }),
     });
     const data = await res.json();
+
+    // Server rejected the submission (not a failed grade). Route/notify
+    // sensibly instead of falling through to the "you failed" screen.
+    if (!res.ok) {
+      if (
+        res.status === 409 &&
+        data.error === "already_applied" &&
+        data.applicationId
+      ) {
+        router.push(`/student/applications/${data.applicationId}`);
+        return;
+      }
+      if (res.status === 402 && data.error === "quota_exceeded") {
+        router.push("/upgrade?to=premium");
+        return;
+      }
+      // job_inactive, profile_incomplete, or anything else → back to the
+      // form with the server's message.
+      setWarning(
+        data.message ?? data.error ?? "Couldn't submit. Please try again.",
+      );
+      setPhase("focus");
+      return;
+    }
+
     // Rocket bobs for 1.6s
     await new Promise((r) => setTimeout(r, 1600));
     if (data.passed) {
