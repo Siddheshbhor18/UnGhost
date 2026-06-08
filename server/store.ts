@@ -3521,8 +3521,11 @@ export async function setCoachMemory(
 }
 
 /**
- * Lightweight rollup — call after each turn. Summarises last N messages into
- * `aiCoachMemory.summary` and extracts crude facts. Real impl would use Claude.
+ * Lightweight rollup — call after each turn. Extracts self-statements from the
+ * recent student turns and ACCUMULATES them into durable memory (deduped,
+ * newest-first, capped) rather than overwriting with only the latest turn, so
+ * the coach actually remembers facts across the conversation. Cheap heuristic;
+ * no LLM call (keeps the chat turn fast).
  */
 export async function rollupCoachMemory(
   userId: string,
@@ -3533,25 +3536,48 @@ export async function rollupCoachMemory(
     .slice(-6)
     .map((m) => m.content);
   if (studentTurns.length === 0) return;
-  // Crude fact extraction — picks lines that look like statements about self.
-  const facts: string[] = [];
+
+  // Pull self-statements ("I want…", "my goal…", "aiming for…") as facts.
+  const fresh: string[] = [];
   for (const t of studentTurns) {
-    const lines = t.split(/[.\n]/);
-    for (const ln of lines) {
-      const clean = ln.trim();
+    for (const ln of t.split(/[.\n]/)) {
+      const clean = ln.trim().replace(/\s+/g, " ");
       if (
         clean.length > 8 &&
         clean.length < 110 &&
-        /\b(I|my|me|aiming|targeting|prefer|want|need)\b/i.test(clean)
+        /\b(I|I'm|my|me|aiming|targeting|prefer|want|need|goal|interested)\b/i.test(
+          clean,
+        )
       ) {
-        facts.push(clean);
-        if (facts.length >= 4) break;
+        fresh.push(clean);
       }
     }
-    if (facts.length >= 4) break;
   }
-  const summary = facts.slice(0, 2).join(" · ") || studentTurns.at(-1)!.slice(0, 160);
-  await setCoachMemory(userId, { summary, facts });
+  if (fresh.length === 0) return;
+
+  // Merge with existing memory: newest first, case-insensitive dedupe, cap 12.
+  const user = await getUserById(userId);
+  const existing = user?.aiCoachMemory?.facts ?? [];
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const f of [...fresh, ...existing]) {
+    const key = f.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(f);
+    if (merged.length >= 12) break;
+  }
+
+  // Summary = the most recent facts, capped ~250 chars (matches the right-rail).
+  let summary = "";
+  for (const f of merged) {
+    const next = summary ? `${summary} · ${f}` : f;
+    if (next.length > 250) break;
+    summary = next;
+  }
+  if (!summary) summary = studentTurns.at(-1)!.slice(0, 160);
+
+  await setCoachMemory(userId, { summary, facts: merged });
 }
 
 // ---------- LIVE SESSIONS ----------
