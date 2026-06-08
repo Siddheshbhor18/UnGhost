@@ -162,7 +162,17 @@ export async function POST(req: Request) {
   // Ground the model in THIS student's real situation (pipeline, SLA status,
   // recent assessment outcomes, top matched open missions) so advice is
   // specific instead of generic. DB-only; same pattern as the catalog block.
-  const studentContext = await buildCoachContext(session.user.id);
+  // Best-effort: a DB hiccup here must never break the reply — degrade to a
+  // generic (non-personalized) answer instead.
+  let studentContext: { text: string; actions: { label: string; href: string }[] } = {
+    text: "",
+    actions: [],
+  };
+  try {
+    studentContext = await buildCoachContext(session.user.id);
+  } catch {
+    /* non-critical — fall back to no personalized context */
+  }
   if (studentContext.text) {
     coachHistory.push({
       role: "coach",
@@ -188,11 +198,16 @@ export async function POST(req: Request) {
 
   await appendCoachMessage(convoId, session.user.id, "coach", replyText);
 
-  // Roll up memory in background (await is fine here — fast in-Mongo op).
-  await rollupCoachMemory(
-    session.user.id,
-    coachHistory.filter((m) => !m.content.startsWith("[")),
-  );
+  // Roll up memory (fast in-Mongo op). Best-effort: the reply is already
+  // persisted above, so a memory hiccup must not fail the response.
+  try {
+    await rollupCoachMemory(
+      session.user.id,
+      coachHistory.filter((m) => !m.content.startsWith("[")),
+    );
+  } catch {
+    /* non-critical — memory just won't update this turn */
+  }
 
   return NextResponse.json({
     conversationId: convoId,
