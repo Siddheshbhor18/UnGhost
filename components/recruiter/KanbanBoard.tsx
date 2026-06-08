@@ -526,7 +526,7 @@ function ActionDrawer({
                   </div>
                   {app.assessment.integrityScore !== undefined && (
                     <p className="text-xs text-brand-muted mt-2">
-                      Integrity score:{" "}
+                      Integrity signal:{" "}
                       <span
                         className={
                           app.assessment.integrityScore >= 80
@@ -535,6 +535,9 @@ function ActionDrawer({
                         }
                       >
                         {app.assessment.integrityScore}/100
+                      </span>
+                      <span className="text-brand-muted/70">
+                        {" "}· self-reported
                       </span>
                     </p>
                   )}
