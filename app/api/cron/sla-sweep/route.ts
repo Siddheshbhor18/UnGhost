@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { runSlaSweep } from "@/server/store";
 import { rateLimit, rateLimitResponse } from "@/server/lib/rate-limit";
+import { requireSameOrigin } from "@/server/lib/csrf";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   if (!auth.bypassRl) {
+    // Session (admin-button) path is browser-originated, so it needs the same
+    // same-origin guard as every other admin mutation — this sweep issues
+    // refund credits + mass-mutates applications. The cron-secret path is
+    // server-to-server (no cookies) and is correctly exempt.
+    const csrf = requireSameOrigin(req);
+    if (csrf) return csrf;
     const rl = await rateLimit("sla-sweep.manual", "global", {
       limit: 6,
       windowSec: 60,
