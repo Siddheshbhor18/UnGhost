@@ -22,6 +22,7 @@ import {
   rollupCoachMemory,
   setCoachPersona,
 } from "@/server/store";
+import { buildCoachContext } from "@/server/lib/coach-context";
 import { roomLabel } from "@/shared/rooms";
 import { COACH_PERSONAS, type CoachPersona } from "@/shared/types";
 
@@ -158,6 +159,20 @@ export async function POST(req: Request) {
       `Never invent, assume, or mention any course/bootcamp not in the list. ` +
       `If nothing in the catalog fits the student, say we don't have one yet rather than making one up.`,
   });
+  // Ground the model in THIS student's real situation (pipeline, SLA status,
+  // recent assessment outcomes, top matched open missions) so advice is
+  // specific instead of generic. DB-only; same pattern as the catalog block.
+  const studentContext = await buildCoachContext(session.user.id);
+  if (studentContext) {
+    coachHistory.push({
+      role: "coach",
+      content:
+        `[student] Live, factual context about THIS student — use it to ` +
+        `personalize and reference their real applications, gaps, and matched ` +
+        `missions; never contradict it or invent details beyond it: ${studentContext}`,
+    });
+  }
+
   for (const m of history) {
     coachHistory.push({
       role: m.role === "assistant" ? "coach" : "student",
