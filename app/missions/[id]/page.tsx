@@ -547,7 +547,33 @@ export default async function MissionBrief({
                   Tier {tier.letter} · {tier.label}
                 </p>
 
-                {existingApp ? (
+                {existingApp && existingApp.submitted === false ? (
+                  // Failed a prior attempt — private to the student, retryable.
+                  <div className="mt-5">
+                    <GlassBadge tone="warn">Didn&apos;t pass yet</GlassBadge>
+                    <p className="text-xs text-brand-muted mt-2">
+                      Your last attempt scored{" "}
+                      <span className="font-semibold text-brand-ink">
+                        {existingApp.assessment?.grade?.score ?? "—"}/100
+                      </span>
+                      . It wasn&apos;t sent to the recruiter — retry when
+                      you&apos;re ready.
+                    </p>
+                    <Link
+                      href={`/missions/${job.id}/assess`}
+                      className="btn-brand mt-3 w-full justify-center"
+                      style={{ minHeight: 56 }}
+                    >
+                      <Target size={16} /> Retry assessment →
+                    </Link>
+                    <Link
+                      href={`/student/applications/${existingApp.id}`}
+                      className="text-xs text-brand-primary font-semibold mt-2 inline-block hover:underline"
+                    >
+                      View grade + Path Forward →
+                    </Link>
+                  </div>
+                ) : existingApp ? (
                   <div className="mt-5">
                     <GlassBadge tone="success">
                       <CheckCircle2 size={11} /> Already applied

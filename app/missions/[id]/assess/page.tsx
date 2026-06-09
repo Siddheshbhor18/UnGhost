@@ -64,16 +64,34 @@ export default function AssessmentPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [jobRes, profRes, quotaRes] = await Promise.all([
+        const [jobRes, profRes, quotaRes, appsRes] = await Promise.all([
           fetch(`/api/jobs/${params.id}`),
           fetch("/api/student/profile"),
           fetch("/api/applications/quota"),
+          fetch("/api/applications"),
         ]);
-        // Quota gate: a free student who has used all their applications can't
-        // apply, so they must not be able to take the assessment either —
+        // Is this a retry of a failed (unsubmitted) attempt for THIS job?
+        // Retries don't create a new submitted application, so they're exempt
+        // from the quota gate (the apply POST exempts them server-side too).
+        let isRetry = false;
+        try {
+          if (appsRes.ok) {
+            const apps = await appsRes.json();
+            isRetry =
+              Array.isArray(apps) &&
+              apps.some(
+                (a: { jobId: string; submitted?: boolean }) =>
+                  a.jobId === params.id && a.submitted === false,
+              );
+          }
+        } catch {
+          /* ignore — treat as non-retry */
+        }
+        // Quota gate: a free student who has used all their (submitted)
+        // applications can't apply, so they can't take a NEW assessment —
         // send them to upgrade. Fail open: only redirect on an explicit "no".
         try {
-          if (quotaRes.ok) {
+          if (!isRetry && quotaRes.ok) {
             const q = await quotaRes.json();
             if (q && q.allowed === false) {
               router.replace("/upgrade?to=premium");

@@ -41,18 +41,23 @@ export function ApplicationsList({ apps, jobs, companies }: Props) {
   const enriched = useMemo(
     () =>
       apps.map((a) => {
+        // A failed/unsubmitted attempt has no SLA and never "expires" — it's
+        // private to the student and retryable.
+        const notSubmitted = a.submitted === false;
         const slaDiff = new Date(a.slaDeadline).getTime() - now;
         const isTerminal = a.stage === "hired" || a.stage === "rejected";
-        const expired = slaDiff <= 0 && !isTerminal;
-        const pulse = !expired && !isTerminal && slaDiff < 4 * 3600_000;
-        return { ...a, slaDiff, expired, pulse, isTerminal };
+        const expired = !notSubmitted && slaDiff <= 0 && !isTerminal;
+        const pulse =
+          !notSubmitted && !expired && !isTerminal && slaDiff < 4 * 3600_000;
+        return { ...a, slaDiff, expired, pulse, isTerminal, notSubmitted };
       }),
     [apps, now],
   );
 
   const filtered = enriched.filter((a) => {
     if (filter === "action") return a.expired || a.stage === "offer";
-    if (filter === "awaiting") return !a.isTerminal && !a.expired;
+    if (filter === "awaiting")
+      return !a.isTerminal && !a.expired && !a.notSubmitted;
     if (filter === "recent")
       return Date.now() - new Date(a.createdAt).getTime() < 7 * 86400_000;
     return true;
@@ -71,7 +76,9 @@ export function ApplicationsList({ apps, jobs, companies }: Props) {
   const counts = {
     all: enriched.length,
     action: enriched.filter((a) => a.expired || a.stage === "offer").length,
-    awaiting: enriched.filter((a) => !a.isTerminal && !a.expired).length,
+    awaiting: enriched.filter(
+      (a) => !a.isTerminal && !a.expired && !a.notSubmitted,
+    ).length,
     recent: enriched.filter(
       (a) => Date.now() - new Date(a.createdAt).getTime() < 7 * 86400_000,
     ).length,
@@ -166,12 +173,18 @@ export function ApplicationsList({ apps, jobs, companies }: Props) {
                             ? "success"
                             : a.stage === "rejected"
                             ? "danger"
+                            : a.notSubmitted
+                            ? "warn"
                             : a.expired
                             ? "danger"
                             : "brand"
                         }
                       >
-                        {a.withdrawnAt ? "Withdrawn" : STAGE_LABEL[a.stage]}
+                        {a.withdrawnAt
+                          ? "Withdrawn"
+                          : a.notSubmitted
+                          ? "Didn't pass · retry"
+                          : STAGE_LABEL[a.stage]}
                       </GlassBadge>
                       {a.expired && (
                         <GlassBadge tone="danger">
@@ -196,7 +209,7 @@ export function ApplicationsList({ apps, jobs, companies }: Props) {
                   </div>
 
                   <div className="text-right">
-                    {!a.isTerminal && (
+                    {!a.isTerminal && !a.notSubmitted && (
                       <>
                         <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
                           SLA

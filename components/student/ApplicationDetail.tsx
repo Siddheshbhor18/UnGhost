@@ -130,6 +130,49 @@ export function ApplicationDetail({
     }
   }
 
+  // Unsubmitted (failed) attempt — private to the student, retryable. The SLA
+  // countdown, pipeline, and messaging below only apply to submitted
+  // applications, so show a focused "didn't pass / retry" view instead.
+  if (app.submitted === false) {
+    const g = app.assessment?.grade;
+    return (
+      <div className="space-y-5">
+        <Link
+          href="/student/applications"
+          className="inline-flex items-center gap-1 text-sm text-brand-primary font-semibold"
+        >
+          <ArrowLeft size={14} /> All applications
+        </Link>
+        <GlassCard className="!p-6">
+          <GlassBadge tone="warn">Didn&apos;t pass yet</GlassBadge>
+          <h1 className="font-display font-extrabold text-2xl text-brand-ink mt-3">
+            {job.title}
+          </h1>
+          <p className="text-sm text-brand-muted mt-1 leading-relaxed">
+            This attempt scored{" "}
+            <span className="font-semibold text-brand-ink">
+              {g?.score ?? "—"}/100
+            </span>
+            . It was <span className="font-semibold">not sent to the recruiter</span>{" "}
+            and doesn&apos;t use an application slot — retry whenever you&apos;re
+            ready.
+          </p>
+          {g?.notes && (
+            <p className="text-sm text-brand-ink/85 mt-3 leading-relaxed">
+              {g.notes}
+            </p>
+          )}
+          <Link
+            href={`/missions/${job.id}/assess`}
+            className="btn-brand mt-5 inline-flex"
+          >
+            <RefreshCw size={14} /> Retry assessment →
+          </Link>
+        </GlassCard>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <Link

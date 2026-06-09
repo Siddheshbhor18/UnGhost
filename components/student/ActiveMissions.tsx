@@ -22,7 +22,11 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function ActiveMissions({ apps, jobs, companies }: Props) {
   const live = apps
-    .filter((a) => !["hired", "rejected"].includes(a.stage))
+    // Submitted, non-terminal applications only — failed/unsubmitted attempts
+    // aren't active missions (no SLA, not with a recruiter).
+    .filter(
+      (a) => a.submitted !== false && !["hired", "rejected"].includes(a.stage),
+    )
     .slice(0, 5);
 
   if (live.length === 0) {
