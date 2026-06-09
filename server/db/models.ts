@@ -249,6 +249,7 @@ const ApplicationSchema = withJsonTransform(
       assessment: AssessmentSubmissionSchema,
       createdAt: String,
       slaDeadline: String,
+      submitted: Boolean,
       interviewScheduledAt: String,
       outcomeNotes: String,
       withdrawnAt: String,

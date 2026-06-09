@@ -164,20 +164,22 @@ export async function POST(req: Request) {
       }
     : undefined;
 
-  // Retry → re-grade the existing record in place (fresh SLA clock, reset to
-  // new_matches). First attempt → create a new application.
+  // Only a PASSING assessment is submitted to the recruiter (gets an SLA clock
+  // + recruiter notification). A fail is saved privately to the student —
+  // retryable, no SLA, never seen by the recruiter — until they pass.
+  const submitted = !!passed;
+  const slaH = job.slaHours ?? 48;
+  const freshSla = new Date(Date.now() + slaH * 3600 * 1000).toISOString();
+
   let app: Application;
   if (isRetry && prior) {
-    const slaH = job.slaHours ?? 48;
-    const slaDeadline = new Date(
-      Date.now() + slaH * 3600 * 1000,
-    ).toISOString();
     app =
       (await updateApplicationFields(prior.id, {
         matchPct: match.matchPct,
         assessment,
-        stage: "new_matches",
-        slaDeadline,
+        submitted,
+        // Start the SLA clock only on the attempt that actually submits.
+        ...(submitted ? { stage: "new_matches", slaDeadline: freshSla } : {}),
       })) ?? prior;
   } else {
     app = await createApplication({
@@ -185,33 +187,34 @@ export async function POST(req: Request) {
       studentId: user.id,
       matchPct: match.matchPct,
       assessment,
+      submitted,
     });
   }
-  // Notify student of grading outcome
+  // Notify the student of the grading outcome.
   if (grade) {
     await notify({
       userId: user.id,
       kind: "application_graded",
-      priority: passed ? "normal" : "high",
-      title: passed
-        ? `Assessment graded · ${grade.score}/100`
+      priority: submitted ? "normal" : "high",
+      title: submitted
+        ? `Submitted to ${job.title} · ${grade.score}/100`
         : `Assessment didn't pass · ${grade.score}/100`,
-      body: passed
-        ? `Submitted to ${job.title}. Recruiter has the SLA clock ticking.`
-        : "The Path Forward has bootcamp recs to close the gap before your next attempt.",
+      body: submitted
+        ? "You cleared the bar — the recruiter now has the SLA clock ticking."
+        : "Not sent to the recruiter. Retry when you're ready — the Path Forward has recs to close the gap.",
       link: `/student/applications/${app.id}`,
     });
-    // Notify recruiter of new application
-    if (job.recruiterId) {
+    // Notify the recruiter ONLY when the application was actually submitted.
+    if (submitted && job.recruiterId) {
       await notify({
         userId: job.recruiterId,
         kind: "application_graded",
-        priority: passed ? "high" : "normal",
-        title: `New ${grade.verdict === "advance" ? "Tier A" : grade.verdict === "borderline" ? "Tier B" : "Tier C"} applicant`,
-        body: `${user.name} submitted for ${job.title} · ${grade.score}/100`,
+        priority: "high",
+        title: `New ${grade.verdict === "advance" ? "Tier A" : "Tier B"} applicant`,
+        body: `${user.name} applied for ${job.title} · ${grade.score}/100`,
         link: "/recruiter/command",
         actorLabel: user.name,
-        actionRequired: passed,
+        actionRequired: true,
       });
     }
   }

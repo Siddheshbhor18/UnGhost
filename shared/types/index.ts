@@ -401,6 +401,12 @@ export interface Application {
   assessment?: AssessmentSubmission;
   createdAt: string;
   slaDeadline: string;
+  /** True once the application has actually been submitted to the recruiter
+   *  (assessment passed). A failed attempt is saved as submitted=false — it's
+   *  private to the student (retryable, no SLA, no recruiter notification, not
+   *  counted against quota) until they pass. Absent on legacy rows ⇒ treated
+   *  as submitted (true). */
+  submitted?: boolean;
   interviewScheduledAt?: string;
   outcomeNotes?: string;
   /** Set when student self-withdraws. */

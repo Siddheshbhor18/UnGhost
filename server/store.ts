@@ -919,7 +919,12 @@ export async function listApplicationsByRecruiter(
   await db();
   const jobs = await JobModel.find({ recruiterId }, { _id: 1 }).lean();
   const jobIds = jobs.map((j: any) => j._id);
-  const docs = await ApplicationModel.find({ jobId: { $in: jobIds } }).lean();
+  // Recruiters only ever see SUBMITTED applications — failed/unsubmitted
+  // attempts are private to the student. (`$ne:false` keeps legacy rows.)
+  const docs = await ApplicationModel.find({
+    jobId: { $in: jobIds },
+    submitted: { $ne: false },
+  }).lean();
   return unwrapAll(docs as unknown as Application[]);
 }
 
@@ -2165,6 +2170,9 @@ export async function runSlaSweep(): Promise<SlaSweepResult> {
   ];
   const apps = await ApplicationModel.find({
     stage: { $in: ACTIVE_STAGES },
+    // Only submitted applications carry an SLA obligation; unsubmitted (failed,
+    // retryable) attempts must never be swept or refunded.
+    submitted: { $ne: false },
   }).lean();
   const list = unwrapAll(apps as unknown as Application[]);
 
@@ -2525,8 +2533,11 @@ export async function computeCompanyMetrics(
 
   const jobs = await JobModel.find({ companyId }).lean();
   const jobIds = jobs.map((j: any) => j._id);
+  // Metrics reflect real (submitted) applications only — failed/unsubmitted
+  // attempts never reached the recruiter, so they don't affect ghost rate etc.
   const allApps = await ApplicationModel.find({
     jobId: { $in: jobIds },
+    submitted: { $ne: false },
   }).lean();
   const recent = unwrapAll(allApps as unknown as Application[]).filter(
     (a) => a.createdAt > cutoff,

@@ -62,13 +62,15 @@ export async function checkApplyQuota(user: User): Promise<ApplyQuotaResult> {
   }
 
   if (limits.applicationCap.kind === "trial") {
-    // Lifetime count — every application the student has ever submitted,
+    // Lifetime count — every application actually SUBMITTED to a recruiter,
     // EXCEPT ones returned after an SLA breach (those credits go back to the
-    // student, so they must not count against the cap — matches the UI which
-    // filters `!a.slaRefundIssued`).
+    // student). Failed attempts (submitted=false) never reached a recruiter,
+    // so they don't count against the cap. (`submitted: {$ne:false}` keeps
+    // legacy rows — which lack the field — counted.)
     const used = await ApplicationModel.countDocuments({
       studentId: user.id,
       slaRefundIssued: { $ne: true },
+      submitted: { $ne: false },
     });
     const cap = limits.applicationCap.count;
     const remaining = Math.max(0, cap - used);
@@ -87,6 +89,7 @@ export async function checkApplyQuota(user: User): Promise<ApplyQuotaResult> {
     studentId: user.id,
     createdAt: { $gte: since },
     slaRefundIssued: { $ne: true },
+    submitted: { $ne: false },
   });
   const cap = limits.applicationCap.count;
   const remaining = Math.max(0, cap - used);
