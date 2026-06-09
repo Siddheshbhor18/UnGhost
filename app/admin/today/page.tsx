@@ -13,6 +13,7 @@ import {
   maybeRunSlaSweep,
   detectTelemetryAlerts,
   computeFinancialRollup,
+  listSupportTickets,
 } from "@/server/store";
 import { PLAN_PRICING } from "@/shared/types";
 import { slaCountdown } from "@/shared/lib/sla";
@@ -39,7 +40,7 @@ export default async function AdminToday() {
   // sweep mechanism is the /api/cron/sla-sweep cron; inline is a top-up.
   // Replaced full listUsers("student"/"recruiter") with countDocuments — admin
   // dashboard only consumed `.length`, so the full collection scan was waste.
-  const [, telemetryAlerts, m, apps, jobs, bcs, studentCount, recruiterCount, heatmap, finance, students] =
+  const [, telemetryAlerts, m, apps, jobs, bcs, studentCount, recruiterCount, heatmap, finance, students, tickets] =
     await Promise.all([
       maybeRunSlaSweep(),
       detectTelemetryAlerts(),
@@ -56,18 +57,22 @@ export default async function AdminToday() {
       // Pull students once so we can compute conversion (signup → apply)
       // + subscription revenue (Pro + Premium plan counts × pricing).
       listUsers("student"),
+      // Real support queue — open + in-progress tickets.
+      listSupportTickets(),
     ]);
 
   // ── KPIs ──
   const liveRevenue = m.liveRevenueINR;
-  const activeUsers24h = studentCount + recruiterCount;
+  const totalUsers = studentCount + recruiterCount;
   const ghostingRate = m.ghostingRatePct;
   const activeMissions = m.activeMissions;
   const monthlyBootcampRevenue = bcs.reduce(
     (s, b) => s + b.enrolledStudentIds.length * b.priceINR,
     0,
   );
-  const openTickets = Math.max(0, Math.floor(apps.length / 12)); // synthetic
+  const openTickets = tickets.filter(
+    (t) => t.status === "open" || t.status === "in_progress",
+  ).length;
 
   // ── Real platform-pulse signals (replaces the "+18% MoM" literal block) ──
   // MoM revenue change: compare the latest two months in finance.byMonth.
@@ -168,7 +173,7 @@ export default async function AdminToday() {
         severity="critical"
         icon={<Ghost size={18} />}
         title={`Platform ghosting rate ${ghostingRate.toFixed(1)}% — above 25%`}
-        subtitle="Industry benchmark is 38%, but our ceiling is 25%"
+        subtitle="Above our 25% internal ceiling"
         href="/admin/telemetry"
         cta="Review"
       />,
@@ -205,19 +210,6 @@ export default async function AdminToday() {
       />,
     );
   }
-  // Synthetic plagiarism appeal
-  review.push(
-    <ActionFeedItem
-      key="plag-1"
-      severity="warn"
-      icon={<FileWarning size={18} />}
-      title="Plagiarism appeal — assignment flagged 87% similarity"
-      subtitle="Student requesting review of AI-detection flag"
-      meta="filed 2h ago"
-      href="/admin/moderation"
-      cta="Adjudicate"
-    />,
-  );
 
   const hour = new Date().getHours();
   const greeting =
@@ -238,7 +230,7 @@ export default async function AdminToday() {
               month: "long",
               year: "numeric",
             })}{" "}
-            · 2FA enforced · every action audit-logged
+            · every action audit-logged
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -264,7 +256,7 @@ export default async function AdminToday() {
             </p>
             <p className="text-sm text-brand-ink leading-relaxed">
               <span className="font-semibold">{greeting}.</span> Platform served{" "}
-              <span className="font-semibold">{activeUsers24h}</span> active users
+              <span className="font-semibold">{totalUsers}</span> total users
               today. Ghosting rate{" "}
               <span
                 className={
@@ -274,8 +266,8 @@ export default async function AdminToday() {
                 }
               >
                 {ghostingRate.toFixed(1)}%
-              </span>{" "}
-              vs industry 38%. Bootcamp revenue MTD ₹
+              </span>
+              . Bootcamp revenue MTD ₹
               {(monthlyBootcampRevenue / 1000).toFixed(0)}k.{" "}
               {critical.length > 0 ? (
                 <span className="text-rose-600 font-semibold">
@@ -300,8 +292,8 @@ export default async function AdminToday() {
         />
         <Kpi
           icon={<UsersIcon size={14} />}
-          label="Active 24h"
-          value={activeUsers24h}
+          label="Total users"
+          value={totalUsers}
           tone="brand"
         />
         <Kpi
@@ -481,8 +473,8 @@ export default async function AdminToday() {
             </p>
             <ul className="space-y-2 text-xs">
               <ComplianceRow ok label="DPDP Act — data residency Mumbai" />
-              <ComplianceRow ok label="PhonePe webhooks signed, no failures" />
-              <ComplianceRow ok label="2FA enforced on all admin sessions" />
+              <ComplianceRow ok label="PhonePe webhooks HMAC-verified" />
+              <ComplianceRow ok label="Every admin action audit-logged" />
               <ComplianceRow
                 ok={false}
                 label="GST monthly export — due 1st"
