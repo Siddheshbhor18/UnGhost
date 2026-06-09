@@ -983,6 +983,10 @@ export async function updateApplicationStage(
   if (stage !== "new_matches" && !a.firstResponseAt) {
     update.firstResponseAt = new Date().toISOString();
   }
+  // Real "time to hire" anchor — set once when the app first reaches hired.
+  if (stage === "hired" && !a.hiredAt) {
+    update.hiredAt = new Date().toISOString();
+  }
   if (stage === "interview" && !a.interviewScheduledAt) {
     const t = new Date();
     t.setDate(t.getDate() + 3);

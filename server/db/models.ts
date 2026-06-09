@@ -255,6 +255,7 @@ const ApplicationSchema = withJsonTransform(
       withdrawnAt: String,
       updateRequestedAt: String,
       firstResponseAt: String,
+      hiredAt: String,
       slaBreachedAt: String,
       slaRefundIssued: Boolean,
     },

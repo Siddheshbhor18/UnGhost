@@ -416,6 +416,9 @@ export interface Application {
   /** Set the first time a recruiter moves the application off new_matches —
    *  the real "time to first response" anchor for analytics. */
   firstResponseAt?: string;
+  /** Set when the application reaches the "hired" stage — the real
+   *  "time to hire" anchor for analytics. */
+  hiredAt?: string;
   /** Set when SLA cron flags a breach and credit refund is issued. */
   slaBreachedAt?: string;
   slaRefundIssued?: boolean;

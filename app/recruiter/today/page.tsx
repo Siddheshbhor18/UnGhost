@@ -34,8 +34,6 @@ import {
   Brain,
 } from "lucide-react";
 
-const SLA_INDUSTRY_BENCHMARK = 38;
-
 export default async function RecruiterToday() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login?role=recruiter");
@@ -56,6 +54,28 @@ export default async function RecruiterToday() {
   const co = user?.companyId ? await getCompanyById(user.companyId) : undefined;
   const students = Object.fromEntries(studentList.map((u) => [u.id, u]));
   const jobIndex = Object.fromEntries(jobs.map((j) => [j.id, j]));
+
+  // Real average time-to-first-response (hours), measured from createdAt →
+  // firstResponseAt over the recruiter's submitted applications. null = no
+  // measured data yet (the UI shows "—" rather than a made-up number).
+  const respondedApps = apps.filter((a) => a.firstResponseAt);
+  const avgResponseHrs =
+    respondedApps.length > 0
+      ? Math.round(
+          respondedApps.reduce(
+            (s, a) =>
+              s +
+              Math.max(
+                0,
+                new Date(a.firstResponseAt!).getTime() -
+                  new Date(a.createdAt).getTime(),
+              ) /
+                3_600_000,
+            0,
+          ) / respondedApps.length,
+        )
+      : null;
+  const avgResponseLabel = avgResponseHrs == null ? "—" : `${avgResponseHrs}h`;
 
   // ── KPI math ──
   const openPositions = jobs.length;
@@ -223,7 +243,7 @@ export default async function RecruiterToday() {
             icon={<Ghost size={16} />}
             label="Ghosting rate"
             value={`${ghostingRate.toFixed(1)}%`}
-            sub={`industry avg ${SLA_INDUSTRY_BENCHMARK}%`}
+            sub="lower is better"
             tone={ghostingRate > 10 ? "danger" : ghostingRate > 5 ? "warn" : "success"}
           />
         </div>
@@ -371,9 +391,9 @@ export default async function RecruiterToday() {
                 . Move fast.
               </p>
               <p className="text-xs text-brand-muted leading-relaxed">
-                Your average response time:{" "}
-                <span className="text-emerald-600 font-semibold">8h</span> — well under
-                your 48h SLA. Keep it up.
+                {avgResponseHrs == null
+                  ? "Respond to your applicants to start tracking your average response time."
+                  : `Your average response time: ${avgResponseHrs}h. Faster responses win more replies.`}
               </p>
             </GlassCard>
 
@@ -398,7 +418,7 @@ export default async function RecruiterToday() {
                 <Row
                   icon={<Clock size={12} className="text-amber-600" />}
                   label="Avg response"
-                  value="8h"
+                  value={avgResponseLabel}
                 />
               </ul>
             </GlassCard>

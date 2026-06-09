@@ -70,13 +70,25 @@ export default async function RecruiterAnalytics() {
       offered > 0 ? Math.round((hires / offered) * 100) : 0,
   };
 
-  // Approx time-to-hire (Phase 1 stand-in: SLA × stages × 1.5)
+  // Real average time-to-hire (hours) from createdAt → hiredAt over actual
+  // hires. null = no hires yet (UI shows "—" instead of a made-up number).
+  const hiredWithTime = apps.filter((a) => a.stage === "hired" && a.hiredAt);
   const avgTtH =
-    jobs.length > 0
+    hiredWithTime.length > 0
       ? Math.round(
-          jobs.reduce((s, j) => s + j.slaHours, 0) / jobs.length * 1.5 * 5,
+          hiredWithTime.reduce(
+            (s, a) =>
+              s +
+              Math.max(
+                0,
+                new Date(a.hiredAt!).getTime() -
+                  new Date(a.createdAt).getTime(),
+              ) /
+                3_600_000,
+            0,
+          ) / hiredWithTime.length,
         )
-      : 0;
+      : null;
 
   return (
     <main className="relative min-h-screen">
@@ -93,8 +105,8 @@ export default async function RecruiterAnalytics() {
               Your hiring scoreboard
             </h1>
             <p className="text-sm text-brand-muted mt-1">
-              Personal funnel + SLA compliance. Compared against{" "}
-              {company?.name ?? "your company"} avg + industry benchmarks.
+              Personal funnel + SLA compliance, compared against{" "}
+              {company?.name ?? "your company"} average.
             </p>
           </div>
           <Link href="/recruiter/today" className="btn-glass">
@@ -127,7 +139,7 @@ export default async function RecruiterAnalytics() {
           <Kpi
             icon={<Clock size={14} />}
             label="Avg time-to-hire"
-            value={`${avgTtH}h`}
+            value={avgTtH == null ? "—" : `${avgTtH}h`}
             tone="warn"
           />
         </div>
