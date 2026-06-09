@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   GlassButton,
@@ -31,6 +31,56 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
   const [salaryMax, setSalaryMax] = useState(50);
   const [experienceMin, setExperienceMin] = useState(2);
   const [experienceMax, setExperienceMax] = useState(5);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+
+  // Hydrate from a "Use template" click on /recruiter/templates (one-shot).
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("unghost:job_template");
+      if (!raw) return;
+      sessionStorage.removeItem("unghost:job_template");
+      const t = JSON.parse(raw);
+      if (t.title) setTitle(t.title);
+      if (Array.isArray(t.skills)) setSkills(t.skills);
+      if (t.gauntletPrompt) setGauntletPrompt(t.gauntletPrompt);
+      if (t.description) setDescription(t.description);
+      if (typeof t.salaryMin === "number") setSalaryMin(t.salaryMin);
+      if (typeof t.salaryMax === "number") setSalaryMax(t.salaryMax);
+      if (t.remote) setRemote(t.remote);
+      if (t.slaHours) setSla(t.slaHours);
+      if (t.location) setLocation(t.location);
+    } catch {
+      /* ignore a malformed template payload */
+    }
+  }, []);
+
+  async function saveAsTemplate() {
+    const name = window.prompt(
+      "Save these fields as a reusable template. Name it:",
+      title || "Untitled template",
+    );
+    if (!name?.trim()) return;
+    const res = await fetch("/api/recruiter/templates", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        title,
+        skills,
+        gauntletPrompt,
+        description,
+        salaryMin,
+        salaryMax,
+        remote,
+        slaHours: sla,
+        location,
+      }),
+    });
+    setSavedMsg(
+      res.ok ? "Saved to your templates ✓" : "Couldn't save the template.",
+    );
+    setTimeout(() => setSavedMsg(null), 2500);
+  }
 
   async function parse() {
     if (!jdText.trim()) return;
@@ -274,7 +324,20 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
       {error && (
         <p className="mb-3 text-sm text-red-500 text-right">{error}</p>
       )}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-3 flex-wrap">
+        {savedMsg && (
+          <span className="text-xs font-semibold text-emerald-600">
+            {savedMsg}
+          </span>
+        )}
+        <GlassButton
+          variant="glass"
+          size="lg"
+          onClick={saveAsTemplate}
+          disabled={!title}
+        >
+          Save as template
+        </GlassButton>
         <GlassButton
           variant="brand"
           size="lg"

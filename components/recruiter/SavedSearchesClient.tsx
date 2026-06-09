@@ -56,9 +56,11 @@ export function SavedSearchesClient({ initial }: Props) {
   }
 
   function runSearch(s: SavedSearch) {
-    // Phase 1: navigate to candidate database; the page reads filters from URL
-    // in Phase 2 via a `?savedSearch=` param. For now, just open candidates.
-    router.push(`/recruiter/candidates`);
+    // Carry the saved filters to the candidate database via ?savedSearch=,
+    // which CandidateDatabase parses + applies on mount.
+    router.push(
+      `/recruiter/candidates?savedSearch=${encodeURIComponent(s.filtersJson)}`,
+    );
   }
 
   if (list.length === 0) {

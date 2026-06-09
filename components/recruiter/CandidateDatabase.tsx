@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   Filter,
@@ -56,17 +57,35 @@ export function CandidateDatabase({ initialCredits }: Props) {
   const [loading, setLoading] = useState(false);
   const [credits, setCredits] = useState(initialCredits);
   const [outreach, setOutreach] = useState<CandidateCard | null>(null);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
-  // Initial search on mount
+  // On mount, hydrate from a "Run now" on /recruiter/saved-searches
+  // (?savedSearch=<filtersJson>); otherwise do a default open search.
   useEffect(() => {
+    const raw = searchParams?.get("savedSearch");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as CandidateSearchFilters & {
+          query?: string;
+        };
+        const { query: q, ...f } = parsed;
+        setQuery(q ?? "");
+        setFilters(f);
+        runSearch(f, q ?? "");
+        return;
+      } catch {
+        /* malformed param — fall through to default */
+      }
+    }
     runSearch({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function runSearch(f: CandidateSearchFilters) {
+  async function runSearch(f: CandidateSearchFilters, q: string = query) {
     setLoading(true);
     try {
-      const payload: CandidateSearchFilters = { ...f, query };
+      const payload: CandidateSearchFilters = { ...f, query: q };
       const res = await fetch("/api/recruiter/candidates", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -77,6 +96,22 @@ export function CandidateDatabase({ initialCredits }: Props) {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function saveSearch() {
+    const name = window.prompt("Name this saved search:", "");
+    if (!name?.trim()) return;
+    const res = await fetch("/api/recruiter/saved-searches", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        filtersJson: JSON.stringify({ ...filters, query }),
+        alertFrequency: "off",
+      }),
+    });
+    setSaveMsg(res.ok ? "Search saved ✓" : "Couldn't save the search.");
+    setTimeout(() => setSaveMsg(null), 2500);
   }
 
   function toggleSkill(skill: string) {
@@ -266,6 +301,20 @@ export function CandidateDatabase({ initialCredits }: Props) {
                 {credits} InMail credit{credits === 1 ? "" : "s"}
               </span>
             </p>
+            <div className="mt-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={saveSearch}
+                className="text-xs font-semibold text-brand-primary hover:underline"
+              >
+                + Save this search
+              </button>
+              {saveMsg && (
+                <span className="text-xs text-emerald-600 font-semibold">
+                  {saveMsg}
+                </span>
+              )}
+            </div>
           </form>
         </GlassCard>
 
