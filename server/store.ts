@@ -3894,6 +3894,44 @@ export async function getRecordingById(
   return unwrap(doc as unknown as SessionRecording);
 }
 
+/**
+ * Create the SessionRecording row when a live session ends with a recording.
+ * Idempotent on sessionId (the "end" action can fire more than once) so a
+ * session never spawns duplicate recordings. Lands as "pending_review" for the
+ * instructor's Keep/Delete queue.
+ */
+export async function createSessionRecording(input: {
+  sessionId: string;
+  bootcampId: string;
+  instructorId: string;
+  sessionTitle: string;
+  bootcampTitle?: string;
+  playbackUrl?: string;
+  provider?: SessionRecording["provider"];
+}): Promise<SessionRecording | undefined> {
+  await db();
+  const existing = await SessionRecordingModel.findOne({
+    sessionId: input.sessionId,
+  }).lean();
+  if (existing) return unwrap(existing as unknown as SessionRecording);
+  const id = genId("rec");
+  const rec: SessionRecording = {
+    id,
+    sessionId: input.sessionId,
+    bootcampId: input.bootcampId,
+    instructorId: input.instructorId,
+    sessionTitle: input.sessionTitle,
+    bootcampTitle: input.bootcampTitle ?? "",
+    playbackUrl: input.playbackUrl,
+    status: "pending_review",
+    createdAt: new Date().toISOString(),
+    provider: input.provider ?? "mock",
+  };
+  await SessionRecordingModel.create({ _id: id, ...rec });
+  await invalidate("recordings:all");
+  return rec;
+}
+
 /** Mark a recording as kept — students can now replay it. */
 export async function publishRecording(
   id: string,

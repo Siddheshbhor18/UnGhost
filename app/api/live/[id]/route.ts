@@ -5,7 +5,9 @@ import { authOptions } from "@/server/auth";
 import { parseBody } from "@/server/lib/validate";
 import { requireSameOrigin } from "@/server/lib/csrf";
 import {
+  createSessionRecording,
   deleteLiveSession,
+  getBootcampById,
   getLiveSessionById,
   registerForLiveSession,
   setLiveSessionStatus,
@@ -122,6 +124,23 @@ export async function PATCH(req: Request, { params }: Ctx) {
     statusMap[action],
     endExtra,
   );
+
+  // On end, if the session is tied to a bootcamp and has a recording URL,
+  // create the SessionRecording row so it lands in the instructor's
+  // Keep/Delete review queue (idempotent on sessionId).
+  if (action === "end" && endExtra?.recordingUrl && live.bootcampId) {
+    const bc = await getBootcampById(live.bootcampId);
+    await createSessionRecording({
+      sessionId: params.id,
+      bootcampId: live.bootcampId,
+      instructorId: session.user.id,
+      sessionTitle: live.title ?? "Live session",
+      bootcampTitle: bc?.title,
+      playbackUrl: endExtra.recordingUrl,
+      provider: endExtra.recordingUrl.includes("youtube") ? "youtube" : "mock",
+    });
+  }
+
   return NextResponse.json({ ok: true, status: statusMap[action] });
 }
 
