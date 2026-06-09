@@ -4141,17 +4141,24 @@ export async function computeFinancialRollup(): Promise<{
   bootcampEnrolments: number;
   sponsorshipRevenuePaise: number;
   sponsorshipCount: number;
-  refundsIssuedPaise: number;
-  refundCount: number;
+  premiumRevenuePaise: number;
+  premiumCount: number;
+  cashRefundsPaise: number;
+  cashRefundCount: number;
+  slaCreditCount: number;
   byMonth: Array<{ month: string; revenuePaise: number; refundsPaise: number }>;
 }> {
   await db();
-  const [bootcamps, sponsorships, users, applications] = await Promise.all([
-    BootcampModel.find({}).lean(),
-    SponsorshipModel.find({}).lean(),
-    UserModel.find({ role: "student" }).lean(),
-    ApplicationModel.find({ slaRefundIssued: true }).lean(),
-  ]);
+  const [bootcamps, sponsorships, users, applications, refundTxns] =
+    await Promise.all([
+      BootcampModel.find({}).lean(),
+      SponsorshipModel.find({}).lean(),
+      UserModel.find({ role: "student" }).lean(),
+      ApplicationModel.find({ slaRefundIssued: true }).lean(),
+      // Real cash refunds = negative-amount processed transactions written by
+      // the admin billing-refund route.
+      ProcessedTxnModel.find({ amountPaise: { $lt: 0 } }).lean(),
+    ]);
   const bcMap = new Map<string, number>();
   for (const b of bootcamps as unknown as Bootcamp[]) bcMap.set(b.id, b.priceINR);
 
@@ -4172,37 +4179,49 @@ export async function computeFinancialRollup(): Promise<{
     }
   }
 
-  // Refunds = SLA-breached apps × ₹250 (Phase 1 placeholder)
-  const refundUnit = 25000;
-  let refundsIssuedPaise = 0;
-  let refundCount = 0;
-  for (const a of applications as unknown as Application[]) {
-    if (a.slaRefundIssued) {
-      refundsIssuedPaise += refundUnit;
-      refundCount += 1;
-    }
+  // Premium plan revenue — the primary monetization, previously omitted from
+  // the financial totals. Real: count of active-premium students × price.
+  let premiumCount = 0;
+  for (const u of users as unknown as User[]) {
+    if (u.plan === "premium") premiumCount += 1;
   }
+  const premiumRevenuePaise =
+    premiumCount * PLAN_PRICING.premium.amountINR * 100;
 
-  // Monthly bucket = enrollment month if we had one — Phase 1 uses createdAt
-  const byMonth = new Map<string, { rev: number; ref: number }>();
-  for (const b of bootcamps as unknown as Bootcamp[]) {
-    // approximate: assume even spread over last 6 months
+  // Real cash refunds = sum of |negative processed-txn amounts|.
+  let cashRefundsPaise = 0;
+  for (const t of refundTxns as unknown as Array<{ amountPaise: number }>) {
+    cashRefundsPaise += Math.abs(t.amountPaise);
   }
+  const cashRefundCount = refundTxns.length;
+
+  // SLA-breach application credits are NOT cash — they return a free
+  // application slot to the student. Surface as an ops count, never folded
+  // into the revenue/refund money math.
+  const slaCreditCount = (applications as unknown as Application[]).filter(
+    (a) => a.slaRefundIssued,
+  ).length;
+
   void bcMap;
-  void users;
 
   return {
     bootcampRevenuePaise,
     bootcampEnrolments,
     sponsorshipRevenuePaise,
     sponsorshipCount,
-    refundsIssuedPaise,
-    refundCount,
-    byMonth: Array.from(byMonth.entries()).map(([month, v]) => ({
-      month,
-      revenuePaise: v.rev,
-      refundsPaise: v.ref,
-    })),
+    premiumRevenuePaise,
+    premiumCount,
+    cashRefundsPaise,
+    cashRefundCount,
+    slaCreditCount,
+    // Real monthly revenue bucketing needs per-transaction timestamps we don't
+    // yet capture for every revenue source — left empty (the UI shows "no
+    // data" rather than an invented trend) until that ledger exists.
+    byMonth: [] as Array<{
+      month: string;
+      revenuePaise: number;
+      refundsPaise: number;
+    }>,
   };
 }
 

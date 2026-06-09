@@ -4,6 +4,7 @@ import {
   RefreshCcw,
   GraduationCap,
   Handshake,
+  Sparkles,
 } from "lucide-react";
 import { GlassBadge, GlassCard } from "@/components/glass";
 import { computeFinancialRollup } from "@/server/store";
@@ -11,8 +12,9 @@ import { paymentsMode } from "@/server/integrations/payments";
 
 export default async function AdminFinancialPage() {
   const r = await computeFinancialRollup();
-  const totalGrossPaise = r.bootcampRevenuePaise + r.sponsorshipRevenuePaise;
-  const totalNetPaise = totalGrossPaise - r.refundsIssuedPaise;
+  const totalGrossPaise =
+    r.bootcampRevenuePaise + r.sponsorshipRevenuePaise + r.premiumRevenuePaise;
+  const totalNetPaise = totalGrossPaise - r.cashRefundsPaise;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
@@ -25,7 +27,7 @@ export default async function AdminFinancialPage() {
             Revenue + refunds
           </h1>
           <p className="text-sm text-brand-muted mt-1">
-            Bootcamp enrolment + recruiter sponsorship inflow, minus SLA-breach refunds.
+            Bootcamp + sponsorship + Premium-plan inflow, minus cash refunds.
             Payments via{" "}
             <span className={paymentsMode() === "live" ? "text-emerald-700 font-semibold" : "text-amber-700 font-semibold"}>
               PhonePe ({paymentsMode()})
@@ -40,14 +42,14 @@ export default async function AdminFinancialPage() {
           icon={<TrendingUp size={16} />}
           label="Gross revenue"
           value={paise(totalGrossPaise)}
-          sub="bootcamp + sponsorship"
+          sub="bootcamp + sponsorship + premium"
           tone="brand"
         />
         <BigKpi
           icon={<RefreshCcw size={16} />}
-          label="Refunds issued"
-          value={paise(r.refundsIssuedPaise)}
-          sub={`${r.refundCount} SLA-breach refund${r.refundCount === 1 ? "" : "s"}`}
+          label="Cash refunds"
+          value={paise(r.cashRefundsPaise)}
+          sub={`${r.cashRefundCount} refund${r.cashRefundCount === 1 ? "" : "s"} processed`}
           tone="warn"
         />
         <BigKpi
@@ -59,7 +61,24 @@ export default async function AdminFinancialPage() {
         />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid lg:grid-cols-3 gap-4">
+        <GlassCard className="!p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold inline-flex items-center gap-1.5">
+              <Sparkles size={11} /> Premium plans
+            </p>
+            <span className="text-xs text-brand-muted">
+              {r.premiumCount} member{r.premiumCount === 1 ? "" : "s"}
+            </span>
+          </div>
+          <p className="font-display text-4xl font-bold text-brand-primary">
+            {paise(r.premiumRevenuePaise)}
+          </p>
+          <p className="text-xs text-brand-muted mt-2">
+            One-time ₹4,999 lifetime plan × active premium members.
+          </p>
+        </GlassCard>
+
         <GlassCard className="!p-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold inline-flex items-center gap-1.5">
@@ -100,15 +119,13 @@ export default async function AdminFinancialPage() {
           Anti-ghost guarantee
         </p>
         <p className="text-sm text-brand-ink/85 leading-relaxed">
-          Every SLA breach triggers an automatic ₹250 student wallet credit. This
-          is what keeps the platform&apos;s anti-ghost promise honest. Current
-          refund tally:{" "}
-          <span className="text-rose-700 font-semibold">{r.refundCount} refunds</span>{" "}
-          ·{" "}
+          Every SLA breach returns the student&apos;s application credit (a free
+          application slot) — not a cash payout. This is what keeps the
+          anti-ghost promise honest. Credits returned so far:{" "}
           <span className="text-rose-700 font-semibold">
-            {paise(r.refundsIssuedPaise)}
-          </span>{" "}
-          paid out.
+            {r.slaCreditCount}
+          </span>
+          .
         </p>
       </GlassCard>
     </div>
