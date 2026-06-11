@@ -18,6 +18,7 @@ import {
   computeCompleteness,
 } from "@/server/lib/profile-completeness";
 import { checkApplyQuota, effectivePlan } from "@/server/lib/quota";
+import { isActiveUser } from "@/server/auth/account-status";
 import { getAI } from "@/server/integrations/ai";
 
 export const runtime = "nodejs";
@@ -53,6 +54,9 @@ export async function POST(req: Request) {
   ]);
   if (!job || !user?.profile) {
     return NextResponse.json({ error: "invalid input" }, { status: 400 });
+  }
+  if (!isActiveUser(user)) {
+    return NextResponse.json({ error: "account_inactive" }, { status: 403 });
   }
 
   // PRD: students with thin profiles can't apply (noise for recruiters)

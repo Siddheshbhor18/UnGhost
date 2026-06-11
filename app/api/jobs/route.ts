@@ -14,6 +14,7 @@ import {
   getUserById,
   writeAuditLog,
 } from "@/server/store";
+import { isActiveUser } from "@/server/auth/account-status";
 import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
@@ -70,6 +71,9 @@ async function handler(req: Request) {
   ]);
   if (!user) {
     return NextResponse.json({ error: "no_account" }, { status: 403 });
+  }
+  if (!isActiveUser(user)) {
+    return NextResponse.json({ error: "account_inactive" }, { status: 403 });
   }
   if (!company) {
     return NextResponse.json({ error: "company_not_found" }, { status: 404 });

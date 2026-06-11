@@ -8,6 +8,7 @@ import { withRateLimit } from "@/server/lib/with-rate-limit";
 import { withApiErrorTracking } from "@/server/lib/api-error";
 import { createPayment, paymentsMode } from "@/server/integrations/payments";
 import { getUserById, countPremiumUsers } from "@/server/store";
+import { isActiveUser } from "@/server/auth/account-status";
 import { effectivePlan } from "@/server/lib/quota";
 import { computeTotalPaise } from "@/server/payments/pricing";
 import {
@@ -46,6 +47,9 @@ async function postHandler(req: Request) {
 
   const user = await getUserById(session.user.id);
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  if (!isActiveUser(user)) {
+    return NextResponse.json({ error: "account_inactive" }, { status: 403 });
+  }
 
   // Launch offer: ₹4,999 lifetime is capped at the first N premium buyers.
   // Skip the cap for users who already hold premium (no-op re-purchase).

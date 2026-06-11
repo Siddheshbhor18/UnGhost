@@ -13,6 +13,7 @@ import {
   listInMailsByRecruiter,
   notify,
 } from "@/server/store";
+import { isActiveUser } from "@/server/auth/account-status";
 import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
@@ -76,6 +77,9 @@ export async function POST(req: Request) {
       { error: "candidate not found" },
       { status: 404 },
     );
+  }
+  if (!recruiter || !isActiveUser(recruiter)) {
+    return NextResponse.json({ error: "account_inactive" }, { status: 403 });
   }
   const company = recruiter?.companyId
     ? await getCompanyById(recruiter.companyId)
