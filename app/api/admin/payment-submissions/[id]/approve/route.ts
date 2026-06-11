@@ -80,15 +80,26 @@ export async function POST(
       await submission.save({ session: dbSession });
 
       if (isPlanPurchase) {
-        // Premium = one-time lifetime (no expiry). Guarded above to be the
-        // only plan that reaches here.
+        // Re-check the 150-seat cap INSIDE the transaction, immediately before
+        // activation, so two admins approving different submissions can't both
+        // clear the pre-check (think-time apart) and overshoot. Counted within
+        // the session for a consistent view; throwing aborts the transaction.
+        const premiumNow = await UserModel.countDocuments(
+          { plan: "premium" },
+          { session: dbSession },
+        );
+        if (premiumNow >= PREMIUM_LIFETIME_SEATS) {
+          throw new Error("offer_closed");
+        }
+        // Premium = one-time lifetime (no expiry). Conditional on not-already-
+        // premium so a double-submit can't double-activate.
         const now = new Date();
         await UserModel.updateOne(
-          { _id: submission.userId },
+          { _id: submission.userId, plan: { $ne: "premium" } },
           {
             $set: {
               plan: "premium",
-              planType: "premium",
+              planType: "lifetime",
               planActivatedAt: now.toISOString(),
               lastBillingTxnId: submission.utr,
               planExpiresAt: null,
@@ -116,6 +127,16 @@ export async function POST(
       }
     });
   } catch (err) {
+    // Cap re-check aborted the txn — surface as a clean 409, not a 500.
+    if (err instanceof Error && err.message === "offer_closed") {
+      return NextResponse.json(
+        {
+          error: "offer_closed",
+          detail: `Lifetime cap reached (${PREMIUM_LIFETIME_SEATS}). Do not approve — refund the payer.`,
+        },
+        { status: 409 },
+      );
+    }
     logger.error(
       { err, submissionId: params.id },
       "admin.approve.transaction_failed",
