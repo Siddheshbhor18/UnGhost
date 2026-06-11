@@ -111,9 +111,20 @@ export const authOptions: AuthOptions = {
         // message on the sign-in form.
         const ip = ipFromAuthReq(req);
         const email = creds.email.toLowerCase();
+        // fallbackInProcess: the login throttle must not fail open into an
+        // unthrottled guessing oracle if Redis blips — degrade to a
+        // per-instance limiter instead.
         const [perAccount, perIp] = await Promise.all([
-          rateLimit("login.acct", `${ip}:${email}`, { limit: 10, windowSec: 300 }),
-          rateLimit("login.ip", ip, { limit: 50, windowSec: 900 }),
+          rateLimit("login.acct", `${ip}:${email}`, {
+            limit: 10,
+            windowSec: 300,
+            fallbackInProcess: true,
+          }),
+          rateLimit("login.ip", ip, {
+            limit: 50,
+            windowSec: 900,
+            fallbackInProcess: true,
+          }),
         ]);
         if (!perAccount.allowed || !perIp.allowed) {
           logger.warn(

@@ -26,6 +26,45 @@ export interface RateLimitOptions {
   limit: number;
   /** Window length in seconds. */
   windowSec: number;
+  /**
+   * When true, a Redis failure does NOT fail open. Instead it falls back to a
+   * per-instance in-memory limiter so security-critical endpoints (login) stay
+   * throttled during a Redis outage rather than becoming an open guessing
+   * oracle. (Per-instance only — weaker than Redis across a fleet, but far
+   * better than unthrottled, and it keeps logins working unlike a hard block.)
+   */
+  fallbackInProcess?: boolean;
+}
+
+// Per-instance fixed-window fallback store, used only when Redis is down and
+// the caller opted into fallbackInProcess. Bounded by natural window expiry.
+const memBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function inProcessRateLimit(
+  bucket: string,
+  identifier: string,
+  opts: RateLimitOptions,
+): RateLimitResult {
+  const key = `${bucket}:${identifier}`;
+  const now = Date.now();
+  const entry = memBuckets.get(key);
+  if (!entry || entry.resetAt <= now) {
+    memBuckets.set(key, { count: 1, resetAt: now + opts.windowSec * 1000 });
+    return {
+      allowed: true,
+      limit: opts.limit,
+      remaining: opts.limit - 1,
+      retryAfterSec: opts.windowSec,
+    };
+  }
+  entry.count += 1;
+  const allowed = entry.count <= opts.limit;
+  return {
+    allowed,
+    limit: opts.limit,
+    remaining: Math.max(0, opts.limit - entry.count),
+    retryAfterSec: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)),
+  };
 }
 
 export interface RateLimitResult {
@@ -69,9 +108,18 @@ export async function rateLimit(
       level: "warning",
     });
     logger.warn(
-      { err: err instanceof Error ? err.message : String(err), bucket },
-      "rate_limit.backend_unavailable_failing_open",
+      {
+        err: err instanceof Error ? err.message : String(err),
+        bucket,
+        fallback: opts.fallbackInProcess ? "in_process" : "open",
+      },
+      "rate_limit.backend_unavailable",
     );
+    // Security-critical buckets degrade to a per-instance limiter instead of
+    // failing open (no unthrottled guessing window during a Redis outage).
+    if (opts.fallbackInProcess) {
+      return inProcessRateLimit(bucket, identifier, opts);
+    }
     return {
       allowed: true,
       limit: opts.limit,
