@@ -4134,6 +4134,46 @@ export async function setJobActive(
   await invalidate("jobs:active", "jobs:active:lite");
 }
 
+/**
+ * Recruiter edits / closes their own job. Owner-scoped + whitelisted: only the
+ * fields a recruiter may change (never companyId/recruiterId/createdAt). Pass
+ * `active:false` to close (take down) or `true` to reopen. Returns undefined if
+ * the job isn't found or isn't owned by the caller.
+ */
+export async function updateJob(
+  jobId: string,
+  recruiterId: string,
+  patch: Partial<Job>,
+): Promise<Job | undefined> {
+  await db();
+  const job = await getJobById(jobId);
+  if (!job || job.recruiterId !== recruiterId) return undefined;
+  const EDITABLE: (keyof Job)[] = [
+    "title",
+    "skills",
+    "location",
+    "remote",
+    "slaHours",
+    "gauntletPrompt",
+    "description",
+    "salaryMin",
+    "salaryMax",
+    "experienceMin",
+    "experienceMax",
+    "active",
+  ];
+  const safe: Record<string, unknown> = {};
+  for (const k of EDITABLE) {
+    if (k in patch && (patch as Record<string, unknown>)[k] !== undefined) {
+      safe[k] = (patch as Record<string, unknown>)[k];
+    }
+  }
+  if (Object.keys(safe).length === 0) return job;
+  await JobModel.updateOne({ _id: jobId }, { $set: safe });
+  await invalidate("jobs:active", "jobs:active:lite");
+  return { ...job, ...safe } as Job;
+}
+
 // ---------- FINANCIAL ROLLUP ----------
 
 export async function computeFinancialRollup(): Promise<{

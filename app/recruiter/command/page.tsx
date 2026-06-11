@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { BlobField, GlassBadge, GlassCard, GlassNavbar } from "@/components/glass";
 import { KanbanBoard } from "@/components/recruiter/KanbanBoard";
+import { JobActions } from "@/components/recruiter/JobActions";
 import {
   getCompanyById,
   getUserById,
@@ -146,6 +147,14 @@ export default async function CommandCenter() {
                         {s}
                       </GlassBadge>
                     ))}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-brand-ink/5">
+                    {job.active === false ? (
+                      <GlassBadge tone="danger">Closed</GlassBadge>
+                    ) : (
+                      <GlassBadge tone="success">Live</GlassBadge>
+                    )}
+                    <JobActions jobId={job.id} active={job.active !== false} />
                   </div>
                 </GlassCard>
               ))}
