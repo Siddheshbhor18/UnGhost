@@ -12,6 +12,7 @@ import {
   Zap,
   CheckCircle2,
   BadgeCheck,
+  Tag,
 } from "lucide-react";
 import { GlassNavbar, Logo } from "@/components/glass";
 import {
@@ -412,6 +413,31 @@ export default async function LandingPage() {
           title="Try 2 free. Upgrade once."
           subtitle="Recruiters post and hire free. Students pick a plan that fits."
         />
+
+        {/* Launch coupon — markets the offer; the discounted total only shows
+            once the code is applied at checkout. */}
+        <div className="mt-8 flex justify-center">
+          <div className="glass-tinted inline-flex flex-col items-center gap-3 px-6 py-4 sm:flex-row sm:gap-4 sm:px-7">
+            <span className="flex items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-gradient text-white shadow-brand-glow">
+                <Tag size={17} />
+              </span>
+              <span className="font-display font-extrabold text-3xl leading-none tracking-tight text-neutral-950 tnum">
+                50% off
+              </span>
+            </span>
+            <span className="text-center text-body-sm leading-relaxed text-neutral-700 sm:text-left">
+              Premium with code{" "}
+              <span className="rounded-md bg-brand-50 px-1.5 py-0.5 font-semibold tracking-wide text-brand-600">
+                unGhost50
+              </span>
+              <span className="block text-body-xs text-neutral-500 sm:mt-0.5">
+                Lifetime access · first 150 students
+              </span>
+            </span>
+          </div>
+        </div>
+
         <StaggerGrid
           className="grid md:grid-cols-2 gap-5 mt-10 max-w-3xl mx-auto"
           stagger={0.1}
