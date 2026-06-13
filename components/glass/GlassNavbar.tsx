@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
@@ -71,6 +72,27 @@ export function GlassNavbar() {
   const { data: session } = useSession();
   const pathname = usePathname() ?? "/";
   const role = session?.user?.role;
+
+  // Live premium check — once a student upgrades we hide the "Go Premium"
+  // CTA (showing it to a paying user is bad UX). Read from the DB, not the
+  // JWT, since premium is activated by admin approval after sign-in.
+  const [isPremium, setIsPremium] = useState(false);
+  useEffect(() => {
+    if (role !== "student") {
+      setIsPremium(false);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/student/plan")
+      .then((r) => (r.ok ? r.json() : { premium: false }))
+      .then((d) => {
+        if (!cancelled) setIsPremium(Boolean(d?.premium));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [role]);
   const homeHref =
     role === "recruiter"
       ? "/recruiter/today"
@@ -145,14 +167,14 @@ export function GlassNavbar() {
           <div className="flex items-center gap-2 shrink-0">
             {session ? (
               <>
-                {role === "student" && (
-                  <Link href="/upgrade" className="hidden sm:block">
+                {role === "student" && !isPremium && (
+                  <Link href="/upgrade" className="premium-attn hidden sm:block">
                     <GlassButton
                       variant="brand"
                       size="sm"
                       className="whitespace-nowrap"
                     >
-                      <Sparkles size={13} /> Premium
+                      <Sparkles size={13} /> Go Premium
                     </GlassButton>
                   </Link>
                 )}
@@ -166,6 +188,18 @@ export function GlassNavbar() {
               </>
             ) : (
               <>
+                {/* Landing-page conversion CTA. Routes through /upgrade, which
+                    gates anon visitors to sign in first. Pulses every 5s to
+                    draw the eye; sm+ only so the mobile pill doesn't overflow. */}
+                <Link href="/upgrade" className="premium-attn hidden sm:block">
+                  <GlassButton
+                    variant="brand"
+                    size="sm"
+                    className="whitespace-nowrap"
+                  >
+                    <Sparkles size={13} /> Go Premium
+                  </GlassButton>
+                </Link>
                 {/* Phones: a compact text link (the button chrome is what
                     overflows the pill beside the logo at ≤375px). sm+: the
                     full glass button. */}

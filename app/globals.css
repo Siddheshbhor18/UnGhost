@@ -774,6 +774,22 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
   animation: none;
 }
 
+/* Periodic attention beat for the "Go Premium" CTA. A glow + scale pulse
+   fires once at the start of each 5s cycle, then rests — draws the eye
+   without the jitter of a continuous loop. Pauses on hover. */
+@keyframes premium-attn {
+  0%   { box-shadow: 0 0 0 0 rgba(1,145,252,0.45), 0 6px 18px rgba(1,145,252,0.20); transform: scale(1); }
+  6%   { box-shadow: 0 0 0 6px rgba(1,145,252,0),    0 10px 30px rgba(1,145,252,0.42); transform: scale(1.06); }
+  14%  { box-shadow: 0 0 0 0 rgba(1,145,252,0),      0 6px 18px rgba(1,145,252,0.20); transform: scale(1); }
+  100% { box-shadow: 0 0 0 0 rgba(1,145,252,0),      0 6px 18px rgba(1,145,252,0.20); transform: scale(1); }
+}
+.premium-attn {
+  display: inline-block;
+  border-radius: 12px;
+  animation: premium-attn 5s ease-out infinite;
+}
+.premium-attn:hover { animation: none; }
+
 .social-icon {
   transition: transform 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55), background-color 0.2s, color 0.2s;
 }
@@ -789,7 +805,8 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
   .pro-float,
   .pop-in,
   .sla-pulse,
-  .cta-primary-glow {
+  .cta-primary-glow,
+  .premium-attn {
     animation: none !important;
   }
   .social-icon:hover {
