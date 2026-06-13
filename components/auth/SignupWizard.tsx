@@ -13,6 +13,7 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
+  Building2,
   ChevronDown,
   FileText,
   Lock,
@@ -92,6 +93,8 @@ export function SignupWizard() {
   const [email, setEmail] = useState("");
   const [country, setCountry] = useState("+91");
   const [phone, setPhone] = useState("");
+  // Recruiter only — the company they represent (pending admin approval).
+  const [companyName, setCompanyName] = useState("");
 
   // Step 2 fields
   const [password, setPassword] = useState("");
@@ -141,7 +144,9 @@ export function SignupWizard() {
 
   const pwScore = useMemo(() => scorePassword(password), [password]);
   const canContinueStep1 =
-    name.trim().length >= 2 && /\S+@\S+\.\S+/.test(email);
+    name.trim().length >= 2 &&
+    /\S+@\S+\.\S+/.test(email) &&
+    (role !== "recruiter" || companyName.trim().length >= 2);
   const canSubmit =
     canContinueStep1 &&
     pwScore.level >= 2 &&
@@ -197,6 +202,7 @@ export function SignupWizard() {
           phone: phoneOut,
           password,
           role,
+          companyName: role === "recruiter" ? companyName.trim() : undefined,
           acceptTos,
           acceptService,
           acceptMarketing,
@@ -323,6 +329,8 @@ export function SignupWizard() {
               setName={setName}
               email={email}
               setEmail={setEmail}
+              companyName={companyName}
+              setCompanyName={setCompanyName}
               country={country}
               setCountry={setCountry}
               phone={phone}
@@ -432,6 +440,8 @@ function StepOne(props: {
   setName: (v: string) => void;
   email: string;
   setEmail: (v: string) => void;
+  companyName: string;
+  setCompanyName: (v: string) => void;
   country: string;
   setCountry: (v: string) => void;
   phone: string;
@@ -447,6 +457,8 @@ function StepOne(props: {
     setName,
     email,
     setEmail,
+    companyName,
+    setCompanyName,
     country,
     setCountry,
     phone,
@@ -490,6 +502,17 @@ function StepOne(props: {
         validate={validateEmail}
         required
       />
+
+      {role === "recruiter" && (
+        <AuthInput
+          label="Company name"
+          leadingIcon={<Building2 size={14} />}
+          value={companyName}
+          onValueChange={setCompanyName}
+          autoComplete="organization"
+          required
+        />
+      )}
 
       {/* Phone — country code dropdown + national number. Optional. */}
       <div>

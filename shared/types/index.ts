@@ -249,6 +249,9 @@ export interface User {
   avatarUrl?: string;
   profile?: StudentProfile;
   companyId?: string; // for recruiters
+  /** Company name the recruiter entered at signup, before an admin approves
+   *  them into a real Company record. Cleared on approval. */
+  pendingCompanyName?: string;
   /** Recruiter-only InMail credit balance (defaults to 50). */
   inMailCredits?: number;
   /** First recruiter at a company is Company Admin — invites/removes others. */

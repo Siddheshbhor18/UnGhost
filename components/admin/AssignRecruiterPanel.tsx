@@ -9,6 +9,8 @@ interface RecruiterLite {
   id: string;
   name: string;
   email: string;
+  /** Company the recruiter entered at signup, pending approval. */
+  requestedCompany?: string;
 }
 interface CompanyLite {
   id: string;
@@ -43,13 +45,14 @@ export function AssignRecruiterPanel({
     <GlassCard className="!p-5 space-y-3">
       <div className="flex items-center justify-between">
         <p className="font-display font-bold text-brand-ink inline-flex items-center gap-2">
-          <UserPlus size={16} /> Unlinked recruiters
+          <UserPlus size={16} /> Recruiters awaiting approval
           <GlassBadge tone="warn">{rows.length}</GlassBadge>
         </p>
       </div>
       <p className="text-xs text-brand-muted">
-        These recruiters signed up but aren&apos;t attached to a company, so they
-        can&apos;t post jobs. Assign each to an existing company or create one.
+        These recruiters signed up and named their company, but can&apos;t post
+        jobs until approved. Approve each into the company they requested (or an
+        existing one).
       </p>
       <div className="divide-y divide-brand-ink/5">
         {rows.map((r) => (
@@ -81,10 +84,13 @@ function AssignRow({
   // domain, else the first existing company, else "create new".
   const emailDomain = recruiter.email.split("@")[1]?.toLowerCase() ?? "";
   const domainMatch = companies.find((c) => c.domain === emailDomain);
+  // If an existing company matches their email domain, default to linking it.
+  // Otherwise, if they named a company at signup, default to creating it.
   const [companyId, setCompanyId] = useState<string>(
-    domainMatch?.id ?? companies[0]?.id ?? NEW,
+    domainMatch?.id ??
+      (recruiter.requestedCompany ? NEW : companies[0]?.id ?? NEW),
   );
-  const [newName, setNewName] = useState("");
+  const [newName, setNewName] = useState(recruiter.requestedCompany ?? "");
   const [newDomain, setNewDomain] = useState(emailDomain);
   const [makeAdmin, setMakeAdmin] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -125,6 +131,11 @@ function AssignRow({
       <div className="min-w-[180px]">
         <p className="text-sm font-semibold text-brand-ink">{recruiter.name}</p>
         <p className="text-xs text-brand-muted">{recruiter.email}</p>
+        {recruiter.requestedCompany && (
+          <p className="text-xs text-brand-primary mt-0.5">
+            Requested: <span className="font-semibold">{recruiter.requestedCompany}</span>
+          </p>
+        )}
       </div>
 
       <select
@@ -176,8 +187,8 @@ function AssignRow({
         disabled={!canSubmit || busy}
         className="ml-auto"
       >
-        {busy ? <Loader2 size={13} className="animate-spin" /> : <Building2 size={13} />}
-        Assign
+        {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+        Approve
       </GlassButton>
 
       {err && <p className="text-xs text-rose-600 w-full">{err}</p>}

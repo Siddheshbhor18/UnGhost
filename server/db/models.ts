@@ -111,6 +111,7 @@ const UserSchema = withJsonTransform(
       avatarUrl: String,
       profile: StudentProfileSchema,
       companyId: String,
+      pendingCompanyName: String,
       /** Recruiter only: InMail credit balance. Phase 1 free InMail = 50 default. */
       inMailCredits: { type: Number, default: 50 },
       isCompanyAdmin: { type: Boolean, default: false },

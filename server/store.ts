@@ -196,6 +196,8 @@ export interface CreateUserInput {
   name: string;
   role: "student" | "recruiter";
   profileAlias?: string;
+  /** Recruiter only — the company they typed at signup, pending admin approval. */
+  pendingCompanyName?: string;
 }
 
 export type CreateUserResult =
@@ -258,6 +260,11 @@ export async function createUserWithCredentials(
     status: "active",
     createdAt: now,
   };
+  // Recruiter only — remember the company they typed at signup so an admin can
+  // approve them into a real Company record.
+  if (input.role === "recruiter" && input.pendingCompanyName) {
+    payload.pendingCompanyName = input.pendingCompanyName;
+  }
 
   try {
     await UserModel.create(payload);

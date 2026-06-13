@@ -28,6 +28,9 @@ const Input = z.object({
   phone: z.string().trim().min(7).max(20).optional().or(z.literal("")),
   password: z.string().min(8).max(72),
   role: z.enum(["student", "recruiter"]),
+  // Recruiter only — the company they represent. Validated as required for
+  // recruiters in the handler.
+  companyName: z.string().trim().min(2).max(120).optional().or(z.literal("")),
   acceptTos: z.literal(true),
   acceptService: z.literal(true),
   acceptMarketing: z.boolean().optional(),
@@ -74,6 +77,18 @@ async function handler(req: Request) {
     );
   }
 
+  // Recruiters must name their company at signup — an admin approves them into
+  // that company.
+  if (data.role === "recruiter" && !data.companyName?.trim()) {
+    return NextResponse.json(
+      {
+        error: "company_required",
+        message: "Enter your company name so we can verify and approve your account.",
+      },
+      { status: 400 },
+    );
+  }
+
   const policy = checkPasswordPolicy(data.password);
   if (!policy.ok) {
     return NextResponse.json(
@@ -94,6 +109,8 @@ async function handler(req: Request) {
     passwordHash,
     name: data.name,
     role: data.role,
+    pendingCompanyName:
+      data.role === "recruiter" ? data.companyName?.trim() : undefined,
   });
 
   if (!result.ok) {
