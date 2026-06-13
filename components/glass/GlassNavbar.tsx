@@ -68,25 +68,43 @@ function isActive(pathname: string, item: NavItem): boolean {
   return pathname === item.href || pathname.startsWith(item.href + "/");
 }
 
+// Session-scoped cache of the live premium check. The navbar is rendered
+// per-page (not in a shared layout), so it remounts on every route change.
+// Without this cache the initial state was non-premium and the pulsing "Go
+// Premium" CTA flashed in for a split second on every section switch — even for
+// paying users. Seeding state from the cache (client-only; never written during
+// SSR) makes remounts render the known status synchronously, so there's no
+// flash. We still revalidate on each mount (stale-while-revalidate) so a
+// mid-session plan change — or a logout→login in the same tab — is picked up;
+// the refetch only updates when the value actually changed, so it can't flash.
+let cachedPremium: boolean | null = null;
+
 export function GlassNavbar() {
   const { data: session } = useSession();
   const pathname = usePathname() ?? "/";
   const role = session?.user?.role;
 
-  // Live premium check — once a student upgrades we hide the "Go Premium"
-  // CTA (showing it to a paying user is bad UX). Read from the DB, not the
-  // JWT, since premium is activated by admin approval after sign-in.
-  const [isPremium, setIsPremium] = useState(false);
+  // Live premium check — once a student upgrades we hide the "Go Premium" CTA
+  // (showing it to a paying user is bad UX). Read from the DB, not the JWT,
+  // since premium is activated by admin approval after sign-in.
+  //
+  // `null` = not yet known. We render the CTA only when we KNOW the student is
+  // non-premium (`=== false`), so a premium user never sees it flash before the
+  // check resolves.
+  const [isPremium, setIsPremium] = useState<boolean | null>(cachedPremium);
   useEffect(() => {
-    if (role !== "student") {
-      setIsPremium(false);
-      return;
-    }
+    if (role !== "student") return;
     let cancelled = false;
+    // Always revalidate. The initial render already used the cached value, so
+    // re-checking can only correct a stale flag (never flash). On a network or
+    // HTTP error we keep the last known value rather than flipping to a guess.
     fetch("/api/student/plan")
-      .then((r) => (r.ok ? r.json() : { premium: false }))
+      .then((r) => (r.ok ? (r.json() as Promise<{ premium?: boolean }>) : null))
       .then((d) => {
-        if (!cancelled) setIsPremium(Boolean(d?.premium));
+        if (!d || cancelled) return;
+        const premium = Boolean(d.premium);
+        cachedPremium = premium;
+        setIsPremium(premium);
       })
       .catch(() => {});
     return () => {
@@ -167,7 +185,7 @@ export function GlassNavbar() {
           <div className="flex items-center gap-2 shrink-0">
             {session ? (
               <>
-                {role === "student" && !isPremium && (
+                {role === "student" && isPremium === false && (
                   <Link href="/upgrade" className="premium-attn hidden sm:block">
                     <GlassButton
                       variant="brand"
