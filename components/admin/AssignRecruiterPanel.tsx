@@ -126,6 +126,36 @@ function AssignRow({
     }
   }
 
+  async function decline() {
+    const reason = window.prompt(
+      `Decline ${recruiter.name}'s recruiter account? They won't be able to sign in. Reason (visible to them):`,
+      "We couldn't verify this recruiter account.",
+    );
+    if (!reason || reason.trim().length < 10) {
+      if (reason !== null) setErr("Reason must be at least 10 characters.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/users/${recruiter.id}/action`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "ban", reason: reason.trim() }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setErr(data?.error ?? "Couldn't decline. Try again.");
+        return;
+      }
+      onDone();
+    } catch {
+      setErr("Network error. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="py-3 flex flex-wrap items-center gap-3">
       <div className="min-w-[180px]">
@@ -181,11 +211,18 @@ function AssignRow({
         Company admin
       </label>
 
+      <button
+        type="button"
+        onClick={decline}
+        disabled={busy}
+        className="ml-auto text-xs font-semibold text-rose-600 hover:underline disabled:opacity-50"
+      >
+        Decline
+      </button>
       <GlassButton
         variant="brand"
         onClick={assign}
         disabled={!canSubmit || busy}
-        className="ml-auto"
       >
         {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
         Approve
