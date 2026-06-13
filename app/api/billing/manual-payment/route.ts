@@ -20,7 +20,7 @@ import { withApiErrorTracking } from "@/server/lib/api-error";
 import { connectMongo } from "@/server/db/mongo";
 import { PaymentSubmissionModel, UserModel } from "@/server/db/models";
 import { sendPaymentReceived } from "@/server/integrations/email";
-import { computeTotalPaise } from "@/server/payments/pricing";
+import { applyCoupon, computeTotalPaise } from "@/server/payments/pricing";
 import {
   PLAN_PRICING,
   PREMIUM_GST_PERCENT,
@@ -39,6 +39,8 @@ const Input = z.object({
   payerMobile: z
     .string()
     .regex(/^\d{10}$/, "10-digit mobile number required"),
+  /** Optional discount code (e.g. unGhost50). Validated server-side. */
+  coupon: z.string().trim().max(40).optional().or(z.literal("")),
 });
 
 /**
@@ -58,8 +60,14 @@ async function postHandler(req: Request) {
   const parsed = await parseBody(req, Input);
   if (!parsed.ok) return parsed.response;
 
-  const { plan, transactionId, upiApp, payerName, payerMobile } = parsed.data;
+  const { plan, transactionId, upiApp, payerName, payerMobile, coupon } =
+    parsed.data;
   const pricing = PLAN_PRICING[plan];
+  // Server-authoritative price: apply the coupon to the base, then add GST.
+  const { basePaise: discountedBase } = applyCoupon(
+    pricing.amountINR * 100,
+    coupon,
+  );
 
   await connectMongo();
 
@@ -112,7 +120,7 @@ async function postHandler(req: Request) {
     userId: session.user.id,
     bootcampId: `plan:${plan}`, // synthetic — identifies this as a plan purchase
     expectedAmountInPaise: computeTotalPaise({
-      priceInPaise: pricing.amountINR * 100,
+      priceInPaise: discountedBase,
       gstPercent: PREMIUM_GST_PERCENT,
     }).totalInPaise,
     utr: transactionId.toUpperCase(),

@@ -13,7 +13,6 @@ import {
   PREMIUM_GST_PERCENT,
   PREMIUM_LIFETIME_SEATS,
 } from "@/shared/types";
-import { computeTotalPaise, formatPaiseAsINR } from "@/server/payments/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -43,13 +42,7 @@ export default async function UpgradePage({ searchParams }: Props) {
   const currentPlan = effectivePlan(user);
   const errorCode = searchParams.error;
 
-  // Price is exclusive of tax — show base, GST, and the GST-inclusive total.
-  const { baseInPaise, gstInPaise, totalInPaise } = computeTotalPaise({
-    priceInPaise: PLAN_PRICING.premium.amountINR * 100,
-    gstPercent: PREMIUM_GST_PERCENT,
-  });
-  const premiumPriceLabel = formatPaiseAsINR(baseInPaise);
-  const premiumGstNote = `+ ${PREMIUM_GST_PERCENT}% GST · ${formatPaiseAsINR(totalInPaise, { withPaise: true })} total`;
+  const premiumBaseInPaise = PLAN_PRICING.premium.amountINR * 100;
 
   // Launch offer: ₹4,999 lifetime is limited to the first N premium buyers.
   const premiumCount = currentPlan === "premium" ? 0 : await countPremiumUsers();
@@ -83,8 +76,8 @@ export default async function UpgradePage({ searchParams }: Props) {
         <UpgradePlanPicker
           currentPlan={currentPlan}
           recommended={searchParams.to === "premium" ? "premium" : null}
-          premiumPriceLabel={premiumPriceLabel}
-          premiumGstNote={premiumGstNote}
+          premiumBaseInPaise={premiumBaseInPaise}
+          gstPercent={PREMIUM_GST_PERCENT}
           offerClosed={offerClosed}
           seatsLeft={currentPlan === "premium" ? null : seatsLeft}
         />

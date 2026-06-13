@@ -5,14 +5,19 @@ import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import type { SubscriptionPlan } from "@/shared/types";
+import {
+  applyCoupon,
+  computeTotalPaise,
+  formatPaiseAsINR,
+} from "@/shared/lib/pricing";
 
 interface PickerProps {
   currentPlan: SubscriptionPlan;
   recommended: "premium" | null;
-  /** Base price label, e.g. "₹4,999" (exclusive of GST). */
-  premiumPriceLabel: string;
-  /** GST-inclusive note, e.g. "+ 18% GST · ₹5,898.82 total". */
-  premiumGstNote: string;
+  /** Premium base price (pre-GST) in paise — the picker computes the display. */
+  premiumBaseInPaise: number;
+  /** GST percent applied on top of the base. */
+  gstPercent: number;
   /** Lifetime offer is sold out — no new premium purchases. */
   offerClosed: boolean;
   /** Remaining lifetime seats (for a scarcity nudge); null when not shown. */
@@ -27,18 +32,54 @@ interface PickerProps {
 export function UpgradePlanPicker({
   currentPlan,
   recommended,
-  premiumPriceLabel,
-  premiumGstNote,
+  premiumBaseInPaise,
+  gstPercent,
   offerClosed,
   seatsLeft,
 }: PickerProps) {
   const router = useRouter();
   const [submittingPlan, setSubmittingPlan] = useState<"premium" | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [applied, setApplied] = useState<string | null>(null);
+  const [couponMsg, setCouponMsg] = useState<string | null>(null);
+
+  // Price recomputed from the base whenever a valid coupon is applied. The
+  // server re-validates the coupon at payment, so this is display-only.
+  const { basePaise: discountedBase, percentOff } = applyCoupon(
+    premiumBaseInPaise,
+    applied,
+  );
+  const { baseInPaise, totalInPaise } = computeTotalPaise({
+    priceInPaise: discountedBase,
+    gstPercent,
+  });
+  const fullTotal = computeTotalPaise({
+    priceInPaise: premiumBaseInPaise,
+    gstPercent,
+  }).totalInPaise;
+  const premiumPriceLabel = formatPaiseAsINR(baseInPaise);
+  const premiumGstNote = `+ ${gstPercent}% GST · ${formatPaiseAsINR(totalInPaise, { withPaise: true })} total`;
+
+  function applyCode() {
+    const code = couponInput.trim();
+    if (!code) return;
+    const { percentOff: pct } = applyCoupon(premiumBaseInPaise, code);
+    if (pct > 0) {
+      setApplied(code);
+      setCouponMsg(`${code.toUpperCase()} applied — ${pct}% off`);
+    } else {
+      setApplied(null);
+      setCouponMsg("That code isn't valid.");
+    }
+  }
 
   function buy(plan: "premium") {
     setSubmittingPlan(plan);
-    // Redirect to manual QR payment page (stopgap until PhonePe KYC clears)
-    router.push(`/upgrade/pay?plan=${plan}`);
+    // Redirect to manual QR payment page (stopgap until PhonePe KYC clears).
+    // Carry the applied coupon — the payment API re-validates it.
+    router.push(
+      `/upgrade/pay?plan=${plan}${applied ? `&coupon=${encodeURIComponent(applied)}` : ""}`,
+    );
   }
 
   return (
@@ -81,6 +122,42 @@ export function UpgradePlanPicker({
           </div>
         ) : (
           <>
+            {percentOff > 0 && (
+              <p className="mb-2 text-center text-body-xs text-neutral-500">
+                <span className="line-through">
+                  {formatPaiseAsINR(fullTotal, { withPaise: true })}
+                </span>{" "}
+                <span className="font-semibold text-emerald-700">
+                  {percentOff}% off applied
+                </span>
+              </p>
+            )}
+            {/* Coupon code */}
+            <div className="mb-3 flex gap-2">
+              <input
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)}
+                placeholder="Coupon code"
+                className="flex-1 min-w-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-body-sm focus:outline-none focus:border-violet-400"
+              />
+              <button
+                type="button"
+                onClick={applyCode}
+                className="rounded-xl border border-violet-300 text-violet-700 text-body-sm font-medium px-3 py-2 hover:bg-violet-50"
+              >
+                Apply
+              </button>
+            </div>
+            {couponMsg && (
+              <p
+                className={clsx(
+                  "mb-2 text-center text-body-xs font-medium",
+                  percentOff > 0 ? "text-emerald-700" : "text-rose-600",
+                )}
+              >
+                {couponMsg}
+              </p>
+            )}
             {seatsLeft !== null && seatsLeft <= 30 ? (
               <p className="mb-2 text-center text-body-xs font-medium text-violet-700">
                 Only {seatsLeft} lifetime {seatsLeft === 1 ? "seat" : "seats"} left

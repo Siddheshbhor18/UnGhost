@@ -40,6 +40,10 @@ interface Props {
   gstInPaise: number;
   totalInPaise: number;
   gstPercent: number;
+  /** Applied coupon code (undefined when none/invalid). */
+  coupon?: string;
+  /** Percent off from the coupon (0 = none). */
+  couponPercentOff?: number;
   cadence: string;
   userName: string;
   userEmail: string;
@@ -65,6 +69,8 @@ export function ManualPaymentFlow({
   gstInPaise,
   totalInPaise,
   gstPercent,
+  coupon,
+  couponPercentOff = 0,
   cadence,
   userName,
   userEmail,
@@ -112,6 +118,7 @@ export function ManualPaymentFlow({
           upiApp,
           payerName: name.trim(),
           payerMobile: phone.trim(),
+          coupon,
         }),
       });
       const data = (await res.json()) as {
@@ -143,6 +150,11 @@ export function ManualPaymentFlow({
             </h1>
           </div>
           <div className="text-right">
+            {couponPercentOff > 0 && (
+              <span className="inline-block mb-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold px-2 py-0.5">
+                {coupon?.toUpperCase()} · {couponPercentOff}% off
+              </span>
+            )}
             <p className="font-display font-extrabold text-3xl">
               {totalLabel}
             </p>

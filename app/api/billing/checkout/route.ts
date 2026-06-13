@@ -10,7 +10,7 @@ import { createPayment, paymentsMode } from "@/server/integrations/payments";
 import { getUserById, countPremiumUsers } from "@/server/store";
 import { isActiveUser } from "@/server/auth/account-status";
 import { effectivePlan } from "@/server/lib/quota";
-import { computeTotalPaise } from "@/server/payments/pricing";
+import { applyCoupon, computeTotalPaise } from "@/server/payments/pricing";
 import {
   PLAN_PRICING,
   PREMIUM_GST_PERCENT,
@@ -21,6 +21,8 @@ export const runtime = "nodejs";
 
 const Input = z.object({
   plan: z.enum(["premium"]),
+  /** Optional discount code (e.g. unGhost50). Validated server-side. */
+  coupon: z.string().trim().max(40).optional().or(z.literal("")),
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -67,9 +69,13 @@ async function postHandler(req: Request) {
   }
 
   const pricing = PLAN_PRICING[parsed.data.plan];
-  // Price is exclusive of tax; add GST on top and charge the total.
+  // Price is exclusive of tax; apply any coupon to the base, then add GST.
+  const { basePaise: discountedBase } = applyCoupon(
+    pricing.amountINR * 100,
+    parsed.data.coupon,
+  );
   const { totalInPaise } = computeTotalPaise({
-    priceInPaise: pricing.amountINR * 100,
+    priceInPaise: discountedBase,
     gstPercent: PREMIUM_GST_PERCENT,
   });
   // Order id = `bill_<plan>_<userId>_<ts>` so the callback knows which plan to activate.
