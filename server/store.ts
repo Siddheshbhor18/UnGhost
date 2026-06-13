@@ -3377,11 +3377,21 @@ export async function removeRecruiterFromCompany(
   userId: string,
 ): Promise<void> {
   await db();
-  // Phase 1: just unset companyId. PRD: 7-day soft-delete window + audit log.
+  // Unlink both sides: clear the user's company + admin flag, and pull them
+  // off the company's recruiterIds roster so the two never drift.
+  const user = await getUserById(userId);
+  const companyId = user?.companyId;
   await UserModel.updateOne(
     { _id: userId },
     { $unset: { companyId: 1 }, $set: { isCompanyAdmin: false } },
   );
+  if (companyId) {
+    await CompanyModel.updateOne(
+      { _id: companyId },
+      { $pull: { recruiterIds: userId } },
+    );
+    await invalidate("companies:all", "companies:all:lite");
+  }
 }
 
 /** Recruiters with no company yet — they're blocked from posting jobs until an

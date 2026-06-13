@@ -7,6 +7,7 @@ import {
   listUnlinkedRecruiters,
 } from "@/server/store";
 import { AssignRecruiterPanel } from "@/components/admin/AssignRecruiterPanel";
+import { CompanyRecruiters } from "@/components/admin/CompanyRecruiters";
 
 export default async function RecruitersAdmin() {
   const [cos, jobs, apps, recruiters, unlinked] = await Promise.all([
@@ -76,24 +77,14 @@ export default async function RecruitersAdmin() {
                 <Stat label="Hires" value={hired} tone="success" />
                 <Stat label="Team" value={recs.length} tone="warn" />
               </div>
-              {recs.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold mb-1">
-                    Recruiters
-                  </p>
-                  <ul className="space-y-0.5 text-xs text-brand-ink/80">
-                    {recs.map((r) => (
-                      <li key={r.id} className="flex items-center justify-between gap-2">
-                        <span className="truncate">
-                          {r.name}
-                          {r.isCompanyAdmin ? " · admin" : ""}
-                        </span>
-                        <span className="text-brand-muted truncate">{r.email}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <CompanyRecruiters
+                recruiters={recs.map((r) => ({
+                  id: r.id,
+                  name: r.name,
+                  email: r.email,
+                  isCompanyAdmin: r.isCompanyAdmin,
+                }))}
+              />
               {coJobs.length > 0 && (
                 <ul className="mt-4 space-y-1 text-xs text-brand-muted">
                   {coJobs.slice(0, 3).map((j) => (
