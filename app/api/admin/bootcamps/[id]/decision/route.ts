@@ -52,6 +52,12 @@ export async function POST(
     title = "Bootcamp approved — now live";
     bodyCopy = `"${bc.title}" is now in the public catalogue. Students can enroll.`;
   } else if (body.decision === "request_changes") {
+    if (bc.status !== "in_review") {
+      return NextResponse.json(
+        { error: `can only request changes on a bootcamp in review (status: ${bc.status})` },
+        { status: 409 },
+      );
+    }
     if (!body.reviewFeedback || body.reviewFeedback.trim().length < 20) {
       return NextResponse.json(
         { error: "reviewFeedback required (≥20 chars)" },
@@ -64,6 +70,12 @@ export async function POST(
     title = "Bootcamp needs changes before publishing";
     bodyCopy = body.reviewFeedback.trim().slice(0, 160);
   } else if (body.decision === "archive") {
+    if (bc.status === "archived") {
+      return NextResponse.json(
+        { error: "bootcamp is already archived" },
+        { status: 409 },
+      );
+    }
     await setBootcampStatus(params.id, "archived");
     title = "Bootcamp archived";
     bodyCopy = `"${bc.title}" has been archived. Contact admin to restore.`;
