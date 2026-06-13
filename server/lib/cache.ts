@@ -18,7 +18,7 @@
  * Cache misses store the JSON-serialised value. Errors in the wrapper fall
  * through to the loader so the cache is never a single point of failure.
  */
-import { redis } from "@/server/db/redis";
+import { redis, type RedisLike } from "@/server/db/redis";
 import { logger } from "@/server/lib/logger";
 
 const PREFIX = "cache:";
@@ -28,9 +28,13 @@ export async function cached<T>(
   ttlSec: number,
   loader: () => Promise<T>,
 ): Promise<T> {
-  const r = redis();
   const k = `${PREFIX}${key}`;
+  // Acquire the client inside the guard: redis() throws on a misconfigured
+  // prod (missing Upstash env). A read-through cache must never be a single
+  // point of failure, so swallow that and fall through to the loader.
+  let r: RedisLike | null = null;
   try {
+    r = redis();
     const hit = await r.get(k);
     if (hit) {
       return JSON.parse(hit) as T;
@@ -39,10 +43,12 @@ export async function cached<T>(
     logger.warn({ err, key }, "cache.read-failed");
   }
   const fresh = await loader();
-  try {
-    await r.set(k, JSON.stringify(fresh), { ex: ttlSec });
-  } catch (err) {
-    logger.warn({ err, key }, "cache.write-failed");
+  if (r) {
+    try {
+      await r.set(k, JSON.stringify(fresh), { ex: ttlSec });
+    } catch (err) {
+      logger.warn({ err, key }, "cache.write-failed");
+    }
   }
   return fresh;
 }
@@ -50,7 +56,11 @@ export async function cached<T>(
 /** Delete one or more cache entries by exact key. */
 export async function invalidate(...keys: string[]): Promise<void> {
   if (keys.length === 0) return;
-  await redis()
-    .del(...keys.map((k) => `${PREFIX}${k}`))
-    .catch((err) => logger.warn({ err, keys }, "cache.invalidate-failed"));
+  // redis() can throw synchronously (prod misconfig); wrap so a failed
+  // invalidation degrades to stale-until-TTL instead of failing the write.
+  try {
+    await redis().del(...keys.map((k) => `${PREFIX}${k}`));
+  } catch (err) {
+    logger.warn({ err, keys }, "cache.invalidate-failed");
+  }
 }
