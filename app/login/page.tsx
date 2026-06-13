@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, Suspense } from "react";
-import dynamic from "next/dynamic";
 import { signIn, signOut, getSession, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -12,17 +11,19 @@ import {
 } from "framer-motion";
 import { ArrowRight, Mail, Sparkles } from "lucide-react";
 import { GlassCard } from "@/components/glass";
+// DoorAnimation is a STATIC import, not next/dynamic({ ssr: false }). Under
+// Next 14's Turbopack, an ssr:false dynamic import of this module crashed the
+// entire /login client render ("module factory is not available"). The
+// component is SSR-safe (its only navigator access is guarded inside an
+// effect) and returns null until `active`, so a plain import costs nothing
+// at SSR or first paint and removes the crash in both dev and prod builds.
+import { DoorAnimation } from "@/components/glass/DoorAnimation";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { RolePicker, ROLE_PILLS, type Role } from "@/components/auth/RolePicker";
 import type { AuthHeroPhase } from "@/components/auth/AuthHero";
-
-const DoorAnimation = dynamic(
-  () => import("@/components/glass/DoorAnimation").then((m) => m.DoorAnimation),
-  { ssr: false },
-);
 
 const HREF_BY_ROLE: Record<Role, string> = {
   student: "/dashboard",
@@ -197,7 +198,8 @@ function LoginInner() {
                 type="button"
                 onClick={() => {
                   setEmail(demoForActiveRole);
-                  setPassword("demo1234");
+                  // Seed accounts (server/db/seeds/users.json) all use "demo".
+                  setPassword("demo");
                 }}
                 className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-brand-primary/5 border border-brand-primary/15 text-[11px] font-semibold text-brand-primary hover:bg-brand-primary/10 hover:border-brand-primary/30 transition"
               >
