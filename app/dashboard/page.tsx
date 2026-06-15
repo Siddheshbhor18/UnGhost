@@ -207,7 +207,7 @@ export default async function DashboardPage() {
         />
 
         {/* 3-Column Body */}
-        <div className="grid lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left rail: Active Missions */}
           <div className="lg:col-span-3 order-2 lg:order-1">
             <ActiveMissions apps={apps} jobs={jobIndex} companies={coIndex} />

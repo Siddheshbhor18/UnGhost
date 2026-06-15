@@ -18,7 +18,7 @@ export function StatBar({ applicationsUsed, applicationsLimit }: StatBarProps) {
   const quotaTight = !unlimited && applicationsUsed >= applicationsLimit - 1;
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-white/70 backdrop-blur border border-brand-ink/5 px-4 py-2.5 mb-6">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl bg-white/70 backdrop-blur border border-brand-ink/5 px-4 py-2.5 mb-6">
       <span className="flex items-center gap-2 text-sm text-brand-ink">
         <Briefcase size={15} className="text-brand-primary" />
         <span className="font-semibold tnum">

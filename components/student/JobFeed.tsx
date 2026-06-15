@@ -72,7 +72,7 @@ export function JobFeed({
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {visibleMatched.length === 0 ? (
             <GlassCard className="md:col-span-2 text-center py-10 text-brand-muted">
               No matches yet — upload your resume above to rank live missions.
@@ -123,7 +123,7 @@ export function JobFeed({
               Hide
             </button>
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {visibleStretch.map((j) => (
               <JobCard
                 key={j.id}
