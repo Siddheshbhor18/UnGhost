@@ -73,7 +73,7 @@ export function HeroCTAs() {
         <Link href="/signup" className="hero-cta-primary inline-block">
           <button
             type="button"
-            className="relative overflow-hidden inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white font-semibold text-base px-6 py-3.5 transition-all hover:bg-brand-600 active:scale-[0.98] group"
+            className="relative overflow-hidden inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white font-semibold text-base px-6 py-3.5 transition-[background-color,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-brand-600 active:scale-[0.98] group"
             style={{
               boxShadow: "0 10px 30px rgba(1,145,252,0.35)",
             }}
@@ -108,7 +108,7 @@ export function HeroCTAs() {
         <Link href="/signup?role=recruiter">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-xl bg-white text-neutral-900 font-semibold text-base px-6 py-3.5 border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50 transition-all active:scale-[0.98]"
+            className="inline-flex items-center gap-2 rounded-xl bg-white text-neutral-900 font-semibold text-base px-6 py-3.5 border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50 transition-[background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98]"
           >
             <Briefcase size={16} />
             Hire

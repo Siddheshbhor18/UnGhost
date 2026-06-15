@@ -12,7 +12,6 @@ import {
   Zap,
   CheckCircle2,
   BadgeCheck,
-  Tag,
 } from "lucide-react";
 import { GlassNavbar, Logo } from "@/components/glass";
 import {
@@ -23,7 +22,7 @@ import {
   TierBadge,
 } from "@/components/ui";
 import { HeroDemoLoop } from "@/components/landing/HeroDemoLoop";
-import { SlaLadder } from "@/components/landing/SlaLadder";
+import { GuaranteeClock } from "@/components/landing/GuaranteeClock";
 import { HeroCTAs } from "@/components/landing/HeroCTAs";
 import { ScrollPrompt } from "@/components/landing/ScrollPrompt";
 import dynamic from "next/dynamic";
@@ -137,7 +136,7 @@ export default async function LandingPage() {
               </span>
               <ArrowRight size={16} className="text-error shrink-0" aria-hidden />
               <span className="text-body-sm text-neutral-600">
-                Miss the window, your application slot is returned — it
+                Miss the window, your application slot is returned. It
                 won&apos;t count against your limit.
               </span>
             </MotionSection>
@@ -200,7 +199,7 @@ export default async function LandingPage() {
             </h3>
             <p className="text-body-md text-white/70 leading-relaxed">
               Whether you&apos;re a student waiting weeks for feedback that
-              never came, or a recruiter who lost a top candidate overnight —
+              never came, or a recruiter who lost a top candidate overnight,
               the hiring process is failing both sides. It&apos;s time to call
               it out, and fix it.
             </p>
@@ -208,19 +207,12 @@ export default async function LandingPage() {
         </div>
       </MotionSection>
 
-      {/* ─────────── THE SLA CLOCK — vertical ladder (centerpiece) ─────────── */}
+      {/* ─────────── THE SLA CLOCK — live countdown (centerpiece) ─────────── */}
       <MotionSection
         className="mx-auto max-w-content px-4 py-20 md:py-28"
         amount={0.15}
       >
-        <SectionHeader
-          eyebrow="The guarantee"
-          title="Reply, or your slot comes back."
-          subtitle="Every recruiter picks a response window before a role goes live. The clock is public. Miss it and the student's application slot is returned automatically — it won't count against their limit."
-        />
-        <div className="mt-14 max-w-2xl">
-          <SlaLadder />
-        </div>
+        <GuaranteeClock />
       </MotionSection>
 
       {/* ─────────── HOW IT WORKS ─────────── */}
@@ -260,13 +252,13 @@ export default async function LandingPage() {
                   num: "03",
                   icon: <Zap size={18} />,
                   title: "Prove your fit",
-                  copy: "Take a real scenario per role. AI grades depth, integrity and evidence — not buzzwords.",
+                  copy: "Take a real scenario per role. AI grades depth, integrity and evidence, not buzzwords.",
                 },
                 {
                   num: "04",
                   icon: <CheckCircle2 size={18} />,
                   title: "Hear back, on the clock",
-                  copy: "Recruiters reply within 24/48/72 hours, or your application slot is returned — it won't count against your limit.",
+                  copy: "Recruiters reply within 24/48/72 hours, or your application slot is returned. It won't count against your limit.",
                 },
               ] as const
             ).map((step) => (
@@ -285,7 +277,7 @@ export default async function LandingPage() {
             <TierBadge tier="C" />
             <TierBadge tier="D" />
           </span>
-          <span>— recruiters see the tier, never a made-up match score.</span>
+          <span>Recruiters see the tier, never a made-up match score.</span>
         </div>
       </MotionSection>
 
@@ -384,7 +376,7 @@ export default async function LandingPage() {
           subtitle="Recorded modules, a live workshop, and an AI-graded assignment. Pass and you earn a Verified Skill badge recruiters can filter on."
         />
         <Badge tone="warning" className="mt-6">
-          Planned — launching with our first cohort
+          Planned · launching with our first cohort
         </Badge>
         <StaggerGrid
           className="mt-6 flex flex-wrap gap-3"
@@ -413,30 +405,6 @@ export default async function LandingPage() {
           title="Try 2 free. Upgrade once."
           subtitle="Recruiters post and hire free. Students pick a plan that fits."
         />
-
-        {/* Launch coupon — markets the offer; the discounted total only shows
-            once the code is applied at checkout. */}
-        <div className="mt-8 flex justify-center">
-          <div className="glass-tinted inline-flex flex-col items-center gap-3 px-6 py-4 sm:flex-row sm:gap-4 sm:px-7">
-            <span className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-gradient text-white shadow-brand-glow">
-                <Tag size={17} />
-              </span>
-              <span className="font-display font-extrabold text-3xl leading-none tracking-tight text-neutral-950 tnum">
-                50% off
-              </span>
-            </span>
-            <span className="text-center text-body-sm leading-relaxed text-neutral-700 sm:text-left">
-              Premium with code{" "}
-              <span className="rounded-md bg-brand-50 px-1.5 py-0.5 font-semibold tracking-wide text-brand-600">
-                unGhost50
-              </span>
-              <span className="block text-body-xs text-neutral-500 sm:mt-0.5">
-                Lifetime access · first 150 students
-              </span>
-            </span>
-          </div>
-        </div>
 
         <StaggerGrid
           className="grid md:grid-cols-2 gap-5 mt-10 max-w-3xl mx-auto"
@@ -473,7 +441,7 @@ export default async function LandingPage() {
                   </span>
                 }
                 sub="one-time + 18% GST"
-                note="Lifetime access — first 150 students only."
+                note="Lifetime access. First 150 students only."
                 features={[
                   "Unlimited applications",
                   "AI Coach + Q&A forever",

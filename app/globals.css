@@ -822,3 +822,160 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
 @media (prefers-reduced-motion: reduce) {
   .hero-cta-primary [style*="hero-shine"] { animation: none !important; }
 }
+
+/* ───────────────────────────────────────────────────────────────────────
+   Premium launch-offer chip — "foil ticket" treatment.
+   A refined glass capsule (restraint > saturated blob) with a discount
+   stamp that catches light once every few seconds, like foil under a
+   spotlight. Per emil: the sheen is purposeful + slow (not a constant
+   loop you'd notice on every glance) and respects reduced-motion.
+   ─────────────────────────────────────────────────────────────────────── */
+.offer-chip {
+  position: relative;
+  isolation: isolate;
+  transition:
+    transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.offer-chip:hover {
+  transform: translateY(-1px);
+}
+/* Buttons must feel responsive to press (emil) */
+.offer-chip:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* Foil discount stamp — gradient fill + a light-catch sheen sweep. */
+.offer-foil {
+  position: relative;
+  overflow: hidden;
+}
+.offer-foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 65%
+  );
+  transform: translateX(-130%);
+  animation: offer-foil-sheen 5.5s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+  pointer-events: none;
+}
+@keyframes offer-foil-sheen {
+  /* Long rest, one quick pass — the "catch" reads premium, not busy. */
+  0%, 72% { transform: translateX(-130%); }
+  84%, 100% { transform: translateX(130%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .offer-foil::after { animation: none; opacity: 0; }
+  .offer-chip:hover { transform: none; }
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   Guarantee clock — segmented window selector + live countdown dial.
+   Single brand accent (no traffic-light tiers). The dial is the one
+   animation that earns its place; everything freezes under reduced motion.
+   ─────────────────────────────────────────────────────────────────────── */
+.clk-seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 4px;
+  max-width: 360px;
+  background: #F2F0EC;            /* neutral-100 track */
+  border-radius: 14px;
+}
+.clk-seg-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / 3);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(10, 10, 10, 0.06), 0 2px 6px rgba(10, 10, 10, 0.06);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.clk-seg[data-active="0"] .clk-seg-thumb { transform: translateX(0); }
+.clk-seg[data-active="1"] .clk-seg-thumb { transform: translateX(100%); }
+.clk-seg[data-active="2"] .clk-seg-thumb { transform: translateX(200%); }
+.clk-seg-btn {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.clk-seg-btn:active { transform: scale(0.96); }
+.clk-seg-hrs {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #6B6660;                /* neutral-500 (inactive) */
+  transition: color 200ms ease;
+}
+.clk-seg-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6B6660;                /* neutral-500 (inactive) — AA on white */
+  transition: color 200ms ease;
+}
+.clk-seg-btn[aria-pressed="true"] .clk-seg-hrs { color: #017FE0; }  /* brand-600 */
+.clk-seg-btn[aria-pressed="true"] .clk-seg-name { color: #1A1816; } /* neutral-900 */
+.clk-seg-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(1, 145, 252, 0.30);
+}
+
+/* Active-tier copy and centre readout blur-swap on window change only
+   (keyed remount); per-second ticks update text in place, no animation. */
+.clk-desc { animation: clk-fade-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.clk-num { animation: clk-num-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes clk-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes clk-num-in {
+  from { opacity: 0.3; filter: blur(4px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+
+/* Live status dot — slow, calm pulse */
+.clk-live {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 10px;
+  height: 10px;
+}
+.clk-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #0191FC;
+}
+.clk-live:not([data-reduce]) .clk-live-dot {
+  animation: clk-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+@keyframes clk-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(1, 145, 252, 0.45); }
+  70%  { box-shadow: 0 0 0 7px rgba(1, 145, 252, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(1, 145, 252, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clk-seg-thumb { transition: none; }
+  .clk-desc,
+  .clk-num { animation: none; }
+  .clk-live-dot { animation: none; }
+}
