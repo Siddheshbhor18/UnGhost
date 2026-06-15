@@ -57,9 +57,10 @@ export function paiseToRupees(paise: number): number {
 // ── Coupons ────────────────────────────────────────────────────────────────
 // Percent-off codes, matched case-insensitively. Single source of truth so the
 // /upgrade UI (display) and the payment APIs (authoritative price) agree.
-const COUPONS: Record<string, number> = {
-  unghost50: 50,
-};
+// No active promo codes — the launch 50%-off offer (unGhost50) has ended, so
+// any code submitted resolves to 0% off and the full price is charged. Add an
+// entry here to bring a promo back.
+const COUPONS: Record<string, number> = {};
 
 /** Percent off for a coupon code (0 if missing/unknown). Case-insensitive. */
 export function couponPercentOff(code?: string | null): number {
