@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { GlassBadge, GlassButton, GlassCard } from "@/components/glass";
+import { CompanyLogo } from "@/components/shared/CompanyLogo";
 import type { Job, CompanyProfile } from "@/shared/types";
 
 interface JobWithMatch extends Job {
@@ -193,6 +194,14 @@ function JobCard({
       <Link href={`/missions/${job.id}`} className="block">
         <GlassCard interactive className={dim ? "opacity-90" : ""}>
           <div className="flex items-start justify-between gap-3">
+            {company && (
+              <CompanyLogo
+                name={company.name}
+                logoUrl={company.logoUrl}
+                size={40}
+                rounded="rounded-xl"
+              />
+            )}
             <div className="flex-1 min-w-0 pr-14">
               <GlassBadge tone="neutral" className="mb-2">
                 <Briefcase size={10} /> {company?.name ?? "—"}

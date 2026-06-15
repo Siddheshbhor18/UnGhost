@@ -5,12 +5,13 @@ import { authOptions } from "@/server/auth";
 import { BlobField, GlassBadge, GlassCard, GlassNavbar } from "@/components/glass";
 import { KanbanBoard } from "@/components/recruiter/KanbanBoard";
 import { JobActions } from "@/components/recruiter/JobActions";
+import { CompanyLogoUploader } from "@/components/recruiter/CompanyLogoUploader";
 import {
   getCompanyById,
   getUserById,
+  getUsersByIds,
   listApplicationsByRecruiter,
   listJobsByRecruiter,
-  listUsers,
 } from "@/server/store";
 import { Plus, Building2, Users, Target, Clock, TrendingUp } from "lucide-react";
 
@@ -21,16 +22,24 @@ export default async function CommandCenter() {
     redirect(session.user.role === "admin" ? "/admin/metrics" : "/dashboard");
   }
 
-  const [apps, jobs, user, studentList] = await Promise.all([
+  const [apps, jobs, user] = await Promise.all([
     listApplicationsByRecruiter(session.user.id),
     listJobsByRecruiter(session.user.id),
     getUserById(session.user.id),
-    listUsers("student"),
   ]);
-  const co = user?.companyId ? await getCompanyById(user.companyId) : undefined;
+  // Resolve only the students in THIS recruiter's pipeline — was a full
+  // `listUsers("student")` scan of every student on the platform.
+  const [co, studentMap] = await Promise.all([
+    user?.companyId
+      ? getCompanyById(user.companyId)
+      : Promise.resolve(undefined),
+    getUsersByIds([...new Set(apps.map((a) => a.studentId))]),
+  ]);
 
   const jobIndex = Object.fromEntries(jobs.map((j) => [j.id, j]));
-  const students = Object.fromEntries(studentList.map((u) => [u.id, u]));
+  const students = Object.fromEntries(
+    [...studentMap.values()].map((u) => [u.id, u]),
+  );
 
   // Stats
   const avgMatch = apps.length
@@ -92,6 +101,17 @@ export default async function CommandCenter() {
             tone="success"
           />
         </div>
+
+        {/* Company branding */}
+        {co && (
+          <GlassCard className="mb-8">
+            <CompanyLogoUploader
+              companyName={co.name}
+              logoUrl={co.logoUrl}
+              canEdit={!!user?.isCompanyAdmin}
+            />
+          </GlassCard>
+        )}
 
         {/* Mission rollup */}
         {jobRollup.length > 0 ? (
