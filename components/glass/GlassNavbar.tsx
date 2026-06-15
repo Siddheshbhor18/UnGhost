@@ -186,7 +186,7 @@ export function GlassNavbar() {
             {session ? (
               <>
                 {role === "student" && isPremium === false && (
-                  <Link href="/upgrade" className="premium-attn hidden sm:block">
+                  <Link href="/upgrade" className="premium-attn hidden sm:inline-block">
                     <GlassButton
                       variant="brand"
                       size="sm"
@@ -209,7 +209,7 @@ export function GlassNavbar() {
                 {/* Landing-page conversion CTA. Routes through /upgrade, which
                     gates anon visitors to sign in first. Pulses every 5s to
                     draw the eye; sm+ only so the mobile pill doesn't overflow. */}
-                <Link href="/upgrade" className="premium-attn hidden sm:block">
+                <Link href="/upgrade" className="premium-attn hidden sm:inline-block">
                   <GlassButton
                     variant="brand"
                     size="sm"

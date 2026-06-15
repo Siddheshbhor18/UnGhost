@@ -784,7 +784,9 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
   100% { box-shadow: 0 0 0 0 rgba(1,145,252,0),      0 6px 18px rgba(1,145,252,0.20); transform: scale(1); }
 }
 .premium-attn {
-  display: inline-block;
+  /* Display is left to the element's utilities (e.g. `hidden sm:inline-block`)
+     so this rule can't override Tailwind's `hidden` and force the pill visible
+     on mobile — which used to push the navbar past the viewport at ≤375px. */
   border-radius: 12px;
   animation: premium-attn 5s ease-out infinite;
 }
