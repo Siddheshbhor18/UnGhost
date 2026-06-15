@@ -165,7 +165,7 @@ export function JobsExplorer({
   }
 
   return (
-    <div className="grid lg:grid-cols-12 gap-5">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* ── Filters ─────────────────────────────────────────── */}
       <aside
         className={`lg:col-span-3 ${
@@ -323,7 +323,7 @@ export function JobsExplorer({
             </button>
           </GlassCard>
         ) : (
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filtered.map((j) => (
               <JobCard
                 key={j.id}
