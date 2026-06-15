@@ -63,13 +63,16 @@ function upstash(): Redis {
 
 const upstashClient: RedisLike = {
   async set(key, value, opts) {
-    if (opts?.ex || opts?.nx) {
-      // Upstash returns "OK" on success, null when NX fails (key exists).
-      const o: { ex?: number; nx?: true } = {};
-      if (opts.ex) o.ex = opts.ex;
-      if (opts.nx) o.nx = true;
-      return upstash().set(key, value, o);
+    // Upstash returns "OK" on success, null when NX fails (key exists). Pass
+    // concrete option literals per branch — Upstash's set() options are a
+    // discriminated union, so a single mutable `{ ex?, nx? }` object doesn't
+    // match any variant (each variant requires `ex` to be a definite number).
+    if (opts?.nx) {
+      return opts.ex
+        ? upstash().set(key, value, { ex: opts.ex, nx: true })
+        : upstash().set(key, value, { nx: true });
     }
+    if (opts?.ex) return upstash().set(key, value, { ex: opts.ex });
     return upstash().set(key, value);
   },
   async get(key) {
