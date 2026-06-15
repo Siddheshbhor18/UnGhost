@@ -11,6 +11,9 @@ import { getAI } from "@/server/integrations/ai";
 import { getBootcampById } from "@/server/store";
 
 export const runtime = "nodejs";
+// AI call can run 10-30s; lift Vercel's function ceiling so a slow model reply
+// isn't killed mid-request. Phase 1 (Inngest) moves these off the request path.
+export const maxDuration = 60;
 
 interface TutorRequest {
   bootcampId: string;

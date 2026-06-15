@@ -13,8 +13,13 @@
 import { Redis } from "@upstash/redis";
 
 export interface RedisLike {
-  /** Set a key with optional TTL (seconds). */
-  set: (key: string, value: string, opts?: { ex?: number }) => Promise<unknown>;
+  /** Set a key with optional TTL (seconds). With `nx`, only sets if the key is
+   *  absent and resolves to `null` when it already exists (atomic lock). */
+  set: (
+    key: string,
+    value: string,
+    opts?: { ex?: number; nx?: boolean },
+  ) => Promise<unknown>;
   /** Get a key as string (null if missing). */
   get: (key: string) => Promise<string | null>;
   /** Delete one or more keys. */
@@ -58,7 +63,13 @@ function upstash(): Redis {
 
 const upstashClient: RedisLike = {
   async set(key, value, opts) {
-    if (opts?.ex) return upstash().set(key, value, { ex: opts.ex });
+    if (opts?.ex || opts?.nx) {
+      // Upstash returns "OK" on success, null when NX fails (key exists).
+      const o: { ex?: number; nx?: true } = {};
+      if (opts.ex) o.ex = opts.ex;
+      if (opts.nx) o.nx = true;
+      return upstash().set(key, value, o);
+    }
     return upstash().set(key, value);
   },
   async get(key) {
@@ -117,6 +128,7 @@ function getMock(key: string): MockEntry | undefined {
 
 const mockClient: RedisLike = {
   async set(key, value, opts) {
+    if (opts?.nx && getMock(key) !== undefined) return null;
     const expiresAt = opts?.ex ? Date.now() + opts.ex * 1000 : null;
     mockStore.set(key, { value, expiresAt });
     return "OK";

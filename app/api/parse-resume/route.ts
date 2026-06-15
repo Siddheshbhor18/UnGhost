@@ -16,6 +16,9 @@ import {
 } from "@/server/lib/rate-limit";
 
 export const runtime = "nodejs";
+// pdf-parse + an AI call can run 10-30s; lift Vercel's function ceiling so it
+// isn't killed mid-request. Phase 1 (Inngest) moves this off the request path.
+export const maxDuration = 60;
 
 const MAX_FILE_MB = 5;
 

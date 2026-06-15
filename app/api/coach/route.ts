@@ -43,6 +43,9 @@ const PostInput = z.object({
 const PatchInput = z.object({ persona: PersonaSchema });
 
 export const runtime = "nodejs";
+// AI call can run 10-30s; lift Vercel's function ceiling so a slow model reply
+// isn't killed mid-request. Phase 1 (Inngest) moves these off the request path.
+export const maxDuration = 60;
 
 /** GET — list conversations, or fetch one with ?id=convo_xxx. */
 export async function GET(req: Request) {

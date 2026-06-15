@@ -425,6 +425,11 @@ export interface Application {
   /** Set when SLA cron flags a breach and credit refund is issued. */
   slaBreachedAt?: string;
   slaRefundIssued?: boolean;
+  /** Set the first time the sweep sends the T-12h / T-4h SLA warning. Lets the
+   *  sweep run frequently while firing each warning exactly once (not every
+   *  run). Absent ⇒ that warning hasn't been sent yet. */
+  slaWarn12hSentAt?: string;
+  slaWarn4hSentAt?: string;
 }
 
 export interface BootcampVideo {

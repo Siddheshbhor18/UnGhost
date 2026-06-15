@@ -1,16 +1,17 @@
 import { GlassBadge, GlassButton, GlassCard } from "@/components/glass";
 import { SkillHeatmap } from "@/components/admin/SkillHeatmap";
-import { getSkillGapHeatmap, listApplications } from "@/server/store";
+import { getSkillGapHeatmap, getAssessmentTelemetry } from "@/server/store";
 import { AlertTriangle, TrendingDown, Award, Activity } from "lucide-react";
 
 export default async function TelemetryPage() {
-  const [heatmap, apps] = await Promise.all([
+  const [heatmap, telemetry] = await Promise.all([
     getSkillGapHeatmap(),
-    listApplications(),
+    // Aggregates only — was a full `listApplications()` scan for three numbers.
+    getAssessmentTelemetry(),
   ]);
-  const submitted = apps.filter((a) => a.assessment).length;
-  const dropOff = apps.length - submitted;
-  const dropPct = apps.length ? Math.round((dropOff / apps.length) * 100) : 0;
+  const { total, submitted, maxScore } = telemetry;
+  const dropOff = total - submitted;
+  const dropPct = total ? Math.round((dropOff / total) * 100) : 0;
   const top = heatmap[0];
 
   return (
@@ -32,7 +33,7 @@ export default async function TelemetryPage() {
           </p>
           <p className="font-display text-5xl font-bold text-rose-600">{dropPct}%</p>
           <p className="text-sm text-brand-muted mt-3 leading-relaxed">
-            {dropOff} of {apps.length} application starts never submit a Gauntlet
+            {dropOff} of {total} application starts never submit a Gauntlet
             response.
           </p>
         </GlassCard>
@@ -50,7 +51,7 @@ export default async function TelemetryPage() {
             <Award size={14} /> Highest Grade
           </p>
           <p className="font-display text-5xl font-bold text-emerald-600">
-            {Math.max(0, ...apps.map((a) => a.assessment?.grade?.score ?? 0))}
+            {maxScore}
           </p>
           <p className="text-sm text-brand-muted mt-3">
             Top assessment on the platform.

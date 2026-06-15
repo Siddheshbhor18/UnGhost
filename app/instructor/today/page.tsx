@@ -12,7 +12,6 @@ import { ActionFeedItem } from "@/components/recruiter/ActionFeedItem";
 import {
   getInstructorTodaySignals,
   listBootcampsByInstructor,
-  listUsers,
   getUserById,
 } from "@/server/store";
 import {
@@ -44,10 +43,9 @@ export default async function InstructorToday() {
     );
   }
 
-  const [user, myBootcamps, allStudents, signals] = await Promise.all([
+  const [user, myBootcamps, signals] = await Promise.all([
     getUserById(session.user.id),
     listBootcampsByInstructor(session.user.id),
-    listUsers("student"),
     // Real "Needs Action Now" + content-performance signals — replaces the
     // previous fabricated stuck-student / "14:30 drop-off" strings.
     getInstructorTodaySignals(session.user.id),
@@ -94,9 +92,6 @@ export default async function InstructorToday() {
   // proxy or fabricated "questions from student" — the message model
   // doesn't exist yet for the latter).
   const { stuckStudents, inactiveStudents, biggestDropoff } = signals;
-  // Reference allStudents so the linter doesn't flag it — kept available
-  // for future surfaces (roster preview etc.).
-  void allStudents;
 
   const hour = new Date().getHours();
   const greeting =

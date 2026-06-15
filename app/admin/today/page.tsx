@@ -4,11 +4,11 @@ import { ActionFeedItem } from "@/components/recruiter/ActionFeedItem";
 import { SlaSweepButton } from "@/components/admin/SlaSweepButton";
 import {
   getGlobalMetrics,
-  listApplications,
   listBootcamps,
   listJobs,
-  listUsers,
   countUsersByRole,
+  countPremiumUsers,
+  getAdminApplicationAnalytics,
   getSkillGapHeatmap,
   maybeRunSlaSweep,
   detectTelemetryAlerts,
@@ -16,7 +16,6 @@ import {
   listSupportTickets,
 } from "@/server/store";
 import { PLAN_PRICING } from "@/shared/types";
-import { slaCountdown } from "@/shared/lib/sla";
 import {
   Activity,
   AlertTriangle,
@@ -40,12 +39,14 @@ export default async function AdminToday() {
   // sweep mechanism is the /api/cron/sla-sweep cron; inline is a top-up.
   // Replaced full listUsers("student"/"recruiter") with countDocuments — admin
   // dashboard only consumed `.length`, so the full collection scan was waste.
-  const [, telemetryAlerts, m, apps, jobs, bcs, studentCount, recruiterCount, heatmap, finance, students, tickets] =
+  const [, telemetryAlerts, m, appAnalytics, jobs, bcs, studentCount, recruiterCount, heatmap, finance, premiumCount, tickets] =
     await Promise.all([
       maybeRunSlaSweep(),
       detectTelemetryAlerts(),
       getGlobalMetrics(),
-      listApplications(),
+      // Aggregates only — was a full `listApplications()` scan for a handful of
+      // platform stats (distinct applicants, avg match, SLA breaches).
+      getAdminApplicationAnalytics(),
       listJobs(),
       listBootcamps(),
       countUsersByRole("student"),
@@ -54,9 +55,9 @@ export default async function AdminToday() {
       // Real revenue breakdown — bootcamp + sponsorship + monthly bucket
       // for MoM. Replaces the previous hardcoded "+18% MoM" string.
       computeFinancialRollup(),
-      // Pull students once so we can compute conversion (signup → apply)
-      // + subscription revenue (Pro + Premium plan counts × pricing).
-      listUsers("student"),
+      // Premium subscriber count — was a full `listUsers("student")` scan just
+      // to count plan === "premium".
+      countPremiumUsers(),
       // Real support queue — open + in-progress tickets.
       listSupportTickets(),
     ]);
@@ -90,15 +91,14 @@ export default async function AdminToday() {
       : null;
 
   // Conversion: students who have at least one application / total students.
-  const studentIdsWithApps = new Set(apps.map((a) => a.studentId));
   const conversionPct: number | null =
     studentCount > 0
-      ? Math.round((studentIdsWithApps.size / studentCount) * 100)
+      ? Math.round((appAnalytics.distinctApplicants / studentCount) * 100)
       : null;
 
   // Subscription revenue — Premium paid users × the lifetime plan price.
-  // Premium is a one-time lifetime purchase, so it counts once.
-  const premiumCount = students.filter((s) => s.plan === "premium").length;
+  // Premium is a one-time lifetime purchase, so it counts once. premiumCount
+  // comes from countPremiumUsers() in the fetch above.
   const subscriptionRevenuePaise =
     premiumCount * PLAN_PRICING.premium.amountINR * 100;
 
@@ -123,35 +123,16 @@ export default async function AdminToday() {
         }
       : null;
 
-  // Top-10 → hire correlation: avg matchPct of HIRED apps vs avg of ALL
-  // apps. If "top match scores hire more often" we'd expect the hired
-  // avg to be meaningfully higher.
-  const hiredApps = apps.filter((a) => a.stage === "hired");
-  const hiredAvgMatch =
-    hiredApps.length > 0
-      ? Math.round(
-          hiredApps.reduce((s, a) => s + (a.matchPct ?? 0), 0) /
-            hiredApps.length,
-        )
-      : null;
-  const overallAvgMatch =
-    apps.length > 0
-      ? Math.round(
-          apps.reduce((s, a) => s + (a.matchPct ?? 0), 0) / apps.length,
-        )
-      : null;
+  // Top-10 → hire correlation: avg matchPct of HIRED apps vs avg of ALL apps.
+  // Both come from getAdminApplicationAnalytics() (single aggregation).
+  const hiredAvgMatch = appAnalytics.hiredAvgMatch;
+  const overallAvgMatch = appAnalytics.overallAvgMatch;
 
   // ── Critical (Severity-1) ──
-  // Real breach count uses the persisted slaRefundIssued flag (set by the sweep).
-  // Plus any unflagged-but-expired apps that are still in active stages —
-  // those will flip on next sweep.
-  const ACTIVE_STAGES = ["new_matches", "under_review", "interview", "offer"];
-  const slaBreached = apps.filter(
-    (a) =>
-      a.slaRefundIssued ||
-      (slaCountdown(a.slaDeadline).expired &&
-        ACTIVE_STAGES.includes(a.stage)),
-  ).length;
+  // Breach count: persisted slaRefundIssued flag (set by the sweep), plus any
+  // unflagged-but-expired apps still in active stages — computed in the
+  // getAdminApplicationAnalytics() aggregation above.
+  const slaBreached = appAnalytics.slaBreached;
   const critical: Array<React.ReactElement> = [];
   if (slaBreached >= 3) {
     critical.push(

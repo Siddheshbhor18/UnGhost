@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import {
+  rateLimit,
+  rateLimitResponse,
+  identifierFromRequest,
+} from "@/server/lib/rate-limit";
 import { getAI } from "@/server/integrations/ai";
 import {
   getMessageThreadById,
@@ -10,6 +15,9 @@ import {
 } from "@/server/store";
 
 export const runtime = "nodejs";
+// AI call can run 10-30s; lift Vercel's function ceiling so a slow model reply
+// isn't killed mid-request. Phase 1 (Inngest) moves these off the request path.
+export const maxDuration = 60;
 
 interface Body {
   threadId: string;
@@ -23,6 +31,14 @@ export async function POST(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  // LLM-cost guard — drafting fires a model call; cap per-user bursts so a
+  // logged-in client can't fan out unbounded (paid) model calls.
+  const rl = await rateLimit(
+    "ai.draft",
+    identifierFromRequest(req, session.user.id),
+    { limit: 20, windowSec: 60 },
+  );
+  if (!rl.allowed) return rateLimitResponse(rl);
   const body = (await req.json().catch(() => null)) as Body | null;
   if (!body?.threadId) {
     return NextResponse.json({ error: "threadId required" }, { status: 400 });

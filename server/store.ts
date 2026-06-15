@@ -904,6 +904,154 @@ export async function countApplicationsByStage(): Promise<Record<string, number>
   return Object.fromEntries(rows.map((r) => [r._id, r.n]));
 }
 
+/**
+ * One-pass analytics for the admin Today dashboard. Replaces a full
+ * `listApplications()` scan that only needed five aggregates. `$facet` keeps it
+ * to a single round-trip. The SLA-breach branch mirrors the page's old JS
+ * predicate exactly: refund already issued, OR an active-stage app whose
+ * string `slaDeadline` is in the past (the `$type: "string"` guard reproduces
+ * the JS behaviour of treating a missing/null deadline as not-expired).
+ */
+export async function getAdminApplicationAnalytics(): Promise<{
+  totalApps: number;
+  distinctApplicants: number;
+  overallAvgMatch: number | null;
+  hiredAvgMatch: number | null;
+  slaBreached: number;
+}> {
+  await db();
+  const ACTIVE_STAGES = ["new_matches", "under_review", "interview", "offer"];
+  const nowIso = new Date().toISOString();
+  const [res] = await ApplicationModel.aggregate<{
+    overall: { total: number; avg: number; distinctApplicants: number }[];
+    hired: { count: number; avg: number }[];
+    breached: { n: number }[];
+  }>([
+    {
+      $facet: {
+        overall: [
+          {
+            $group: {
+              _id: null,
+              total: { $sum: 1 },
+              avg: { $avg: { $ifNull: ["$matchPct", 0] } },
+              applicants: { $addToSet: "$studentId" },
+            },
+          },
+          {
+            $project: {
+              total: 1,
+              avg: 1,
+              distinctApplicants: { $size: "$applicants" },
+            },
+          },
+        ],
+        hired: [
+          { $match: { stage: "hired" } },
+          {
+            $group: {
+              _id: null,
+              count: { $sum: 1 },
+              avg: { $avg: { $ifNull: ["$matchPct", 0] } },
+            },
+          },
+        ],
+        breached: [
+          {
+            $match: {
+              $or: [
+                { slaRefundIssued: true },
+                {
+                  stage: { $in: ACTIVE_STAGES },
+                  slaDeadline: { $type: "string", $lt: nowIso },
+                },
+              ],
+            },
+          },
+          { $count: "n" },
+        ],
+      },
+    },
+  ]);
+  const overall = res?.overall?.[0];
+  const hired = res?.hired?.[0];
+  const total = overall?.total ?? 0;
+  return {
+    totalApps: total,
+    distinctApplicants: overall?.distinctApplicants ?? 0,
+    overallAvgMatch: total > 0 ? Math.round(overall!.avg) : null,
+    hiredAvgMatch: hired && hired.count > 0 ? Math.round(hired.avg) : null,
+    slaBreached: res?.breached?.[0]?.n ?? 0,
+  };
+}
+
+/**
+ * Assessment-funnel aggregates for the admin Telemetry page. Replaces a full
+ * `listApplications()` scan that only needed total / submitted / max-grade.
+ */
+export async function getAssessmentTelemetry(): Promise<{
+  total: number;
+  submitted: number;
+  maxScore: number;
+}> {
+  await db();
+  const [res] = await ApplicationModel.aggregate<{
+    total: number;
+    submitted: number;
+    maxScore: number;
+  }>([
+    {
+      $group: {
+        _id: null,
+        total: { $sum: 1 },
+        // `a.assessment` truthy → a graded/attempted submission exists.
+        submitted: { $sum: { $cond: [{ $ne: ["$assessment", null] }, 1, 0] } },
+        maxScore: { $max: { $ifNull: ["$assessment.grade.score", 0] } },
+      },
+    },
+  ]);
+  return {
+    total: res?.total ?? 0,
+    submitted: res?.submitted ?? 0,
+    maxScore: res?.maxScore ?? 0,
+  };
+}
+
+/**
+ * Per-job application counts (total + hired + rejected) for the admin
+ * Recruiters page, which rolls these up per company. One `$group` keyed by
+ * jobId — bounded by the number of jobs, not applications. Replaces a full
+ * `listApplications()` scan + in-JS per-company filtering.
+ */
+export async function countApplicationsByJob(): Promise<
+  Record<string, { total: number; hired: number; rejected: number }>
+> {
+  await db();
+  const rows = await ApplicationModel.aggregate<{
+    _id: string;
+    total: number;
+    hired: number;
+    rejected: number;
+  }>([
+    {
+      $group: {
+        _id: "$jobId",
+        total: { $sum: 1 },
+        hired: { $sum: { $cond: [{ $eq: ["$stage", "hired"] }, 1, 0] } },
+        rejected: { $sum: { $cond: [{ $eq: ["$stage", "rejected"] }, 1, 0] } },
+      },
+    },
+  ]);
+  const out: Record<
+    string,
+    { total: number; hired: number; rejected: number }
+  > = {};
+  for (const r of rows) {
+    out[r._id] = { total: r.total, hired: r.hired, rejected: r.rejected };
+  }
+  return out;
+}
+
 export async function listApplicationsByStudent(
   studentId: string,
 ): Promise<Application[]> {
@@ -4059,6 +4207,17 @@ export async function setCompanyVerified(
 ): Promise<void> {
   await db();
   await CompanyModel.updateOne({ _id: companyId }, { $set: { verified } });
+  await invalidate("companies:all", "companies:all:lite");
+}
+
+/** Set (or clear, with "") a company's logo URL. Used by the recruiter
+ *  branding flow when a company admin uploads/removes their logo. */
+export async function setCompanyLogo(
+  companyId: string,
+  logoUrl: string,
+): Promise<void> {
+  await db();
+  await CompanyModel.updateOne({ _id: companyId }, { $set: { logoUrl } });
   await invalidate("companies:all", "companies:all:lite");
 }
 

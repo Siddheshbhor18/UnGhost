@@ -13,9 +13,9 @@ import { slaCountdown } from "@/shared/lib/sla";
 import {
   getCompanyById,
   getUserById,
+  getUsersByIds,
   listApplicationsByRecruiter,
   listJobsByRecruiter,
-  listUsers,
   maybeRunSlaSweep,
 } from "@/server/store";
 import {
@@ -44,15 +44,25 @@ export default async function RecruiterToday() {
   // Throttled SLA sweep, run concurrently with the page fetch (was a blocking
   // pre-step adding a full applications scan to the critical path). Durable
   // mechanism is the /api/cron/sla-sweep cron; this is a best-effort top-up.
-  const [, apps, jobs, user, studentList] = await Promise.all([
+  const [, apps, jobs, user] = await Promise.all([
     maybeRunSlaSweep(),
     listApplicationsByRecruiter(session.user.id),
     listJobsByRecruiter(session.user.id),
     getUserById(session.user.id),
-    listUsers("student"),
   ]);
-  const co = user?.companyId ? await getCompanyById(user.companyId) : undefined;
-  const students = Object.fromEntries(studentList.map((u) => [u.id, u]));
+  // Resolve only the students in THIS recruiter's pipeline — was a full
+  // `listUsers("student")` scan of every student on the platform just to name a
+  // handful of candidates. co + students both depend on the batch above, so
+  // fetch them together.
+  const [co, studentMap] = await Promise.all([
+    user?.companyId
+      ? getCompanyById(user.companyId)
+      : Promise.resolve(undefined),
+    getUsersByIds([...new Set(apps.map((a) => a.studentId))]),
+  ]);
+  const students = Object.fromEntries(
+    [...studentMap.values()].map((u) => [u.id, u]),
+  );
   const jobIndex = Object.fromEntries(jobs.map((j) => [j.id, j]));
 
   // Real average time-to-first-response (hours), measured from createdAt →

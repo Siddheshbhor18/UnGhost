@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import {
+  rateLimit,
+  rateLimitResponse,
+  identifierFromRequest,
+} from "@/server/lib/rate-limit";
 import { getAI } from "@/server/integrations/ai";
 import type { AssignmentRubricCriterion } from "@/server/integrations/ai";
 import {
@@ -14,6 +19,9 @@ import {
 import type { BootcampProgress } from "@/shared/types";
 
 export const runtime = "nodejs";
+// AI grading can run 10-30s; lift Vercel's function ceiling so a slow model
+// reply isn't killed mid-request. Phase 1 (Inngest) moves these off-request.
+export const maxDuration = 60;
 
 // Minimum total score to earn the Verified Skill badge. Matches the 70%
 // gate the student-facing UI already advertises.
@@ -70,6 +78,14 @@ export async function POST(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const studentId = session.user.id;
+  // LLM-cost guard — grading fires a model call; cap per-user bursts so repeated
+  // resubmissions can't fan out unbounded (paid) model calls.
+  const rl = await rateLimit(
+    "ai.assignment",
+    identifierFromRequest(req, studentId),
+    { limit: 10, windowSec: 60 },
+  );
+  if (!rl.allowed) return rateLimitResponse(rl);
   const body = (await req.json().catch(() => null)) as SubmitBody | null;
   if (!body?.writeup || !body.reflection) {
     return NextResponse.json(

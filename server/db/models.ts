@@ -259,6 +259,8 @@ const ApplicationSchema = withJsonTransform(
       hiredAt: String,
       slaBreachedAt: String,
       slaRefundIssued: Boolean,
+      slaWarn12hSentAt: String,
+      slaWarn4hSentAt: String,
     },
     { versionKey: false },
   ),

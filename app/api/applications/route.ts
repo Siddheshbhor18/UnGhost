@@ -3,6 +3,11 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import {
+  rateLimit,
+  rateLimitResponse,
+  identifierFromRequest,
+} from "@/server/lib/rate-limit";
 import { parseBody } from "@/server/lib/validate";
 import {
   createApplication,
@@ -22,6 +27,9 @@ import { isActiveUser } from "@/server/auth/account-status";
 import { getAI } from "@/server/integrations/ai";
 
 export const runtime = "nodejs";
+// AI calls can run 10-30s; lift Vercel's function ceiling so a slow model reply
+// isn't killed mid-request. Phase 1 (Inngest) moves these off the request path.
+export const maxDuration = 60;
 
 const ApplyInput = z.object({
   jobId: z.string().min(1).max(64),
@@ -45,6 +53,15 @@ export async function POST(req: Request) {
   if (!session || session.user.role !== "student") {
     return NextResponse.json({ error: "students only" }, { status: 403 });
   }
+  // LLM-cost guard — the apply path fires up to two model calls (match + grade).
+  // Quota limits NEW applications, but retries re-grade in place, so cap per-
+  // student bursts so a stuck client can't fan out paid model calls.
+  const rl = await rateLimit(
+    "ai.apply",
+    identifierFromRequest(req, session.user.id),
+    { limit: 10, windowSec: 60 },
+  );
+  if (!rl.allowed) return rateLimitResponse(rl);
   const parsed = await parseBody(req, ApplyInput);
   if (!parsed.ok) return parsed.response;
   const b = parsed.data;

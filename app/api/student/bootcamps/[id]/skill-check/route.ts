@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import {
+  rateLimit,
+  rateLimitResponse,
+  identifierFromRequest,
+} from "@/server/lib/rate-limit";
 import { getAI } from "@/server/integrations/ai";
 import {
   getBootcampById,
@@ -15,6 +20,9 @@ import {
 } from "@/server/lib/skillcheck";
 
 export const runtime = "nodejs";
+// AI grading can run 10-30s; lift Vercel's function ceiling so a slow model
+// reply isn't killed mid-request. Phase 1 (Inngest) moves these off-request.
+export const maxDuration = 60;
 
 const RETRY_COOLDOWN_MIN = 30;
 const MAX_ATTEMPTS = 3;
@@ -68,6 +76,15 @@ export async function POST(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const studentId = session.user.id;
+  // LLM-cost guard — grading fires a model call. The per-video attempt cooldown
+  // below limits one lesson, but a per-user burst cap stops fanning calls across
+  // many videos at once.
+  const rl = await rateLimit(
+    "ai.skill-check",
+    identifierFromRequest(req, studentId),
+    { limit: 20, windowSec: 60 },
+  );
+  if (!rl.allowed) return rateLimitResponse(rl);
   const body = (await req.json().catch(() => null)) as Body | null;
   if (!body?.videoId || !Array.isArray(body.answers)) {
     return NextResponse.json({ error: "invalid payload" }, { status: 400 });

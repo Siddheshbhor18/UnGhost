@@ -3,17 +3,19 @@ import {
   listCompanies,
   listJobs,
   listUsers,
-  listApplications,
+  countApplicationsByJob,
   listUnlinkedRecruiters,
 } from "@/server/store";
 import { AssignRecruiterPanel } from "@/components/admin/AssignRecruiterPanel";
 import { CompanyRecruiters } from "@/components/admin/CompanyRecruiters";
 
 export default async function RecruitersAdmin() {
-  const [cos, jobs, apps, recruiters, unlinked] = await Promise.all([
+  const [cos, jobs, appCountsByJob, recruiters, unlinked] = await Promise.all([
     listCompanies(),
     listJobs(),
-    listApplications(),
+    // Per-job counts (one row per job) — was a full `listApplications()` scan
+    // just to roll up applicant/hire/ghost totals per company.
+    countApplicationsByJob(),
     listUsers("recruiter"),
     listUnlinkedRecruiters(),
   ]);
@@ -46,12 +48,19 @@ export default async function RecruitersAdmin() {
       <div className="grid md:grid-cols-2 gap-5">
         {cos.map((co) => {
           const coJobs = jobs.filter((j) => j.companyId === co.id);
-          const coApps = apps.filter((a) => coJobs.some((j) => j.id === a.jobId));
           const recs = recruiters.filter((r) => r.companyId === co.id);
-          const hired = coApps.filter((a) => a.stage === "hired").length;
-          const ghost = coApps.filter((a) => a.stage === "rejected").length;
-          const ghostPct = coApps.length
-            ? Math.round((ghost / coApps.length) * 100)
+          let applicants = 0;
+          let hired = 0;
+          let ghost = 0;
+          for (const j of coJobs) {
+            const c = appCountsByJob[j.id];
+            if (!c) continue;
+            applicants += c.total;
+            hired += c.hired;
+            ghost += c.rejected;
+          }
+          const ghostPct = applicants
+            ? Math.round((ghost / applicants) * 100)
             : 0;
           return (
             <GlassCard key={co.id} interactive>
@@ -73,7 +82,7 @@ export default async function RecruitersAdmin() {
               </p>
               <div className="grid grid-cols-4 gap-2">
                 <Stat label="Missions" value={coJobs.length} tone="brand" />
-                <Stat label="Applicants" value={coApps.length} tone="brand" />
+                <Stat label="Applicants" value={applicants} tone="brand" />
                 <Stat label="Hires" value={hired} tone="success" />
                 <Stat label="Team" value={recs.length} tone="warn" />
               </div>

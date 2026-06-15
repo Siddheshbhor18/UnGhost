@@ -9,6 +9,9 @@ import { withRateLimit } from "@/server/lib/with-rate-limit";
 import { withApiErrorTracking } from "@/server/lib/api-error";
 
 export const runtime = "nodejs";
+// AI call can run 10-30s; lift Vercel's function ceiling so a slow model reply
+// isn't killed mid-request. Phase 1 (Inngest) moves these off the request path.
+export const maxDuration = 60;
 
 const Input = z.object({
   // 50 KB hard cap — JD text rarely exceeds 10 KB. Anything larger is almost
