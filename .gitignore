@@ -39,6 +39,23 @@ server/db/seeds/launch-inventory.ts
 scripts/_gen-launch-inventory.py
 server/db/seeds/launch-inventory-2.ts
 scripts/_gen-launch-inventory-2.py
+server/db/seeds/launch-inventory-3.ts
+scripts/_gen-launch-inventory-3.py
+scripts/seed-launch-inventory-3.ts
+scripts/unseed-launch-inventory-3.ts
+
+# Midsize-startup seed batch: same plaintext shared recruiter password — never commit
+server/db/seeds/midsize-startups.ts
+scripts/_gen-midsize-startups.ts
+scripts/seed-midsize-startups.ts
+scripts/unseed-midsize-startups.ts
+scripts/remove-bigname-companies.ts
+
+# Local marketing artifacts — keep out of the app repo (binary/large)
+unGhost_reel.mp4
+unGhost-brochure.html
+unGhost_video_storyboard.md
 
 scripts/clear-bootcamp-videos.ts
 scripts/whois-inmail.ts
+scripts/list-bootcamp-videos.ts
