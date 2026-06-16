@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Mail,
   Target,
-  Twitter,
   Linkedin,
   Upload,
   Zap,
@@ -556,15 +555,6 @@ export default async function LandingPage() {
               skill bootcamps. Built in Mumbai. DPDP Act compliant.
             </p>
             <div className="flex gap-2 mt-4">
-              <a
-                href="https://x.com/unghost"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="unGhost on X"
-                className="social-icon grid place-items-center w-8 h-8 rounded-lg bg-neutral-100 text-brand-500 hover:bg-brand-500 hover:text-white transition"
-              >
-                <Twitter size={14} />
-              </a>
               <a
                 href="https://www.linkedin.com/company/unghost"
                 target="_blank"
