@@ -10,10 +10,11 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Lint + typecheck. Build is verified by Vercel directly.
+  # Lint, typecheck, and the vitest suite (unit + integration on an in-process
+  # mongodb-memory-server). Tests used to be skipped in CI entirely.
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,3 +24,36 @@ jobs:
       - run: npm ci
       - run: npm run lint --if-present
       - run: npm run typecheck
+      - run: npm test
+
+  # Full `next build` — mirrors the Vercel production build so a build-only
+  # break (e.g. a type error the Next compiler surfaces but incremental tsc
+  # misses) is caught in CI rather than failing the deploy. A throwaway Mongo
+  # service + placeholder env satisfy any build-time data collection; none of
+  # these values are real or used at runtime.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    env:
+      MONGODB_URI: mongodb://localhost:27017/ci
+      NEXTAUTH_SECRET: ci-build-placeholder-not-used-at-runtime
+      NEXTAUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      # Present only so redisMode()'s production guard can't throw if a
+      # build-time code path touches it; no Redis calls happen during a build.
+      UPSTASH_REDIS_REST_URL: https://placeholder.ci.invalid
+      UPSTASH_REDIS_REST_TOKEN: ci-placeholder
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
