@@ -7,18 +7,20 @@ import {
   getOrCreateInMailThread,
   listMessageThreadsForUser,
 } from "@/server/store";
+import { z } from "zod";
+import { parseBody } from "@/server/lib/validate";
 
 export const runtime = "nodejs";
+
+const CreateThreadInput = z.object({
+  applicationId: z.string().trim().min(1).max(64).optional(),
+  inmailId: z.string().trim().min(1).max(64).optional(),
+});
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json([], { status: 200 });
   return NextResponse.json(await listMessageThreadsForUser(session.user.id));
-}
-
-interface CreateBody {
-  applicationId?: string;
-  inmailId?: string;
 }
 
 export async function POST(req: Request) {
@@ -28,7 +30,9 @@ export async function POST(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const body = (await req.json().catch(() => null)) as CreateBody | null;
+  const parsed = await parseBody(req, CreateThreadInput);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   let thread;
   if (body?.applicationId) {
     thread = await getOrCreateApplicationThread(body.applicationId);

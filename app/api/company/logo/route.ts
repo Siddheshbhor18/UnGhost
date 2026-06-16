@@ -13,11 +13,12 @@ import {
 export const runtime = "nodejs";
 
 const MAX_FILE_MB = 2;
+// Raster only. SVG is intentionally excluded: it can carry <script> and would
+// be a stored-XSS vector when served same-origin. Logos don't need vectors.
 const ALLOWED_TYPES: Record<string, string> = {
   "image/png": ".png",
   "image/jpeg": ".jpg",
   "image/webp": ".webp",
-  "image/svg+xml": ".svg",
 };
 
 /**

@@ -15,15 +15,17 @@ import {
 } from "@/server/store";
 import { isActiveUser } from "@/server/auth/account-status";
 import { logger } from "@/server/lib/logger";
+import { z } from "zod";
+import { parseBody } from "@/server/lib/validate";
 
 export const runtime = "nodejs";
 
-interface Body {
-  studentId: string;
-  subject: string;
-  body: string;
-  jobId?: string;
-}
+const InMailInput = z.object({
+  studentId: z.string().trim().min(1).max(64),
+  subject: z.string().trim().min(1).max(200),
+  body: z.string().trim().min(1).max(5000),
+  jobId: z.string().trim().min(1).max(64).optional(),
+});
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -44,13 +46,9 @@ export async function POST(req: Request) {
   if (!session?.user?.id || session.user.role !== "recruiter") {
     return NextResponse.json({ error: "recruiters only" }, { status: 403 });
   }
-  const body = (await req.json().catch(() => null)) as Body | null;
-  if (!body?.studentId || !body.subject || !body.body) {
-    return NextResponse.json(
-      { error: "studentId, subject and body are required" },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseBody(req, InMailInput);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const credits = await getInMailCredits(session.user.id);
   if (credits <= 0) {
     return NextResponse.json(

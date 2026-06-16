@@ -36,6 +36,10 @@ export async function GET(req: Request) {
     headers: {
       "content-type": ct,
       "cache-control": "private, max-age=300",
+      // Defense-in-depth for any pre-existing SVG logos: stop the browser from
+      // sniffing/executing scripts if a stored asset is loaded as a document.
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
     },
   });
 }

@@ -43,6 +43,10 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+  // Bound the stored blob so a client can't persist an arbitrarily large string.
+  if (typeof body.filtersJson !== "string" || body.filtersJson.length > 4000) {
+    return NextResponse.json({ error: "filtersJson too large" }, { status: 413 });
+  }
   if (!FREQS.includes(body.alertFrequency)) {
     return NextResponse.json(
       { error: "invalid alertFrequency" },

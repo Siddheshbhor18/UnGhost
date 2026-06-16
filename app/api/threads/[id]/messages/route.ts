@@ -11,8 +11,12 @@ import {
   sendMessage,
 } from "@/server/store";
 import type { Role } from "@/shared/types";
+import { z } from "zod";
+import { parseBody } from "@/server/lib/validate";
 
 export const runtime = "nodejs";
+
+const SendInput = z.object({ body: z.string().trim().min(1).max(5000) });
 
 async function authzThreadAccess(threadId: string, userId: string) {
   const t = await getMessageThreadById(threadId);
@@ -45,10 +49,6 @@ export async function GET(
   return NextResponse.json({ thread: t, messages });
 }
 
-interface SendBody {
-  body: string;
-}
-
 export async function POST(
   req: Request,
   { params }: { params: { id: string } },
@@ -62,10 +62,9 @@ export async function POST(
   const t = await authzThreadAccess(params.id, session.user.id);
   if (!t) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const body = (await req.json().catch(() => null)) as SendBody | null;
-  if (!body?.body?.trim()) {
-    return NextResponse.json({ error: "body required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, SendInput);
+  if (!parsed.ok) return parsed.response;
+  const text = parsed.data.body;
 
   const senderRole: "student" | "recruiter" =
     (session.user.role as Role) === "recruiter" ? "recruiter" : "student";
@@ -74,7 +73,7 @@ export async function POST(
     threadId: params.id,
     senderId: session.user.id,
     senderRole,
-    body: body.body.trim(),
+    body: text,
   });
   if (!msg) return NextResponse.json({ error: "send failed" }, { status: 500 });
 
