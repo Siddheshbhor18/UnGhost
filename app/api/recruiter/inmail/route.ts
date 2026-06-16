@@ -17,6 +17,11 @@ import { isActiveUser } from "@/server/auth/account-status";
 import { logger } from "@/server/lib/logger";
 import { z } from "zod";
 import { parseBody } from "@/server/lib/validate";
+import {
+  rateLimit,
+  rateLimitResponse,
+  identifierFromRequest,
+} from "@/server/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -46,6 +51,13 @@ export async function POST(req: Request) {
   if (!session?.user?.id || session.user.role !== "recruiter") {
     return NextResponse.json({ error: "recruiters only" }, { status: 403 });
   }
+  // Burst cap on top of the per-message credit + 90-day cooldown checks below.
+  const rl = await rateLimit(
+    "inmail.send",
+    identifierFromRequest(req, session.user.id),
+    { limit: 20, windowSec: 60 },
+  );
+  if (!rl.allowed) return rateLimitResponse(rl);
   const parsed = await parseBody(req, InMailInput);
   if (!parsed.ok) return parsed.response;
   const body = parsed.data;

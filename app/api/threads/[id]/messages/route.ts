@@ -13,6 +13,11 @@ import {
 import type { Role } from "@/shared/types";
 import { z } from "zod";
 import { parseBody } from "@/server/lib/validate";
+import {
+  rateLimit,
+  rateLimitResponse,
+  identifierFromRequest,
+} from "@/server/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -61,6 +66,14 @@ export async function POST(
   }
   const t = await authzThreadAccess(params.id, session.user.id);
   if (!t) return NextResponse.json({ error: "not found" }, { status: 404 });
+
+  // Per-sender cap so a compromised/buggy client can't flood a thread.
+  const rl = await rateLimit(
+    "msg.send",
+    identifierFromRequest(req, session.user.id),
+    { limit: 30, windowSec: 60 },
+  );
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   const parsed = await parseBody(req, SendInput);
   if (!parsed.ok) return parsed.response;
