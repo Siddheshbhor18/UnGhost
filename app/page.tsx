@@ -261,29 +261,6 @@ export default async function LandingPage() {
       >
         <BootcampCardStack />
       </MotionSection>
-
-      {/* ─────────── SOCIAL PROOF ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-16"
-        amount={0.15}
-      >
-        <div className="text-center">
-          <p className="text-body-sm font-medium text-neutral-500 mb-6">
-            Trusted by students and recruiters across India
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6 opacity-50">
-            {["IIT Bombay", "NMIMS", "BITS Pilani", "VIT", "SRM", "Manipal"].map((name) => (
-              <span
-                key={name}
-                className="font-display text-xl font-bold text-neutral-400 tracking-tight"
-              >
-                {name}
-              </span>
-            ))}
-          </div>
-        </div>
-      </MotionSection>
-
       {/* ─────────── HOW IT WORKS ─────────── */}
       <MotionSection
         className="mx-auto max-w-content px-4 py-20"
