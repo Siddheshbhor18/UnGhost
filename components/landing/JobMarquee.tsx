@@ -130,10 +130,10 @@ export function JobMarquee() {
 
       <div className="mb-10 text-center">
         <Link
-          href="/signup"
+          href="/signup?next=/student/jobs"
           className="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-brand-500/40 transition-all duration-200 hover:bg-brand-600 hover:shadow-brand-500/60 active:scale-[0.98]"
         >
-          Find a job
+          See open roles
         </Link>
       </div>
 

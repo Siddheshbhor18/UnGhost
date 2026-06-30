@@ -32,7 +32,7 @@ type NavItem = { href: string; label: string; exact?: boolean };
 
 const NAV_BY_ROLE: Record<string, NavItem[]> = {
   anon: [
-    { href: "/", label: "Who We Are", exact: true },
+    { href: "/signup?next=/student/jobs", label: "Jobs" },
     { href: "/bootcamps", label: "Bootcamps" },
     { href: "/recruiters", label: "For Recruiters" },
   ],

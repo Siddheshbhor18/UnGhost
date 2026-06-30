@@ -4,14 +4,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import {
   ArrowRight,
-  Mail,
-  Target,
-  Linkedin,
-  Instagram,
-  Upload,
-  Zap,
   CheckCircle2,
   GraduationCap,
+  Heart,
+  Instagram,
+  Linkedin,
+  Mail,
 } from "lucide-react";
 import { Suspense } from "react";
 import { GlassNavbar, Logo } from "@/components/glass";
@@ -20,12 +18,12 @@ import {
   Button,
   Card,
   SectionLabel,
-  TierBadge,
 } from "@/components/ui";
 import { HeroDemoLoop } from "@/components/landing/HeroDemoLoop";
 import { BootcampCardStack } from "@/components/landing/BootcampCardStack";
 import { HeroCTAs } from "@/components/landing/HeroCTAs";
 import { JobMarquee } from "@/components/landing/JobMarquee";
+import { FeaturedSpeaker } from "@/components/landing/FeaturedSpeaker";
 import { HeroReveal } from "@/components/landing/HeroReveal";
 import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import dynamic from "next/dynamic";
@@ -49,7 +47,6 @@ import {
 } from "@/components/landing/motion";
 
 import { CoursesSection } from "@/components/landing/CoursesSection";
-import { GuaranteeClock } from "@/components/landing/GuaranteeClock";
 import { formatPaiseAsINR } from "@/shared/lib/pricing";
 import {
   COURSE_PRICE_PAISE,
@@ -76,7 +73,7 @@ const JOBS_TIERS = [
     highlight: false,
   },
   {
-    name: "Jobs · 3 months",
+    name: "Standard",
     price: formatPaiseAsINR(PLAN_PRICING.jobs_quarterly.amountINR * 100),
     cadence: "for 3 months",
     badge: null,
@@ -90,7 +87,7 @@ const JOBS_TIERS = [
     highlight: false,
   },
   {
-    name: "Jobs · 1 year",
+    name: "Pro",
     price: formatPaiseAsINR(PLAN_PRICING.jobs_annual.amountINR * 100),
     cadence: "for 12 months",
     badge: "Best value",
@@ -113,7 +110,7 @@ export default async function LandingPage() {
   if (session?.user?.role === "instructor") redirect("/instructor/today");
 
   return (
-    <main className="relative min-h-screen" style={{ overflowX: "clip" }}>
+    <main className="relative min-h-[100dvh]" style={{ overflowX: "clip" }}>
       <SmoothScroll />
       <ParallaxBackdrop />
       <ScrollProgress />
@@ -127,25 +124,17 @@ export default async function LandingPage() {
           bleeds past the void section into the rest of the page. */}
       <div className="relative isolate">
       <HeroReveal overlaySelector="#void-section">
-      <section className="mx-auto max-w-content px-4 pt-12 md:pt-20 pb-8 relative">
-        {/* Grid overlay — editorial Vercel-style backdrop */}
+      <section className="mx-auto max-w-content px-4 pt-16 md:pt-24 pb-12 relative">
+        {/* Ambient glass-mesh backdrop — full-bleed beyond the content container so the warm
+            brand orbs span the whole hero, not just the 1080px reading column. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(1,145,252,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(1,145,252,0.06) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-            maskImage:
-              "radial-gradient(ellipse 60% 50% at 50% 30%, black 30%, transparent 70%)",
-            WebkitMaskImage:
-              "radial-gradient(ellipse 60% 50% at 50% 30%, black 30%, transparent 70%)",
-          }}
+          className="pointer-events-none absolute -inset-x-[25vw] inset-y-0 -z-10 mesh-hero opacity-80"
         />
 
         <div className="grid lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7 space-y-6">
-            <h1 className="font-display font-extrabold tracking-tightest text-5xl md:text-7xl text-neutral-950 leading-[1.02] headline-twotone">
+            <h1 className="font-display font-extrabold tracking-tight text-5xl md:text-7xl text-neutral-950 leading-[1.02] headline-twotone">
               <RevealText
                 segments={[
                   "We don't ghost.",
@@ -167,38 +156,43 @@ export default async function LandingPage() {
               amount={0}
             >
               India&apos;s first hiring platform where HR actually responds.
-              Every recruiter commits to a public response window before a role
-              goes live.
+              Every recruiter commits to a public response window (24, 48, or
+              72 hours) before a role goes live.
             </MotionSection>
 
-            {/* SLA proof-chip row — the 5-second comprehension element */}
+            {/* Loss-aversion callout — promoted from a chip caption to its
+                own visible line. The strongest psychological hook on the
+                page earns the slot right above the CTAs. */}
             <MotionSection
-              as="div"
-              className="flex flex-wrap items-center gap-x-3 gap-y-2"
+              as="p"
+              className="text-body-md text-neutral-700 max-w-xl leading-snug"
               delay={0.62}
               y={12}
               amount={0}
             >
-              <span className="flex items-center gap-1.5">
-                {["24h", "48h", "72h"].map((h) => (
-                  <span
-                    key={h}
-                    className="tnum font-display font-bold text-body-sm text-neutral-900 rounded-lg bg-neutral-0 ring-1 ring-neutral-200 shadow-elev-1 px-2.5 py-1"
-                  >
-                    {h}
-                  </span>
-                ))}
-              </span>
-              <ArrowRight size={16} className="text-error shrink-0" aria-hidden />
-              <span className="text-body-sm text-neutral-600">
-                Miss the window, your application slot is returned. It
-                won&apos;t count against your limit.
-              </span>
+              Miss the window? Your slot returns to the pool and it won&apos;t
+              count against your limit.
+            </MotionSection>
+
+            {/* Mobile-only demo. Desktop renders the same component in the
+                right column below. Two instances are intentional: each is
+                display:none at its non-matching breakpoint, so only one ticks
+                visually at a time. The cost is one extra setInterval (every
+                2.2s) — acceptable for the conversion lift of showing product
+                above the fold on mobile. */}
+            <MotionSection
+              as="div"
+              className="lg:hidden -mx-4 sm:mx-0"
+              delay={0.74}
+              y={0}
+              amount={0}
+            >
+              <HeroDemoLoop />
             </MotionSection>
 
             <MotionSection
               as="div"
-              delay={0.78}
+              delay={0.86}
               y={16}
               amount={0}
             >
@@ -206,10 +200,10 @@ export default async function LandingPage() {
             </MotionSection>
           </div>
 
-          {/* Magic Widget */}
+          {/* Desktop-only demo (mobile renders inline above CTAs). */}
           <MotionSection
             as="div"
-            className="lg:col-span-5"
+            className="hidden lg:block lg:col-span-5"
             delay={0.35}
             y={0}
             amount={0}
@@ -253,192 +247,149 @@ export default async function LandingPage() {
         </div>
       </MotionSection>
       </div>
-
-      {/* ─────────── BOOTCAMP CARD STACK — stacking course cards ─────────── */}
+      {/* ─────────── TWO WAYS — asymmetric: header in left rail, unified cards on right ─────────── */}
       <MotionSection
-        className="mx-auto max-w-content px-4 py-20 md:py-28"
+        className="mx-auto max-w-content px-4 py-16 md:py-28"
+        amount={0.15}
+      >
+        <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+          {/* Eyebrow header — sits in the left rail, breaking the centered-
+              header monotony three sections in a row. */}
+          <div className="lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
+            <p className="text-body-sm uppercase tracking-wider font-semibold text-brand-500 mb-3">
+              Two lanes, one platform
+            </p>
+            <h2 className="font-display font-extrabold text-display-lg text-neutral-950 tracking-tight leading-[1.05]">
+              Pick the lane that fits today.
+            </h2>
+            <p className="text-body-md text-neutral-500 mt-4 leading-relaxed max-w-md">
+              Apply with guaranteed response windows. Or build the skills
+              first. Most students do both. Bootcamp badges strengthen every
+              application you send.
+            </p>
+          </div>
+
+          {/* Unified panel — single ring, single shadow, single bg. The two
+              sub-panels read as complements (Step 1 → Step 2), not as
+              alternatives. An inline arrow chip between them signals flow. */}
+          <div className="lg:col-span-8 grid md:grid-cols-2 overflow-hidden rounded-3xl bg-white/70 backdrop-blur-xl ring-1 ring-white/60 shadow-[0_8px_32px_rgba(10,10,10,0.06)]">
+            {/* Bootcamps first — they feed into jobs */}
+            <div className="p-8 md:p-9 flex flex-col border-b md:border-b-0 md:border-r border-white/50">
+              <Badge tone="neutral" className="mb-5 self-start">
+                Bootcamps
+              </Badge>
+              <h3 className="font-display font-bold text-display-md text-neutral-900 tracking-tight mb-4">
+                Hands-on bootcamps with verified badges.
+              </h3>
+              <ul className="space-y-3 text-body-sm text-neutral-700 mb-10 flex-grow">
+                {[
+                  "Real projects designed by operators, not academics",
+                  "Code, ship and review from day one",
+                  "Earn Verified Skill badges recruiters see on your profile",
+                ].map((p) => (
+                  <li key={p} className="flex items-start gap-2.5">
+                    <CheckCircle2
+                      size={16}
+                      className="text-neutral-700 mt-0.5 shrink-0"
+                    />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+              <Link href="#bootcamps" className="self-start">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  trailingIcon={<ArrowRight size={14} />}
+                >
+                  Explore bootcamps
+                </Button>
+              </Link>
+            </div>
+
+            {/* Jobs — what the bootcamps prepare you for. The brand tint on
+                this side signals the destination (the primary product). */}
+            <div className="p-8 md:p-10 flex flex-col bg-brand-50/60 backdrop-blur-xl">
+              <Badge tone="info" className="mb-5 self-start">
+                Jobs
+              </Badge>
+              <h3 className="font-display font-bold text-display-md text-neutral-900 tracking-tight mb-4">
+                Apply with confidence. Replies on the clock.
+              </h3>
+              <ul className="space-y-3 text-body-sm text-neutral-700 mb-10 flex-grow">
+                {[
+                  "Open roles matched to your skills",
+                  "Guaranteed response countdowns on every application",
+                  "Slot returned the instant a recruiter ghosts the window",
+                ].map((p) => (
+                  <li key={p} className="flex items-start gap-2.5">
+                    <CheckCircle2
+                      size={16}
+                      className="text-brand-500 mt-0.5 shrink-0"
+                    />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/signup?next=/student/jobs" className="self-start">
+                <Button
+                  variant="primary"
+                  size="md"
+                  trailingIcon={<ArrowRight size={14} />}
+                >
+                  Browse jobs
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </MotionSection>
+
+      {/* ─────────── FEATURED SPEAKER — Abhinav Jain Ranka workshop ─────────── */}
+      <MotionSection
+        className="mx-auto max-w-content px-4 py-16 md:py-24"
+        amount={0.15}
+      >
+        <FeaturedSpeaker />
+      </MotionSection>
+
+      {/* ─────────── BOOTCAMP CARD STACK — animated showcase of the 6 courses, leads into storefront ─────────── */}
+      <MotionSection
+        className="mx-auto max-w-content px-4 py-16 md:py-24"
         amount={0.15}
       >
         <BootcampCardStack />
       </MotionSection>
-      {/* ─────────── HOW IT WORKS ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-20"
-        amount={0.15}
-      >
-        <SectionHeader
-          title="Drop, match, prove, hear back."
-          subtitle="Four steps from resume to a real reply."
-        />
-        <div className="relative mt-14">
-          {/* Connecting rail — desktop only, sits behind the numerals */}
-          <div
-            aria-hidden
-            className="hidden lg:block absolute left-0 right-0 top-7 h-px bg-gradient-to-r from-transparent via-brand-200 to-transparent"
-          />
-          <StaggerGrid
-            className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-10 gap-y-12"
-            stagger={0.08}
-          >
-            {(
-              [
-                {
-                  num: "01",
-                  icon: <Upload size={18} />,
-                  title: "Drop your resume",
-                  copy: "AI parses skills, history, impact in seconds. Edit, confirm, set your trajectory.",
-                },
-                {
-                  num: "02",
-                  icon: <Target size={18} />,
-                  title: "Get matched",
-                  copy: "Vector search ranks every open role against your skills, experience and trajectory.",
-                },
-                {
-                  num: "03",
-                  icon: <Zap size={18} />,
-                  title: "Prove your fit",
-                  copy: "Take a real scenario per role. AI grades depth, integrity and evidence, not buzzwords.",
-                },
-                {
-                  num: "04",
-                  icon: <CheckCircle2 size={18} />,
-                  title: "Hear back, on the clock",
-                  copy: "Recruiters reply within 24/48/72 hours, or your application slot is returned. It won't count against your limit.",
-                },
-              ] as const
-            ).map((step) => (
-              <StaggerItem key={step.num}>
-                <FlowStep {...step} />
-              </StaggerItem>
-            ))}
-          </StaggerGrid>
-        </div>
-        {/* Tier strip — honest grading detail, no invented match % */}
-        <div className="mt-12 flex flex-wrap items-center gap-x-3 gap-y-2 text-body-sm text-neutral-500">
-          <span>Every candidate is ranked by fit:</span>
-          <span className="flex items-center gap-1.5">
-            <TierBadge tier="A" />
-            <TierBadge tier="B" />
-            <TierBadge tier="C" />
-            <TierBadge tier="D" />
-          </span>
-          <span>Recruiters see the tier, never a made-up match score.</span>
-        </div>
-      </MotionSection>
 
-      {/* ─────────── GUARANTEE CLOCK — public SLA countdown ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-20"
-        amount={0.15}
-      >
-        <GuaranteeClock />
-      </MotionSection>
-
-      {/* ─────────── JOBS & BOOTCAMPS FOR STUDENTS ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-20"
-        amount={0.15}
-      >
-        <SectionHeader
-          title="Two ways to fast-track your career."
-          subtitle="Apply to real jobs with guaranteed response times, or level up with hands-on bootcamps. All in one place."
-        />
-        <div className="mt-10 grid md:grid-cols-2 rounded-2xl overflow-hidden ring-1 ring-neutral-200 shadow-elev-3">
-          {/* Jobs part — brand-tinted */}
-          <div className="bg-brand-50/50 p-8 md:p-10 flex flex-col">
-            <Badge tone="info" className="mb-4 self-start">
-              Apply to jobs
-            </Badge>
-            <h3 className="font-display font-bold text-display-md text-neutral-900 tracking-tight mb-4">
-              Apply with confidence. Get replies on time.
-            </h3>
-            <ul className="space-y-3 text-body-sm text-neutral-700 mb-8 flex-grow">
-              {[
-                "See open roles matched specifically to your skills",
-                "Guaranteed response countdowns on every application",
-                "If recruiters ghost you, your application slot is returned immediately",
-                "Get real-time feedback and resume tips from our AI Career Coach",
-              ].map((p) => (
-                <li key={p} className="flex items-start gap-2.5">
-                  <CheckCircle2
-                    size={16}
-                    className="text-brand-500 mt-0.5 shrink-0"
-                  />
-                  {p}
-                </li>
-              ))}
-            </ul>
-            <Link href="/signup?next=/student/jobs" className="self-start">
-              <Button
-                variant="primary"
-                size="md"
-                trailingIcon={<ArrowRight size={14} />}
-              >
-                Find a job
-              </Button>
-            </Link>
-          </div>
-
-          {/* Bootcamp part — clean white */}
-          <div className="bg-neutral-0 p-8 md:p-10 flex flex-col border-t md:border-t-0 md:border-l border-neutral-200">
-            <Badge tone="success" className="mb-4 self-start">
-              Join Bootcamps
-            </Badge>
-            <h3 className="font-display font-bold text-display-md text-neutral-900 tracking-tight mb-4">
-              Learn from top operators. Get verified skills.
-            </h3>
-            <ul className="space-y-3 text-body-sm text-neutral-700 mb-8 flex-grow">
-              {[
-                "Hands-on projects designed by developers from top tech firms",
-                "No boring lectures or theory dumps—write real code from day one",
-                "Earn verified skill badges that are directly visible to hiring managers",
-                "Get smart bundle discounts that unlock additional courses for free",
-              ].map((p) => (
-                <li key={p} className="flex items-start gap-2.5">
-                  <CheckCircle2
-                    size={16}
-                    className="text-success mt-0.5 shrink-0"
-                  />
-                  {p}
-                </li>
-              ))}
-            </ul>
-            <Link href="#bootcamps" className="self-start">
-              <Button
-                variant="secondary"
-                size="md"
-                trailingIcon={<ArrowRight size={14} />}
-              >
-                Explore bootcamps
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </MotionSection>
-
-      {/* ─────────── BOOTCAMPS ─────────── */}
+      {/* ─────────── BOOTCAMPS STOREFRONT — anchor for #bootcamps deep links ─────────── */}
       <MotionSection
         id="bootcamps"
-        className="mx-auto max-w-content px-4 py-20"
+        className="mx-auto max-w-content px-4 py-16 md:py-24"
         amount={0.15}
       >
         <SectionHeader
-          eyebrow="Bootcamps"
-          title="Master the skill. Then land the job."
-          subtitle="Six focused courses built with operators, not academics. Buy only what you need — smart bundles unlock the rest for free."
+          title="Pick your courses."
+          subtitle="Buy only what you need — smart bundles unlock the rest for free."
         />
-        <CoursesSection />
+        <div className="mt-10">
+          <CoursesSection />
+        </div>
       </MotionSection>
 
-      {/* ─────────── PRICING ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-20"
-        amount={0.15}
-      >
+      {/* ─────────── PRICING — asymmetric: action sidebar breaks the symmetric-header chain ─────────── */}
+      <section className="mx-auto max-w-content px-4 py-16 md:py-28">
         <SectionHeader
           title="Apply free. Upgrade once it's working."
           subtitle="Recruiters post and hire free. Students start with 2 applications, then pick the plan that fits."
+          action={
+            <Link
+              href="/upgrade"
+              className="text-body-sm font-semibold text-brand-500 hover:text-brand-600 inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
+              Compare every plan
+              <ArrowRight size={14} />
+            </Link>
+          }
         />
 
         <StaggerGrid
@@ -456,140 +407,95 @@ export default async function LandingPage() {
         </p>
 
         {/* Courses callout — bootcamp pricing lives in the cart */}
-        <div className="mt-12 max-w-5xl mx-auto">
-          <div className="relative overflow-hidden rounded-2xl bg-neutral-0 ring-1 ring-neutral-200 shadow-elev-3 p-7 md:p-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-500 ring-1 ring-brand-100 shrink-0">
-                <GraduationCap size={22} />
-              </div>
-              <div>
-                <p className="font-display font-bold text-neutral-900 text-lg">
-                  Want the skills too?
-                </p>
-                <p className="text-body-sm text-neutral-500 mt-1 max-w-md leading-relaxed">
-                  Bootcamp courses are sold separately —{" "}
-                  {formatPaiseAsINR(COURSE_PRICE_PAISE)} per course, or{" "}
-                  {formatPaiseAsINR(EVERYTHING_BUNDLE_PAISE)} for all six with
-                  bundle unlocks.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3 shrink-0">
-              <Link href="#bootcamps">
-                <Button variant="secondary" size="md">
-                  Browse courses
-                </Button>
-              </Link>
-              <Link href="/bootcamps/checkout">
-                <Button
-                  variant="primary"
-                  size="md"
-                  trailingIcon={<ArrowRight size={14} />}
-                >
-                  View cart
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </MotionSection>
+        {/* Bootcamps cross-sell — pared down to a single line in the premium pass */}
+        <p className="mt-12 max-w-5xl mx-auto text-center text-body-sm text-neutral-500">
+          Bootcamps sold separately —{" "}
+          <span className="text-neutral-900 font-medium">
+            {formatPaiseAsINR(COURSE_PRICE_PAISE)}
+          </span>{" "}
+          per course, or{" "}
+          <span className="text-neutral-900 font-medium">
+            {formatPaiseAsINR(EVERYTHING_BUNDLE_PAISE)}
+          </span>{" "}
+          for the full six with bundle unlocks.{" "}
+          <Link
+            href="#bootcamps"
+            className="text-brand-500 hover:text-brand-600 font-medium inline-flex items-center gap-1"
+          >
+            Browse courses <ArrowRight size={12} />
+          </Link>
+        </p>
+      </section>
 
       {/* ─────────── FAQ ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-20"
-        amount={0.15}
-      >
+      <section className="mx-auto max-w-content px-4 py-16 md:py-28">
         <SectionHeader title="The honest questions." />
         <div className="mt-10">
           <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl bg-neutral-100" />}>
             <FAQ />
           </Suspense>
         </div>
-      </MotionSection>
+      </section>
 
-      {/* ─────────── FINAL CTA ─────────── */}
+      {/* ─────────── FINAL CTA — BLACK ─────────── */}
       <MotionSection
-        className="mx-auto max-w-5xl px-4 py-20"
+        className="mx-auto max-w-5xl px-4 py-16 md:py-28"
         amount={0.2}
         y={32}
       >
-        <div className="relative">
-          <Card
-            surface="glass-tinted"
-            className="py-14 px-8 text-center rounded-2xl relative overflow-hidden"
-          >
-            {/* Dot grid overlay */}
-            <div
-              aria-hidden
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle, rgba(1,145,252,0.12) 1px, transparent 1px)",
-                backgroundSize: "24px 24px",
-              }}
-            />
-            <div className="relative">
-              {/* Spine resolves: the clock is met */}
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 ring-1 ring-success/30 text-success px-3 py-1 text-body-xs font-bold mb-5">
-                <CheckCircle2 size={13} /> SLA met
-              </span>
-              <h3 className="font-display font-extrabold text-display-xl text-neutral-950 mb-5 leading-tight tracking-tightest headline-twotone">
-                <RevealText
-                  segments={[
-                    "No ghost.",
-                    " ",
-                    <span className="accent" key="acc">
-                      No catch.
-                    </span>,
-                  ]}
-                  stagger={0.08}
-                  trigger="view"
-                  amount={0.4}
-                />
-              </h3>
-              <p className="text-body-md text-neutral-500 max-w-xl mx-auto mb-8 leading-relaxed">
-                Recruiters who don&apos;t reply in time lose visibility.
-                Students who skip the gauntlet don&apos;t get reviewed.
-                Symmetry, built in.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Link href="/signup?next=/student/jobs">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    trailingIcon={<ArrowRight size={16} />}
-                  >
-                    Find a job
-                  </Button>
-                </Link>
-                <Link href="/signup?role=recruiter">
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    trailingIcon={<ArrowRight size={16} />}
-                  >
-                    I&apos;m hiring
-                  </Button>
-                </Link>
-              </div>
+        <div className="relative bg-neutral-950 text-white rounded-[32px] md:rounded-[40px] shadow-[0_0_80px_rgba(0,0,0,0.18)] overflow-hidden">
+          <div className="relative px-8 md:px-12 py-16 md:py-20 text-center">
+            <h3 className="font-display font-extrabold text-display-xl text-white mb-5 leading-tight tracking-tight headline-twotone">
+              <RevealText
+                segments={[
+                  "Apply once.",
+                  " ",
+                  <span className="accent" key="acc">
+                    Hear back in 48 hours.
+                  </span>,
+                ]}
+                stagger={0.08}
+                trigger="view"
+                amount={0.4}
+              />
+            </h3>
+            <p className="text-body-md text-white/60 max-w-xl mx-auto mb-10 leading-relaxed">
+              Free to start. No card. Recruiters who don&apos;t reply lose
+              visibility. Students who skip the gauntlet don&apos;t get
+              reviewed. Symmetry, built in.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link href="/signup?next=/student/jobs">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white font-semibold text-base px-7 h-12 shadow-[0_8px_24px_rgba(1,145,252,0.32),inset_0_1px_0_rgba(255,255,255,0.18)] hover:bg-brand-600 transition-colors active:scale-[0.99]"
+                >
+                  Start applying for free
+                  <ArrowRight size={16} />
+                </button>
+              </Link>
+              <Link href="/signup?role=recruiter">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-xl bg-white/10 backdrop-blur-xl text-white font-semibold text-base px-7 h-12 border border-white/20 hover:bg-white/20 transition-colors active:scale-[0.99]"
+                >
+                  I&apos;m hiring
+                  <ArrowRight size={16} />
+                </button>
+              </Link>
             </div>
-          </Card>
+          </div>
         </div>
       </MotionSection>
 
       {/* ─────────── FOOTER ─────────── */}
-      <MotionSection
-        as="footer"
-        className="border-t border-neutral-200 mt-10 pt-12 pb-8"
-        amount={0.05}
-        y={12}
-      >
+      <footer className="border-t border-neutral-200 mt-10 pt-8 pb-8">
         <div className="mx-auto max-w-content px-4 grid grid-cols-2 md:grid-cols-6 gap-8">
           <div className="col-span-2">
             <Logo size="sm" />
             <p className="text-body-xs text-neutral-500 mt-3 max-w-xs leading-relaxed">
               India-first hiring platform with anti-ghosting SLAs and embedded
-              skill bootcamps. Built in Mumbai. DPDP Act compliant.
+              skill bootcamps. Built in Pune. DPDP Act compliant.
             </p>
             <div className="flex gap-2 mt-4">
               <a
@@ -658,22 +564,12 @@ export default async function LandingPage() {
         </div>
         <div className="mx-auto max-w-content px-4 mt-10 pt-6 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-3 text-body-xs text-neutral-500">
           <p>
-            © {new Date().getFullYear()} unGhost Technologies Pvt Ltd · Mumbai,
+            © {new Date().getFullYear()} unGhost Technologies Pvt Ltd · Pune,
             India
           </p>
-          <p>
-            Data residency: ap-south-1 · Made with{" "}
-            <img
-              src="/symbol.svg"
-              alt="unGhost"
-              width={12}
-              height={12}
-              className="inline align-text-bottom"
-            />{" "}
-            in India
-          </p>
+          <p>Data residency: ap-south-1 · Made in Pune, India</p>
         </div>
-      </MotionSection>
+      </footer>
     </main>
   );
 }
@@ -717,41 +613,6 @@ function SectionHeader({
   );
 }
 
-function FlowStep({
-  num,
-  icon,
-  title,
-  copy,
-}: {
-  num: string;
-  icon: React.ReactNode;
-  title: string;
-  copy: string;
-}) {
-  return (
-    <div className="relative">
-      {/* Node: icon chip floats on the rail, oversized step numeral behind */}
-      <div className="flex items-center gap-4 mb-5">
-        <span className="relative z-10 grid place-items-center w-14 h-14 rounded-2xl bg-neutral-0 text-brand-500 shadow-elev-3 ring-1 ring-neutral-200/80 transition-transform duration-fast ease-out-soft group-hover:-translate-y-0.5">
-          {icon}
-        </span>
-        <span
-          className="font-display font-extrabold text-3xl tnum leading-none text-neutral-950 select-none"
-          style={{ letterSpacing: "-0.04em" }}
-          aria-hidden
-        >
-          {num}
-        </span>
-      </div>
-      <h4 className="font-display font-bold text-lg text-neutral-900 mb-1.5 tracking-tight">
-        {title}
-      </h4>
-      <p className="text-body-sm text-neutral-500 leading-relaxed max-w-[26ch]">
-        {copy}
-      </p>
-    </div>
-  );
-}
 
 function JobsTierCard({
   name,
@@ -774,8 +635,8 @@ function JobsTierCard({
 }) {
   return (
     <Card
-      selected={highlight}
-      className={`!p-7 h-full flex flex-col ${highlight ? "shadow-elev-4" : ""}`}
+      surface={highlight ? "glass-tinted" : "solid"}
+      className={`${highlight ? "!p-7 !rounded-2xl" : "!p-7 !rounded-lg"} h-full flex flex-col ${highlight ? "shadow-[0_12px_32px_rgba(1,145,252,0.18)]" : ""}`}
     >
       {/* Fixed-height badge slot so titles/prices line up across all 3 cards. */}
       <div className="h-6 mb-3 flex items-center">

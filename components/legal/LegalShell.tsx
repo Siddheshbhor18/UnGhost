@@ -41,7 +41,7 @@ export function LegalShell({
           </h1>
           <p className="text-xs text-brand-muted mt-2 inline-flex items-center gap-1">
             <Calendar size={11} /> Effective {effectiveDate} ·{" "}
-            unGhost Technologies Pvt Ltd · Mumbai, India
+            unGhost Technologies Pvt Ltd · Pune, India
           </p>
           {intro && (
             <p className="text-sm text-brand-ink/85 mt-4 leading-relaxed">
