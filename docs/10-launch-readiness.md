@@ -80,12 +80,20 @@ MSG91_OTP_TEMPLATE_ID=...
 RESEND_API_KEY=re_...
 RESEND_FROM=unGhost <hello@unghost.com>
 
-# Payments
+# Payments — PhonePe (legacy / partial-channel)
 PHONEPE_MERCHANT_ID=...
 PHONEPE_SALT_KEY=...
 PHONEPE_SALT_INDEX=1
 PHONEPE_BASE_URL=https://api.phonepe.com/apis/hermes
 
+# Payments — Razorpay (primary, courses + jobs plans)
+# See docs/09-runbooks/razorpay-go-live.md for the full walk-through.
+RAZORPAY_KEY_ID=rzp_live_...                    # server-only API key id
+RAZORPAY_KEY_SECRET=...                         # NEVER ship to the browser
+NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_...        # same id as above; safe to expose
+RAZORPAY_WEBHOOK_SECRET=$(openssl rand -hex 32) # DISTINCT from KEY_SECRET; set
+                                                # to match what you paste in the
+                                                # Razorpay dashboard's webhook secret
 # Realtime
 PUSHER_APP_ID=...
 PUSHER_KEY=...

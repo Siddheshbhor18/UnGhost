@@ -13,17 +13,20 @@ const CSP = [
   "default-src 'self'",
   // 'unsafe-eval' kept on for Next dev runtime + some Sentry source maps.
   // In prod a stricter set is possible once we switch to nonce-based CSP.
-  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.sentry-cdn.com https://browser.sentry-cdn.com https://www.youtube.com",
+  // Razorpay Standard Checkout loads its modal script from checkout.razorpay.com.
+  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.sentry-cdn.com https://browser.sentry-cdn.com https://www.youtube.com https://checkout.razorpay.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.sentry.io https://*.pusher.com wss://*.pusher.com https://api.phonepe.com https://api-preprod.phonepe.com https://*.100ms.live wss://*.100ms.live https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.youtube.com",
+  // Razorpay checkout XHRs to api/lumberjack under *.razorpay.com.
+  "connect-src 'self' https://*.sentry.io https://*.pusher.com wss://*.pusher.com https://api.phonepe.com https://api-preprod.phonepe.com https://*.100ms.live wss://*.100ms.live https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.youtube.com https://*.razorpay.com",
   // R2 public CDN + uploaded video playback. Must include the custom domain
   // bound to the R2 bucket (R2_PUBLIC_BASE_URL); without it the browser
   // silently blocks <video> playback and the lesson player renders black.
   "media-src 'self' blob: https://uploads.unghost.in https://*.r2.cloudflarestorage.com",
   // PhonePe may bounce through a hosted checkout. Allow it as a frame source.
-  "frame-src 'self' https://*.phonepe.com https://www.youtube.com",
+  // Razorpay renders its payment modal in iframes from api/checkout.razorpay.com.
+  "frame-src 'self' https://*.phonepe.com https://www.youtube.com https://api.razorpay.com https://checkout.razorpay.com",
   // Block our app being embedded anywhere — defeats clickjacking.
   "frame-ancestors 'none'",
   "form-action 'self'",

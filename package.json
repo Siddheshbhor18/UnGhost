@@ -19,7 +19,15 @@
     "migrate:status": "migrate-mongo status",
     "migrate:create": "migrate-mongo create",
     "load:smoke": "k6 run tests/load/k6.smoke.js",
-    "load:peak": "k6 run --vus 10000 --duration 10m tests/load/k6.peak.js"
+    "load:peak": "k6 run --vus 10000 --duration 10m tests/load/k6.peak.js",
+    "vercel:link": "bash scripts/vercel-link.sh",
+    "vercel:razorpay:setup": "bash scripts/vercel-razorpay-setup.sh",
+    "vercel:env:ls": "vercel env ls",
+    "vercel:env:pull": "vercel env pull .env.production --environment=production",
+    "vercel:env:add": "vercel env add",
+    "vercel:logs": "vercel logs --follow",
+    "vercel:deploy": "vercel",
+    "vercel:deploy:prod": "vercel --prod"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
@@ -31,6 +39,9 @@
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "framer-motion": "^11.11.1",
+    "geist": "^1.7.2",
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.25",
     "lucide-react": "^0.460.0",
     "mammoth": "^1.12.0",
     "migrate-mongo": "^14.0.7",

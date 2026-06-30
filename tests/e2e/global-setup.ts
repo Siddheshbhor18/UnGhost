@@ -54,11 +54,17 @@ async function ensureDemoUsers(): Promise<void> {
     const users = mongoose.connection.collection("users");
     const passwordHash = await hashPassword("demo");
     for (const u of DEMO_USERS) {
+      // The app keys users by the string `_id` (getUserById → findById(_id)).
+      // Insert with `_id`, NOT a plain `id` field — otherwise Mongo assigns an
+      // ObjectId `_id` and every getUserById(session.user.id) misses, bouncing
+      // the account off any page that guards on a loaded user.
+      const { id, ...rest } = u;
       const res = await users.updateOne(
         { email: u.email },
         {
           $setOnInsert: {
-            ...u,
+            _id: id,
+            ...rest,
             passwordHash,
             status: "active",
             createdAt: new Date(),

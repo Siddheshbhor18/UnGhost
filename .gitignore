@@ -3,6 +3,7 @@ node_modules
 out
 .env
 .env.local
+.env.production
 .DS_Store
 *.log
 .vercel
@@ -55,6 +56,10 @@ scripts/remove-bigname-companies.ts
 unGhost_reel.mp4
 unGhost-brochure.html
 unGhost_video_storyboard.md
+Student_Product_Challenge_Execution_Plan.pdf
+UIUXupdate.md
+UIUXchangescontext.md
+offer_letters_samples/
 
 scripts/clear-bootcamp-videos.ts
 scripts/whois-inmail.ts
