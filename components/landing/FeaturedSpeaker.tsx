@@ -9,13 +9,8 @@
  * Next can serve responsive sizes + AVIF/WebP (sharp on hi-DPI screens).
  *
  * --- TODO: swap before launch ---
- *   WORKSHOP_DATE  — currently from the mock (in the past relative to today)
- *   WORKSHOP_TIME  — same
- *   WHATSAPP_URL   — replace `<INVITE-CODE>` with the real chat.whatsapp.com
- *                    invite slug for the Poem Capital community group. Format
- *                    is `https://chat.whatsapp.com/<slug>`; when admin
- *                    approval is enabled the click sends a join request the
- *                    admin then approves.
+ *   WORKSHOP_DATE / WORKSHOP_TIME — currently from the mock; confirm with the
+ *                                    speaker's office once a slot lands.
  */
 
 import Image from "next/image";
@@ -28,10 +23,11 @@ const PANEL_BG = "#0A0907";
 const WORKSHOP_DATE = "5th July 2025";
 const WORKSHOP_TIME = "11:00 AM IST";
 
-// Replace `<INVITE-CODE>` with the real WhatsApp group/community invite
-// slug. Keep the host (`chat.whatsapp.com`) — that's the only URL form WhatsApp
-// honours for "request to join" / "tap to join" flows.
-const WHATSAPP_URL = "https://chat.whatsapp.com/<INVITE-CODE>";
+// Real Poem Capital community invite. When admin approval is enabled the
+// click sends a join request the admin then approves — keep the host as
+// `chat.whatsapp.com`, that's the only URL form WhatsApp honours for the
+// "request to join" / "tap to join" deep-link flow.
+const WHATSAPP_URL = "https://chat.whatsapp.com/B5Xt5JvLskrCoJAaX1v95X?mode=gi_t";
 
 const ACCOLADES = [
   { icon: Trophy, title: "CA Business Leader", sub: "40 Under 40" },
