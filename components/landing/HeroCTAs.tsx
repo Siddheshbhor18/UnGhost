@@ -70,27 +70,11 @@ export function HeroCTAs() {
     <div className="flex flex-wrap gap-3 pt-2">
       {/* Primary — shine sweep + glow */}
       <MagneticButton>
-        <Link href="/signup" className="hero-cta-primary inline-block">
+        <Link href="/signup?next=/student/jobs" className="inline-block">
           <button
             type="button"
-            className="relative overflow-hidden inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white font-semibold text-base px-6 py-3.5 transition-[background-color,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-brand-600 active:scale-[0.98] group"
-            style={{
-              boxShadow: "0 10px 30px rgba(1,145,252,0.35)",
-            }}
+            className="relative inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white font-semibold text-base px-6 py-3.5 transition-[background-color,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-brand-600 active:scale-[0.98]"
           >
-            {/* Continuous shine sweep */}
-            {!reduce && (
-              <span
-                aria-hidden
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%)",
-                  transform: "translateX(-100%)",
-                  animation: "hero-shine 3.5s ease-in-out infinite",
-                }}
-              />
-            )}
             <span className="relative">Find a job</span>
             <motion.span
               className="relative inline-flex"
@@ -105,13 +89,13 @@ export function HeroCTAs() {
 
       {/* Secondary — magnetic only */}
       <MagneticButton>
-        <Link href="/signup?role=recruiter">
+        <Link href="/signup?next=/bootcamps">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-xl bg-white text-neutral-900 font-semibold text-base px-6 py-3.5 border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50 transition-[background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98]"
+            className="inline-flex items-center gap-2 rounded-xl bg-neutral-0 text-neutral-900 font-semibold text-base px-6 py-3.5 border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-0 transition-[background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98]"
           >
             <Briefcase size={16} />
-            Hire
+            Start Learning
           </button>
         </Link>
       </MagneticButton>

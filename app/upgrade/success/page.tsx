@@ -28,7 +28,8 @@ export default function UpgradeSuccessPage({ searchParams }: Props) {
           {label} unlocked.
         </h1>
         <p className="mt-4 text-body-md text-neutral-500 leading-relaxed">
-          Unlimited applications, AI Coach forever, every bootcamp included. Welcome aboard.
+          Unlimited applications, AI Coach, and every bootcamp included for the
+          next 12 months. Welcome aboard.
         </p>
         <div className="mt-10 flex justify-center gap-3">
           <Link

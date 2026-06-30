@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
@@ -35,6 +35,7 @@ import {
 import { CheckboxConsent } from "./CheckboxConsent";
 import { RolePicker, type Role } from "./RolePicker";
 import type { AuthHeroPhase } from "./AuthHero";
+import { safeNext, resolveSignupRole } from "@/shared/lib/safe-redirect";
 
 /**
  * SignupWizard — two-step signup. Replaces the monolithic /signup form.
@@ -74,21 +75,25 @@ const HREF_BY_ROLE_SIGNUP: Record<string, string> = {
 
 export function SignupWizard() {
   const router = useRouter();
+  const params = useSearchParams();
+  const nextParam = safeNext(params.get("next"));
+  const initialRole: Role = resolveSignupRole(params.get("role"));
   const reduced = useReducedMotion();
   const shake = useAnimationControls();
   const { data: sessionData, status: sessionStatus } = useSession();
   useEffect(() => {
     if (sessionStatus !== "authenticated") return;
     const r = (sessionData?.user as any)?.role as string | undefined;
-    router.replace(r ? HREF_BY_ROLE_SIGNUP[r] ?? "/dashboard" : "/dashboard");
-  }, [sessionStatus, sessionData, router]);
+    const dest = nextParam ?? (r ? HREF_BY_ROLE_SIGNUP[r] ?? "/dashboard" : "/dashboard");
+    router.replace(dest);
+  }, [sessionStatus, sessionData, nextParam, router]);
 
   // Step machine — 1 (who) → 2 (secure). We never go beyond 2; success
   // redirects to /verify-phone.
   const [step, setStep] = useState<1 | 2>(1);
 
   // Step 1 fields
-  const [role, setRole] = useState<Role>("student");
+  const [role, setRole] = useState<Role>(initialRole);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [country, setCountry] = useState("+91");
@@ -237,9 +242,12 @@ export function SignupWizard() {
       // Play the hero "entering" beat briefly so the door choreography
       // reads, then route to /login. MSG91/verify-phone retired.
       setPhase("entering");
+      const loginUrl = nextParam
+        ? `/login?just_signed_up=1&next=${encodeURIComponent(nextParam)}`
+        : "/login?just_signed_up=1";
       setTimeout(
         () => {
-          router.push("/login?just_signed_up=1");
+          router.push(loginUrl);
           router.refresh();
         },
         reduced ? 0 : 600,
@@ -369,7 +377,7 @@ export function SignupWizard() {
                 <span className="h-px bg-brand-ink/10 flex-1" />
               </div>
               <OAuthButtons
-                callbackUrl={HREF_BY_ROLE_SIGNUP[role] ?? "/dashboard"}
+                callbackUrl={nextParam ?? HREF_BY_ROLE_SIGNUP[role] ?? "/dashboard"}
                 intentRole={role === "recruiter" ? "recruiter" : "student"}
                 onError={setErr}
               />

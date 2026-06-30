@@ -1,5 +1,5 @@
 /**
- * Single source of truth for bootcamp "rooms" — the 5 fixed subjects.
+ * Single source of truth for bootcamp "rooms" — the 6 fixed subjects.
  *
  * Drives the student room hubs (/bootcamps/[room]), instructor studio scoping,
  * recruiter lecture library, and all category labels + validation. Add a
@@ -10,6 +10,11 @@ export const ROOMS = [
     id: "ai",
     label: "AI",
     blurb: "Build with generative AI, agents, and applied ML.",
+  },
+  {
+    id: "gtm",
+    label: "GTM Engineering",
+    blurb: "Go-to-market as an engineer: pipelines, automation, and revenue ops.",
   },
   {
     id: "marketing",

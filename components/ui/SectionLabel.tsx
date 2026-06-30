@@ -3,7 +3,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 export interface SectionLabelProps extends HTMLAttributes<HTMLSpanElement> {
   icon?: ReactNode;
-  tone?: "neutral" | "brand" | "muted";
+  tone?: "neutral" | "brand" | "muted" | "success";
 }
 
 /**
@@ -23,6 +23,7 @@ export function SectionLabel({
         "section-label inline-flex items-center gap-1.5",
         tone === "brand" && "text-brand-500",
         tone === "muted" && "text-neutral-500",
+        tone === "success" && "text-success",
         className,
       )}
       {...rest}

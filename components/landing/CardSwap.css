@@ -1,0 +1,42 @@
+/* ───────────────────────────────────────────────────────────────────────
+   CardSwap — container + card base styles.
+   Adapted from React Bits. The container uses 3D perspective; cards are
+   absolutely positioned with GSAP-driven transforms.
+   ─────────────────────────────────────────────────────────────────────── */
+
+.card-swap-container {
+  position: absolute;
+  top: 62%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  perspective: 900px;
+  overflow: visible;
+}
+
+.card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 16px;
+  border: 1px solid #E8E5DF;
+  background: #FFFFFF;
+  transform-style: preserve-3d;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 12px 24px -10px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Responsive scaling ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .card-swap-container {
+    transform: translate(-50%, -50%) scale(0.75);
+  }
+}
+
+@media (max-width: 480px) {
+  .card-swap-container {
+    transform: translate(-50%, -50%) scale(0.55);
+  }
+}

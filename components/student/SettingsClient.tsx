@@ -267,11 +267,19 @@ export function SettingsClient({ user }: Props) {
 
 /**
  * Subscription block — shows the current plan (Free or Premium) and the
- * upgrade action. Premium is a one-time lifetime purchase, so there is no
- * renewal to cancel.
+ * upgrade action. Premium is an annual plan; grandfathered launch buyers
+ * (no planExpiresAt) keep lifetime access.
  */
 function SubscriptionCard({ user }: { user: User }) {
   const isPremium = (user.plan ?? "free") === "premium";
+  const isLifetime = isPremium && !user.planExpiresAt;
+  const renewsOn = user.planExpiresAt
+    ? new Date(user.planExpiresAt).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : null;
 
   return (
     <GlassCard>
@@ -281,14 +289,20 @@ function SubscriptionCard({ user }: { user: User }) {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="font-display font-bold text-brand-ink">
-            {isPremium ? "Premium · lifetime" : "Free · trial"}{" "}
+            {isPremium
+              ? isLifetime
+                ? "Premium · lifetime"
+                : "Premium · 1 year"
+              : "Free · trial"}{" "}
             <GlassBadge tone={isPremium ? "brand" : "neutral"} className="ml-1">
               current
             </GlassBadge>
           </p>
           <p className="text-xs text-brand-muted mt-0.5">
             {isPremium
-              ? "Unlimited applications · AI Coach · all bootcamps · forever."
+              ? isLifetime
+                ? "Unlimited applications · AI Coach · all bootcamps · forever."
+                : `Unlimited applications · AI Coach · all bootcamps. Access until ${renewsOn}.`
               : "2 lifetime applications. Upgrade to Premium for unlimited access."}
           </p>
         </div>

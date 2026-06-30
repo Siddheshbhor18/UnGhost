@@ -24,6 +24,7 @@ import { PasswordField } from "@/components/auth/PasswordField";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { RolePicker, ROLE_PILLS, type Role } from "@/components/auth/RolePicker";
 import type { AuthHeroPhase } from "@/components/auth/AuthHero";
+import { safeNext } from "@/shared/lib/safe-redirect";
 
 const HREF_BY_ROLE: Record<Role, string> = {
   student: "/dashboard",
@@ -345,22 +346,6 @@ function BreatheCard({
   );
 }
 
-/**
- * Sanitise the `?next=` redirect target. We only ever bounce to a same-origin
- * absolute path — anything else (a full URL, a protocol-relative `//evil.com`,
- * or a backslash-smuggled `/\evil.com`) is an open-redirect vector that
- * phishers use to make a malicious link look like it came from us. Reject all
- * of those and fall back to the role default.
- */
-function safeNext(next: string | null): string | null {
-  if (!next) return null;
-  // Must be a single-leading-slash path. Block "//host", "/\host", schemes,
-  // and any whitespace/control trickery.
-  if (!next.startsWith("/")) return null;
-  if (next.startsWith("//") || next.startsWith("/\\")) return null;
-  if (/[\x00-\x1f\s]/.test(next)) return null;
-  return next;
-}
 
 function validateEmail(v: string) {
   if (!/\S+@\S+\.\S+/.test(v)) {

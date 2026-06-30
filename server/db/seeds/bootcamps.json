@@ -84,7 +84,7 @@
   {
     "id": "bc_ds_python",
     "skill": "Python for Data Science",
-    "category": "data_science",
+    "category": "ai",
     "title": "Applied Data Science — Python, Pandas, and the Job",
     "description": "The 80/20 of data work in industry: clean messy data fast, frame the question right, communicate the answer.",
     "priceINR": 3999,
@@ -129,7 +129,7 @@
   {
     "id": "bc_ds_ml",
     "skill": "Practical Machine Learning",
-    "category": "data_science",
+    "category": "ai",
     "title": "Practical ML — Models You Can Defend in a Meeting",
     "description": "Pick the right model, validate it honestly, and explain it to a non-technical decision-maker without losing the room.",
     "priceINR": 5499,
@@ -242,7 +242,7 @@
   {
     "id": "bc_fin_fpna",
     "skill": "FP&A Fundamentals",
-    "category": "finance",
+    "category": "entrepreneurship",
     "title": "FP&A Fundamentals — The Operator's Toolkit",
     "description": "Build the three-statement model, run a budget vs actuals review, and translate finance for non-finance teams.",
     "priceINR": 4499,
@@ -277,7 +277,7 @@
   {
     "id": "bc_fin_equity",
     "skill": "Equity Research",
-    "category": "finance",
+    "category": "entrepreneurship",
     "title": "Equity Research — Reading a Company Like an Analyst",
     "description": "Crack a 10-K in 90 minutes. Build a defendable DCF. Write the one-page pitch a portfolio manager will actually read.",
     "priceINR": 5999,

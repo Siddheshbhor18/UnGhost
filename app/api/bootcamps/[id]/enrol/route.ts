@@ -6,7 +6,7 @@ import {
   getBootcampById,
   getUserById,
 } from "@/server/store";
-import { effectivePlan, planAllowsFreeBootcamp } from "@/server/lib/quota";
+import { effectivePlan, ownsCourse } from "@/server/lib/quota";
 import { requireSameOrigin } from "@/server/lib/csrf";
 
 export const runtime = "nodejs";
@@ -47,14 +47,15 @@ export async function POST(req: Request, { params }: Ctx) {
     return NextResponse.json({ ok: true, alreadyEnrolled: true, bootcamp });
   }
 
-  if (!planAllowsFreeBootcamp(user)) {
+  if (!ownsCourse(user, bootcamp.category)) {
     return NextResponse.json(
       {
-        error: "upgrade_required",
+        error: "course_required",
         plan: effectivePlan(user),
+        courseId: bootcamp.category,
         message:
-          "Bootcamps are included with the Premium plan. Upgrade to access all bootcamps for a one-time fee.",
-        upgradeUrl: "/upgrade?to=premium",
+          "This bootcamp is part of a course you don't own yet. Buy the course to unlock every cohort in it.",
+        purchaseUrl: `/bootcamps/checkout?course=${bootcamp.category}`,
       },
       { status: 402 },
     );

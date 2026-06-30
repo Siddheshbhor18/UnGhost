@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { parseBody } from "@/server/lib/validate";
 import { requireSameOrigin } from "@/server/lib/csrf";
@@ -10,13 +11,17 @@ import {
 } from "@/server/auth/password";
 import { createUserWithCredentials } from "@/server/store";
 import { issueEmailVerifyToken } from "@/server/auth/email-verify-token";
-import { isFreeEmailDomain } from "@/server/lib/email-domain";
+import { emailDomain, isFreeEmailDomain } from "@/server/lib/email-domain";
 import { sendVerifyEmail } from "@/server/integrations/email";
 import {
   attachReferrerToUser,
   getPartnerByCode,
+  getCompanyByDomain,
+  createCompany,
+  assignRecruiterToCompany,
   writeAuditLog,
 } from "@/server/store";
+import { attachAttribution } from "@/server/creator/referral.service";
 import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
@@ -62,28 +67,14 @@ async function handler(req: Request) {
   if (!parsed.ok) return parsed.response;
   const data = parsed.data;
 
-  // Recruiter anti-abuse: recruiters post jobs that reach every student
-  // instantly, so we gate recruiter signup to a *work* email (company-owned
-  // domain). Free/personal/disposable providers are rejected. Students are
-  // unaffected — they can sign up with any valid email.
-  if (data.role === "recruiter" && isFreeEmailDomain(data.email)) {
-    return NextResponse.json(
-      {
-        error: "work_email_required",
-        message:
-          "Recruiter accounts need a work email on your company's domain. Personal or free email addresses aren't accepted.",
-      },
-      { status: 400 },
-    );
-  }
-
-  // Recruiters must name their company at signup — an admin approves them into
-  // that company.
+  // Recruiters must name their company at signup. We no longer require a work
+  // email or admin approval — the company is auto-provisioned + linked below so
+  // the recruiter can post jobs immediately (self-serve onboarding).
   if (data.role === "recruiter" && !data.companyName?.trim()) {
     return NextResponse.json(
       {
         error: "company_required",
-        message: "Enter your company name so we can verify and approve your account.",
+        message: "Enter your company name to finish setting up your account.",
       },
       { status: 400 },
     );
@@ -130,6 +121,40 @@ async function handler(req: Request) {
 
   const user = result.user;
 
+  // Self-serve recruiter onboarding (no admin approval). Provision a company
+  // from the name they gave and link them to it so they can post jobs right
+  // away. Teammates on the same work-email domain reuse the same company record
+  // instead of creating duplicates; the first recruiter on a company is its
+  // admin. Best-effort — a failure here doesn't block signup (the recruiter can
+  // still be linked manually from the admin panel).
+  if (data.role === "recruiter" && data.companyName?.trim()) {
+    try {
+      const companyName = data.companyName.trim();
+      const corporateDomain = isFreeEmailDomain(data.email)
+        ? null
+        : emailDomain(data.email);
+      // Free-mail recruiters have no real company domain — key the company off
+      // a slug of the name so teammates still de-dupe into one record.
+      const slug = companyName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const domain = corporateDomain ?? `${slug || user.id}.unverified`;
+
+      let company = await getCompanyByDomain(domain);
+      const isNewCompany = !company;
+      if (!company) {
+        company = await createCompany({ name: companyName, domain });
+      }
+      await assignRecruiterToCompany(user.id, company.id, isNewCompany);
+    } catch (err) {
+      logger.warn(
+        { err, userId: user.id },
+        "signup.recruiter-company-provision-failed",
+      );
+    }
+  }
+
   // Attribute this signup to a channel partner if the visitor came in via
   // `?ref=<code>`. The wizard reads localStorage on submit + sends the
   // code here. We look up the partner, attach, audit. Best-effort — a bad
@@ -154,6 +179,30 @@ async function handler(req: Request) {
         "signup.attribution-failed",
       );
     }
+  }
+
+  // Creator-platform attribution (new system). If the visitor arrived via
+  // `/r/<code>`, an HttpOnly `ug_ref` cookie holds their referral-session
+  // token. First-touch wins + immutable (enforced in the service). Best-effort
+  // — never blocks signup. Runs alongside the legacy partner path during the
+  // migration window.
+  try {
+    const refToken = cookies().get("ug_ref")?.value;
+    if (refToken) {
+      const attached = await attachAttribution(user.id, refToken);
+      if (attached.attributed) {
+        await writeAuditLog({
+          actorId: user.id,
+          actorRole: data.role,
+          action: "auth.signup-attributed-creator",
+          targetType: "user",
+          targetId: user.id,
+          summary: `Signup attributed to creator ${attached.creatorId}`,
+        });
+      }
+    }
+  } catch (err) {
+    logger.warn({ err, userId: user.id }, "signup.creator-attribution-failed");
   }
 
   // Issue email verify token. Email send is fire-and-forget (don't block

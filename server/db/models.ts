@@ -35,7 +35,7 @@ const stringIdOpts = {
   versionKey: false,
 };
 
-function withJsonTransform<T extends Schema>(s: T): T {
+export function withJsonTransform<T extends Schema>(s: T): T {
   s.set("toJSON", {
     virtuals: false,
     versionKey: false,
@@ -144,6 +144,16 @@ const UserSchema = withJsonTransform(
       lastBillingTxnId: String,
       // When true, the daily expiry cron does NOT renew Pro at planExpiresAt.
       planRenewalCancelled: { type: Boolean, default: false },
+      // Bootcamp courses bought (₹5k → 3-month access each, renewable).
+      ownedCourses: {
+        type: [
+          new Schema(
+            { course: String, grantedAt: String, expiresAt: String },
+            { _id: false },
+          ),
+        ],
+        default: undefined,
+      },
       // ── Verification ──────────────────────────────────────────────
       // Defaults false. /api/auth/signup flips it only after the user
       // proves email ownership. Login refuses if still false (with a
@@ -154,6 +164,12 @@ const UserSchema = withJsonTransform(
       // ── Channel-partner attribution ──────────────────────────────
       referrerPartnerId: { type: String, index: true },
       referrerCapturedAt: String,
+      // ── Creator-platform attribution (one-creator-per-student, immutable) ──
+      // Set once at signup from the `ug_ref` referral-session cookie. The
+      // service layer is the immutability boundary — it never overwrites a
+      // value that is already present (first valid attribution wins).
+      referredByCreatorId: { type: String, index: true },
+      referralSessionId: { type: String, index: true },
       // ── OAuth provenance ─────────────────────────────────────────
       // Set to "google" | "linkedin" the first time a user signs in via
       // that provider. Null/absent for credentials-only signups. Read-only
@@ -1042,10 +1058,10 @@ export const EmailTemplateModel: Model<EmailTemplate> =
 // skip the plan-activation work.
 export interface ProcessedTxn {
   id: string;
-  provider: "phonepe" | "mock";
+  provider: "phonepe" | "razorpay" | "mock";
   orderId: string;
   userId: string;
-  plan: "premium" | "sponsorship";
+  plan: "premium" | "sponsorship" | "jobs_quarterly" | "jobs_annual" | "courses";
   amountPaise: number;
   status: "success" | "failed" | "pending";
   processedAt: string;
@@ -1091,6 +1107,9 @@ const PartnerSchema = withJsonTransform(
       createdAt: { type: String, required: true },
       createdByAdminId: { type: String, required: true },
       tokenRotatedAt: String,
+      // Set by scripts/migrate-partners-to-creators.ts — the mirrored creator's
+      // User._id. Idempotency marker only; live partner code never reads it.
+      migratedToCreatorId: { type: String },
     },
     { versionKey: false },
   ),

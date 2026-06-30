@@ -209,7 +209,13 @@ export const authOptions: AuthOptions = {
         // Stamp the token with the user's current revocation epoch so a later
         // ban / suspend / password-reset (which bumps the epoch) invalidates
         // this exact session at the edge.
-        const epoch = await getSessionEpoch(user.id);
+        // Best-effort — Redis failure falls back to 0 so it never blocks login.
+        let epoch = 0;
+        try {
+          epoch = await getSessionEpoch(user.id);
+        } catch {
+          /* fail-open — epoch 0 means no revocation check */
+        }
 
         return {
           id: user.id,
@@ -277,25 +283,30 @@ export const authOptions: AuthOptions = {
         /* cookie unreadable in this context — fall back to student default */
       }
 
+      let mongoUser;
       try {
-        const mongoUser = await upsertOAuthUser({
+        mongoUser = await upsertOAuthUser({
           email,
           name: user.name ?? undefined,
           avatarUrl: user.image ?? undefined,
           oauthProvider: provider,
           requestedRole,
         });
-        // Mutate the user object so jwt({user}) picks these up on first signin.
-        (user as any).id = mongoUser.id;
-        (user as any).role = mongoUser.role;
-        (user as any).epoch = await getSessionEpoch(mongoUser.id);
-        return true;
       } catch (err) {
-        // Don't leak DB errors to the OAuth screen — log and refuse.
-        // The user sees a generic "could not sign in" and can retry.
-        console.error("[auth] OAuth upsert failed", err);
+        logger.error({ err }, "auth.oauth-upsert-failed");
         return false;
       }
+      // Mutate the user object so jwt({user}) picks these up on first signin.
+      (user as any).id = mongoUser.id;
+      (user as any).role = mongoUser.role;
+      // Best-effort session epoch — Redis failure must not block sign-in.
+      // Falls back to 0 (no revocation) so the user can proceed.
+      try {
+        (user as any).epoch = await getSessionEpoch(mongoUser.id);
+      } catch {
+        (user as any).epoch = 0;
+      }
+      return true;
     },
     async jwt({ token, user }) {
       if (user) {
@@ -322,5 +333,6 @@ export function rolePath(role: Role): string {
   if (role === "recruiter") return "/recruiter/today";
   if (role === "admin") return "/admin/today";
   if (role === "instructor") return "/instructor/today";
+  if (role === "creator") return "/creatordashboard";
   return "/dashboard";
 }

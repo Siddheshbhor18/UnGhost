@@ -19,11 +19,14 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
   const [chips, setChips] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   async function handleFile(file: File) {
     if (file.size > 5 * 1024 * 1024) {
-      alert("Resume must be under 5 MB.");
+      setErrorMsg("Resume must be under 5 MB.");
       return;
     }
+    setErrorMsg(null);
     setFileName(file.name);
     setPhase("scanning");
     setChips([]);
@@ -104,12 +107,18 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
           : "border-white/60",
       )}
     >
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles size={16} className="text-brand-primary" />
-        <p className="text-xs font-semibold text-brand-primary">
+        <div className="flex items-center gap-2 mb-3">
+        <Sparkles size={16} className="text-brand-500" />
+        <p className="text-xs font-semibold text-brand-500">
           Resume Parser
         </p>
       </div>
+
+      {errorMsg && (
+        <div className="mb-3 rounded-lg bg-error-light border border-error/30 px-3 py-2 text-xs text-error font-medium">
+          {errorMsg}
+        </div>
+      )}
 
       {phase === "idle" && (
         <div
@@ -123,15 +132,15 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
           className={clsx(
             "rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition",
             dragOver
-              ? "border-brand-primary bg-brand-primary/5"
-              : "border-brand-ink/15 hover:border-brand-primary/50 hover:bg-white/40",
+              ? "border-brand-500 bg-brand-500/5"
+              : "border-neutral-300 hover:border-brand-500/50 hover:bg-white/40",
           )}
         >
-          <Upload size={28} className="mx-auto text-brand-primary mb-3" />
-          <p className="font-display text-lg font-bold text-brand-ink mb-1">
+          <Upload size={28} className="mx-auto text-brand-500 mb-3" />
+          <p className="font-display text-lg font-bold text-neutral-900 mb-1">
             Drop your resume
           </p>
-          <p className="text-sm text-brand-muted">
+          <p className="text-sm text-neutral-500">
             PDF or DOCX · up to 5 MB · auto-parsed in seconds
           </p>
           <input
@@ -148,39 +157,23 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
       )}
 
       {phase === "scanning" && (
-        <div className="relative rounded-2xl border border-brand-primary/30 p-6 bg-white/50 overflow-hidden">
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-brand-primary to-transparent animate-pulse" />
-          <div
-            className="absolute inset-x-0 h-12 bg-gradient-to-b from-brand-primary/0 via-brand-primary/20 to-brand-primary/0 animate-[scan_2.4s_ease-in-out_infinite]"
-            style={{ animationName: "scan" }}
-          />
-          <style jsx>{`
-            @keyframes scan {
-              0% {
-                transform: translateY(0);
-              }
-              50% {
-                transform: translateY(120%);
-              }
-              100% {
-                transform: translateY(0);
-              }
-            }
-          `}</style>
+        <div className="relative rounded-2xl border border-brand-500/30 p-6 bg-white/50 overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-brand-500 to-transparent animate-pulse" />
+          <div className="absolute inset-x-0 h-12 bg-gradient-to-b from-brand-500/0 via-brand-500/20 to-brand-500/0 animate-scan" />
           <div className="relative flex items-center gap-2 mb-3">
-            <FileText size={16} className="text-brand-primary" />
-            <p className="text-sm font-semibold text-brand-ink truncate">
+            <FileText size={16} className="text-brand-500" />
+            <p className="text-sm font-semibold text-neutral-900 truncate">
               {fileName}
             </p>
           </div>
-          <p className="relative text-xs text-brand-muted mb-3">
+          <p className="relative text-xs text-neutral-500 mb-3">
             Reading skills, history, impact…
           </p>
           <div className="relative flex flex-wrap gap-1.5">
             {chips.map((c) => (
               <span
                 key={c}
-                className="text-[11px] px-2.5 py-1 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 font-semibold animate-[fade-up_0.3s_ease-out]"
+                className="text-[11px] px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-500 border border-brand-500/20 font-semibold animate-scale-in"
               >
                 {c}
               </span>
@@ -190,19 +183,19 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
       )}
 
       {phase === "done" && (
-        <div className="rounded-2xl bg-emerald-500/5 border border-emerald-500/20 p-5">
+        <div className="rounded-2xl bg-success-light border border-success/20 p-5">
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 size={18} className="text-emerald-600" />
-            <p className="font-display text-base font-bold text-brand-ink">
+            <CheckCircle2 size={18} className="text-success" />
+            <p className="font-display text-base font-bold text-neutral-900">
               Parsed — {chips.length} skills detected
             </p>
           </div>
-          <p className="text-xs text-brand-muted mb-4">
+          <p className="text-xs text-neutral-500 mb-4">
             Create an account to see matched missions.
           </p>
           <button
             onClick={() => router.push("/signup?from=resume")}
-            className="btn-brand w-full justify-center"
+            className="btn w-full justify-center btn-primary"
           >
             Continue → create account
           </button>
