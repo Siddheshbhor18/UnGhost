@@ -3,6 +3,7 @@
 import { aiMode, aiProvider } from "@/server/integrations/ai";
 import { emailMode } from "@/server/integrations/email";
 import { paymentsMode } from "@/server/integrations/payments";
+import { razorpayMode } from "@/server/integrations/payments/razorpay";
 import { realtimeMode } from "@/server/integrations/realtime";
 import { jobsMode } from "@/server/integrations/queue";
 import { redisMode } from "@/server/db/redis";
@@ -94,15 +95,22 @@ export function listIntegrations(): IntegrationStatus[] {
     {
       id: "payments",
       label: "Payments",
-      provider: "PhonePe",
-      mode: paymentsMode(),
+      provider:
+        razorpayMode() === "live"
+          ? "Razorpay"
+          : paymentsMode() === "live"
+            ? "PhonePe"
+            : "Razorpay / PhonePe",
+      // Live iff *any* supported gateway has its credentials set. The new
+      // primary is Razorpay; PhonePe is kept hot for grandfathered orders.
+      mode:
+        razorpayMode() === "live" || paymentsMode() === "live" ? "live" : "mock",
       envKeys: [
-        "PHONEPE_MERCHANT_ID",
-        "PHONEPE_SALT_KEY",
-        "PHONEPE_SALT_INDEX",
-        "PHONEPE_BASE_URL",
+        "RAZORPAY_KEY_ID",
+        "RAZORPAY_KEY_SECRET",
+        "RAZORPAY_WEBHOOK_SECRET",
       ],
-      hint: "Add PhonePe credentials to take real bootcamp + sponsorship payments.",
+      hint: "Add Razorpay keys (RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET + RAZORPAY_WEBHOOK_SECRET) to take real course + sponsorship payments.",
     },
     {
       id: "realtime",
