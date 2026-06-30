@@ -32,7 +32,7 @@ type NavItem = { href: string; label: string; exact?: boolean };
 
 const NAV_BY_ROLE: Record<string, NavItem[]> = {
   anon: [
-    { href: "/signup?next=/student/jobs", label: "Jobs" },
+    { href: "/", label: "Who We Are", exact: true },
     { href: "/bootcamps", label: "Bootcamps" },
     { href: "/recruiters", label: "For Recruiters" },
   ],
@@ -197,7 +197,6 @@ export function GlassNavbar() {
                     </GlassButton>
                   </Link>
                 )}
-                {role === "student" ? <NavCartButton /> : null}
                 <NotificationBell />
                 <AccountMenu
                   name={session.user?.name}
@@ -205,6 +204,7 @@ export function GlassNavbar() {
                   image={session.user?.image}
                   role={role}
                 />
+                {role === "student" ? <NavCartButton /> : null}
               </>
             ) : (
               <>
@@ -220,7 +220,6 @@ export function GlassNavbar() {
                     <Sparkles size={13} /> Go Premium
                   </GlassButton>
                 </Link>
-                <NavCartButton />
                 {/* Phones: a compact text link (the button chrome is what
                     overflows the pill beside the logo at ≤375px). sm+: the
                     full glass button. */}
@@ -240,6 +239,7 @@ export function GlassNavbar() {
                     Get started
                   </GlassButton>
                 </Link>
+                <NavCartButton />
               </>
             )}
           </div>
