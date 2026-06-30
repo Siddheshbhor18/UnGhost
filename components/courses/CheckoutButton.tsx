@@ -75,13 +75,17 @@ export function CheckoutButton({
         error?: string;
       };
       if (!orderRes.ok || !order.orderId || !order.keyId) {
-        setStatus({
-          state: "error",
-          message:
-            order.error === "empty_cart"
-              ? "Your cart is empty."
-              : "Couldn't start checkout. Please try again.",
-        });
+        // Server refused the order — surface the specific reason so the
+        // buyer knows what to do instead of seeing a generic "try again".
+        const message =
+          order.error === "empty_cart"
+            ? "Your cart is empty."
+            : order.error === "already_on_plan"
+              ? "You're already on this plan — no charge needed."
+              : order.error === "razorpay_auth_failed"
+                ? "Payments are temporarily unavailable. Please try again shortly."
+                : "Couldn't start checkout. Please try again.";
+        setStatus({ state: "error", message });
         return;
       }
 

@@ -18,13 +18,12 @@ interface Ctx {
 /**
  * POST → enrol the authenticated student in a bootcamp.
  *
- * New subscription model: bootcamps are bundled into the Premium plan.
- *   - premium  → enrol immediately, no charge
- *   - free/pro → 402 "upgrade required" — UI redirects to /upgrade
+ * Bootcamp access is per-course (room) ownership:
+ *   - owns the course (or grandfathered premium) → enrol immediately
+ *   - otherwise → 402; UI sends the buyer to /bootcamps/checkout?course=…
  *
- * Per-bootcamp purchase via the PhonePe webhook is being retired — see
- * api/payments/phonepe/webhook for migration. For the launch, the only
- * path to bootcamp access is the Premium plan.
+ * Course purchases run through the Razorpay flow (see
+ * `/api/payments/razorpay/order` with `kind: "courses"`).
  */
 export async function POST(req: Request, { params }: Ctx) {
   const csrf = requireSameOrigin(req);

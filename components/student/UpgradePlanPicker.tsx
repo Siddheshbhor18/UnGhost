@@ -5,6 +5,7 @@ import clsx from "clsx";
 import {
   PLAN_PRICING,
   GST_PERCENT,
+  planAlreadyCovered,
   type SubscriptionPlan,
   type PurchasableJobsPlan,
 } from "@/shared/types";
@@ -36,13 +37,24 @@ const PAID_FEATURES = [
 /**
  * Jobs-plan picker. Free is the baseline; the two paid plans (₹149 / ₹299) open
  * the Razorpay checkout inline. Bootcamp courses are bought separately on
- * /bootcamps/checkout. Grandfathered premium shows an all-inclusive note.
+ * /bootcamps/checkout. The CTA on each card reflects what the buyer would get:
+ * — the plan they're on shows "Current plan"
+ * — any equal-or-better plan (e.g. jobs_quarterly buyer staring at the Free
+ *   card, or a premium holder looking at jobs plans) shows a non-actionable
+ *   "Included" pill so they can't pay for a downgrade
+ * — anything strictly above the current plan opens the trusted checkout
  */
 export function UpgradePlanPicker({ currentPlan, prefill }: PickerProps) {
   return (
     <div className="grid gap-5 sm:grid-cols-3 max-w-4xl mx-auto">
       <Card title="Free" price="₹0" sub="2 lifetime applications" features={["2 lifetime applications", "Browse all jobs + courses", "Upgrade anytime"]}>
-        <Cta state={currentPlan === "free" ? "current" : "baseline"} />
+        <Cta
+          state={
+            currentPlan === "free"
+              ? "current"
+              : "covered"
+          }
+        />
       </Card>
 
       {JOBS.map(({ plan, title, cadence, badge }) => {
@@ -52,6 +64,7 @@ export function UpgradePlanPicker({ currentPlan, prefill }: PickerProps) {
           gstPercent: GST_PERCENT,
         });
         const isCurrent = currentPlan === plan;
+        const covered = planAlreadyCovered(currentPlan, plan);
         return (
           <Card
             key={plan}
@@ -64,11 +77,15 @@ export function UpgradePlanPicker({ currentPlan, prefill }: PickerProps) {
           >
             {isCurrent ? (
               <Cta state="current" />
+            ) : covered ? (
+              // Buyer is on a higher-rank plan — paying for this would shrink
+              // their access, so we show "Already included" instead of a CTA.
+              <Cta state="covered" />
             ) : (
               <CheckoutButton
                 body={{ kind: "jobs", plan }}
                 description={`unGhost ${title}`}
-                successUrl="/upgrade/success"
+                successUrl={`/upgrade/success?kind=jobs&plan=${plan}`}
                 label={`Get ${title}`}
                 prefill={prefill}
               />
@@ -79,8 +96,8 @@ export function UpgradePlanPicker({ currentPlan, prefill }: PickerProps) {
 
       {currentPlan === "premium" && (
         <p className="sm:col-span-3 text-center text-body-sm text-neutral-500">
-          You're on legacy Premium — unlimited applications, AI Coach, and every
-          bootcamp are included until your plan expires.
+          You&apos;re on legacy Premium — unlimited applications, AI Coach, and
+          every bootcamp are included until your plan expires.
         </p>
       )}
     </div>
@@ -132,17 +149,15 @@ function Card({
   );
 }
 
-function Cta({ state }: { state: "current" | "baseline" }) {
+function Cta({ state }: { state: "current" | "covered" }) {
   return (
     <div
       className={clsx(
         "rounded-xl px-6 py-3.5 text-center text-base font-semibold",
-        state === "current"
-          ? "bg-neutral-100 text-neutral-500"
-          : "bg-neutral-100 text-neutral-700",
+        "bg-neutral-100 text-neutral-500",
       )}
     >
-      {state === "current" ? "Current plan" : "Included"}
+      {state === "current" ? "Current plan" : "Already included"}
     </div>
   );
 }

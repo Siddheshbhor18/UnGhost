@@ -9,6 +9,7 @@
  */
 import {
   PLAN_PRICING,
+  PLAN_RANK,
   PREMIUM_GST_PERCENT,
   PREMIUM_PLAN_DURATION_DAYS,
   GST_PERCENT,
@@ -17,10 +18,12 @@ import {
 import { applyCoupon, computeTotalPaise } from "@/shared/lib/pricing";
 import {
   activateUserPlan,
+  getUserById,
   notify,
   recordProcessedTxn,
   writeAuditLog,
 } from "@/server/store";
+import { effectivePlan } from "@/server/lib/quota";
 import { logger } from "@/server/lib/logger";
 import { checkAndCreateReward } from "@/server/creator/reward.service";
 
@@ -95,6 +98,36 @@ export async function fulfilPremiumPurchase(
       "razorpay.fulfil-already-processed",
     );
     return { ok: true, firstTime: false };
+  }
+
+  // Defense in depth: never overwrite a LIFETIME premium grant with a
+  // fixed-term one. Lifetime users have no `planExpiresAt`; activating an
+  // annual purchase would set one and silently shorten their access.
+  // (Annual → annual re-buys ARE allowed — they extend planExpiresAt, which
+  // is the renewal flow operations may use manually.)
+  const userBefore = await getUserById(input.userId);
+  if (userBefore && userBefore.plan === "premium" && !userBefore.planExpiresAt) {
+    logger.warn(
+      { userId: input.userId, paymentId: input.paymentId, via: input.via },
+      "razorpay.fulfil-skipped-lifetime-overlay",
+    );
+    await writeAuditLog({
+      actorId: input.userId,
+      actorRole: "student",
+      action: "billing.premium.lifetime-preserved",
+      targetType: "user",
+      targetId: input.userId,
+      summary: `Refused to overlay lifetime premium with annual term via ${input.paymentId} (${input.via}). Manual refund required.`,
+    });
+    await notify({
+      userId: input.userId,
+      kind: "system",
+      priority: "high",
+      title: "Payment received — your lifetime access is safe",
+      body: "You already have lifetime Premium. Support will reach out about a refund — your access hasn't changed.",
+      link: "/student/settings",
+    });
+    return { ok: true, firstTime: true };
   }
 
   await activateUserPlan(input.userId, "premium", input.paymentId, {
@@ -199,6 +232,46 @@ export async function fulfilJobsPlan(
   });
   if (!record.firstTime) {
     return { ok: true, firstTime: false };
+  }
+
+  // Defense in depth: the order route already blocks downgrades/sideways
+  // purchases, but an in-flight order created before that gate shipped — or
+  // any future admin-issued order — could still arrive here. Never DOWNGRADE
+  // an existing higher-rank plan. Same-rank arrivals are allowed (treated as
+  // a renewal that extends planExpiresAt). Strictly lower rank → record the
+  // txn (so retries don't loop) and skip the plan write; log loudly so ops
+  // can refund manually.
+  const userBefore = await getUserById(input.userId);
+  const currentPlan = userBefore ? effectivePlan(userBefore) : "free";
+  if (PLAN_RANK[currentPlan] > PLAN_RANK[input.plan]) {
+    logger.warn(
+      {
+        userId: input.userId,
+        currentPlan,
+        paidFor: input.plan,
+        paymentId: input.paymentId,
+        via: input.via,
+      },
+      "razorpay.fulfil-skipped-downgrade",
+    );
+    await writeAuditLog({
+      actorId: input.userId,
+      actorRole: "student",
+      action: "billing.jobs.downgrade-blocked",
+      targetType: "user",
+      targetId: input.userId,
+      summary: `Refused to downgrade ${currentPlan} → ${input.plan} via ${input.provider} ${input.paymentId} (${input.via}). Manual refund required.`,
+    });
+    // Notify the buyer that their payment is held — admin will reconcile.
+    await notify({
+      userId: input.userId,
+      kind: "system",
+      priority: "high",
+      title: "Payment received — no plan change needed",
+      body: `You already have ${currentPlan} access (better than the plan you just paid for). Support will reach out about a refund.`,
+      link: "/student/settings",
+    });
+    return { ok: true, firstTime: true };
   }
 
   await activateUserPlan(input.userId, input.plan, input.paymentId, {

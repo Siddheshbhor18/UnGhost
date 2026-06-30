@@ -416,7 +416,7 @@ function JobCard({
       </button>
 
       <Link
-        href={quotaExhausted ? "/upgrade?to=premium" : `/missions/${job.id}`}
+        href={quotaExhausted ? "/upgrade" : `/missions/${job.id}`}
         className="block h-full"
       >
         <GlassCard interactive className="h-full flex flex-col">
@@ -479,7 +479,7 @@ function JobCard({
                 quotaExhausted ? "text-violet-600" : "text-brand-primary"
               }`}
             >
-              {quotaExhausted ? "Go Premium" : "View & apply"}{" "}
+              {quotaExhausted ? "Upgrade" : "View & apply"}{" "}
               <ArrowRight size={12} />
             </span>
           </div>

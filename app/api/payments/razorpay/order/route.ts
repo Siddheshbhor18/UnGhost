@@ -12,6 +12,8 @@ import { createOrder } from "@/server/integrations/payments/razorpay";
 import { jobsPlanPricing } from "@/server/payments/subscription";
 import { coursesPricing } from "@/server/payments/courses";
 import { isCourseId } from "@/shared/lib/courses";
+import { effectivePlan } from "@/server/lib/quota";
+import { planAlreadyCovered } from "@/shared/types";
 
 export const runtime = "nodejs";
 
@@ -65,6 +67,15 @@ async function postHandler(req: Request) {
   let notes: Record<string, string>;
 
   if (data.kind === "jobs") {
+    const current = effectivePlan(user);
+    if (planAlreadyCovered(current, data.plan)) {
+      // Same plan, sideways, or downgrade — refuse before opening Razorpay
+      // so a paying user never sees a confusing "pay again" modal.
+      return NextResponse.json(
+        { error: "already_on_plan", currentPlan: current },
+        { status: 409 },
+      );
+    }
     const pricing = jobsPlanPricing(data.plan);
     totalInPaise = pricing.totalInPaise;
     notes = { userId: user.id, kind: "jobs", plan: data.plan };

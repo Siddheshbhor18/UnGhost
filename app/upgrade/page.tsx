@@ -18,10 +18,12 @@ interface Props {
 /**
  * /upgrade — student subscription picker.
  *
- * Two tiers: Free and Premium (annual · 1 year). The picker opens the
- * automated Razorpay checkout inline; on success the buyer lands on
- * /upgrade/success?plan=premium. Fulfilment is handled server-side by the
- * verify route + webhook.
+ * Three tiers: Free (baseline), Jobs · 3 months (₹149), Jobs · 1 year (₹299).
+ * The picker disables cards the buyer is already covered by (their own plan
+ * or a higher one) and opens the Razorpay checkout inline for an actual
+ * upgrade. On success the buyer lands on /upgrade/success?kind=jobs&plan=…
+ * (or /bootcamps/checkout?success=1 for course carts). Fulfilment is server-
+ * side via the verify route + webhook.
  */
 export default async function UpgradePage({ searchParams }: Props) {
   const session = await getServerSession(authOptions);

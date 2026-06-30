@@ -594,15 +594,15 @@ export default async function MissionBrief({
                 ) : quotaExhausted ? (
                   <>
                     <Link
-                      href="/upgrade?to=premium"
+                      href="/upgrade"
                       className="btn-brand mt-5 w-full justify-center"
                       style={{ minHeight: 56 }}
                     >
-                      <Sparkles size={16} /> Go Premium to Apply →
+                      <Sparkles size={16} /> Upgrade to Apply →
                     </Link>
                     <p className="text-[11px] text-brand-muted mt-3">
                       You&apos;ve used all {applicationsLimit} free
-                      applications. Premium unlocks unlimited.
+                      applications. A paid plan unlocks unlimited.
                     </p>
                   </>
                 ) : canApply ? (
@@ -692,14 +692,14 @@ export default async function MissionBrief({
                   )}
                   {unlimitedApps ? (
                     <p className="text-[11px] text-emerald-600 font-semibold">
-                      Unlimited · Premium
+                      Unlimited
                     </p>
                   ) : quotaTight ? (
                     <Link
                       href="/upgrade"
                       className="text-xs text-rose-600 font-semibold hover:underline"
                     >
-                      Go Premium for unlimited →
+                      Upgrade for unlimited →
                     </Link>
                   ) : (
                     <p className="text-[11px] text-brand-muted">

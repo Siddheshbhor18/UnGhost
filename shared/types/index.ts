@@ -263,6 +263,37 @@ export const PURCHASABLE_JOBS_PLANS = ["jobs_quarterly", "jobs_annual"] as const
 export type PurchasableJobsPlan = (typeof PURCHASABLE_JOBS_PLANS)[number];
 
 /**
+ * Plan tier rank. Higher rank == strictly more entitlements (applications
+ * window + features). Used to decide whether a checkout request is an
+ * upgrade (allowed) or a sideways/downgrade (blocked — the buyer already
+ * holds equal-or-better coverage).
+ *
+ * Ordering matches the marketing ladder:
+ *   free  <  jobs_quarterly  <  jobs_annual  <  premium (legacy, includes bootcamps)
+ *
+ * Two paid jobs plans differ only by duration: a quarterly buyer who picks
+ * annual is upgrading; an annual buyer who picks quarterly is downgrading.
+ */
+export const PLAN_RANK: Record<SubscriptionPlan, number> = {
+  free: 0,
+  jobs_quarterly: 1,
+  jobs_annual: 2,
+  premium: 3,
+};
+
+/**
+ * True when buying `target` would NOT grant the user anything new — they're
+ * already on `current` or a higher-rank plan. Re-buys and downgrades both
+ * return true, so checkout can refuse a charge that wouldn't change access.
+ */
+export function planAlreadyCovered(
+  current: SubscriptionPlan,
+  target: SubscriptionPlan,
+): boolean {
+  return PLAN_RANK[current] >= PLAN_RANK[target];
+}
+
+/**
  * Premium is priced **exclusive of tax**. `amountINR` above is the base; this
  * GST is added on top and collected from the buyer at checkout.
  */

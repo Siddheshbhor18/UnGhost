@@ -66,3 +66,35 @@ describe("ownsCourse", () => {
     expect(ownsCourse(u, "sales")).toBe(false);
   });
 });
+
+import { PLAN_RANK, planAlreadyCovered } from "@/shared/types";
+
+describe("PLAN_RANK + planAlreadyCovered", () => {
+  it("ranks tiers in marketing order: free < quarterly < annual < premium", () => {
+    expect(PLAN_RANK.free).toBeLessThan(PLAN_RANK.jobs_quarterly);
+    expect(PLAN_RANK.jobs_quarterly).toBeLessThan(PLAN_RANK.jobs_annual);
+    expect(PLAN_RANK.jobs_annual).toBeLessThan(PLAN_RANK.premium);
+  });
+
+  it("returns false when the target is strictly higher (upgrade allowed)", () => {
+    expect(planAlreadyCovered("free", "jobs_quarterly")).toBe(false);
+    expect(planAlreadyCovered("free", "jobs_annual")).toBe(false);
+    expect(planAlreadyCovered("free", "premium")).toBe(false);
+    expect(planAlreadyCovered("jobs_quarterly", "jobs_annual")).toBe(false);
+    expect(planAlreadyCovered("jobs_quarterly", "premium")).toBe(false);
+    expect(planAlreadyCovered("jobs_annual", "premium")).toBe(false);
+  });
+
+  it("returns true on same-tier (re-buy / renewal — blocked at order route, allowed at fulfilment)", () => {
+    expect(planAlreadyCovered("jobs_quarterly", "jobs_quarterly")).toBe(true);
+    expect(planAlreadyCovered("jobs_annual", "jobs_annual")).toBe(true);
+    expect(planAlreadyCovered("premium", "premium")).toBe(true);
+    expect(planAlreadyCovered("free", "free")).toBe(true);
+  });
+
+  it("returns true on downgrade", () => {
+    expect(planAlreadyCovered("jobs_annual", "jobs_quarterly")).toBe(true);
+    expect(planAlreadyCovered("premium", "jobs_quarterly")).toBe(true);
+    expect(planAlreadyCovered("premium", "jobs_annual")).toBe(true);
+  });
+});

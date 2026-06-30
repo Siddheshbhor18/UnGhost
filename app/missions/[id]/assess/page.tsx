@@ -94,7 +94,7 @@ export default function AssessmentPage() {
           if (!isRetry && quotaRes.ok) {
             const q = await quotaRes.json();
             if (q && q.allowed === false) {
-              router.replace("/upgrade?to=premium");
+              router.replace("/upgrade");
               return;
             }
           }
@@ -211,7 +211,7 @@ export default function AssessmentPage() {
         return;
       }
       if (res.status === 402 && data.error === "quota_exceeded") {
-        router.push("/upgrade?to=premium");
+        router.push("/upgrade");
         return;
       }
       // job_inactive, profile_incomplete, or anything else → back to the

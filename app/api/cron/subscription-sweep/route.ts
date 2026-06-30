@@ -51,8 +51,8 @@ async function handler(req: Request) {
       kind: "plan_activated",
       priority: "high",
       title: "Your paid plan has expired",
-      body: "You're now on Free (2 lifetime applications). Go Premium for unlimited applications + AI Coach.",
-      link: "/upgrade?to=premium",
+      body: "You're now on Free (2 lifetime applications). Upgrade to keep unlimited applications + AI Coach.",
+      link: "/upgrade",
     });
     await writeAuditLog({
       actorId: userId,
@@ -75,7 +75,7 @@ async function handler(req: Request) {
       priority: "normal",
       title: "Paid plan expiring soon",
       body: `Your paid plan ends ${user.planExpiresAt ?? "soon"}. Renew now to keep your applications + AI Coach.`,
-      link: "/upgrade?to=premium",
+      link: "/upgrade",
     });
   }
 

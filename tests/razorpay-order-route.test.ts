@@ -18,6 +18,7 @@ import { UserModel } from "@/server/db/models";
 import { __addAllowedHost } from "@/server/lib/csrf";
 import { jobsPlanPricing } from "@/server/payments/subscription";
 import { coursesPricing } from "@/server/payments/courses";
+import { PLAN_PRICING } from "@/shared/types";
 
 __addAllowedHost("test.local");
 
@@ -256,5 +257,122 @@ describe("POST /api/payments/razorpay/order — server-side pricing", () => {
     const data = (await res.json()) as { error: string; reason: string };
     expect(data.error).toBe("order_create_failed");
     expect(data.reason).toBe("internal_server_error");
+  });
+});
+
+describe("POST /api/payments/razorpay/order — already-paid guard", () => {
+  // Premium and jobs_annual both outrank jobs_quarterly. Premium also
+  // outranks jobs_annual (rank: free 0 < jobs_quarterly 1 < jobs_annual 2
+  // < premium 3). A buyer on a higher-rank plan can't sideways/downgrade
+  // into Razorpay — the route rejects with 409 and never calls the gateway.
+  async function makeStudentOnPlan(
+    id: string,
+    plan: "jobs_quarterly" | "jobs_annual" | "premium",
+  ): Promise<void> {
+    await UserModel.create({
+      _id: id,
+      email: `${id}@x.test`,
+      role: "student",
+      name: "Holder",
+      plan,
+      planType: plan === "premium" ? "lifetime" : PLAN_PRICING[plan].cadence,
+      planExpiresAt:
+        plan === "premium"
+          ? undefined
+          : new Date(Date.now() + 30 * 86_400_000).toISOString(),
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  it("409s a jobs_quarterly holder trying to re-buy jobs_quarterly", async () => {
+    await makeStudentOnPlan("u_dup_q", "jobs_quarterly");
+    asUser({ id: "u_dup_q", role: "student" });
+    const res = await POST(
+      post({ kind: "jobs", plan: "jobs_quarterly" }),
+      undefined,
+    );
+    expect(res.status).toBe(409);
+    const data = (await res.json()) as { error: string; currentPlan: string };
+    expect(data.error).toBe("already_on_plan");
+    expect(data.currentPlan).toBe("jobs_quarterly");
+    expect(calls).toHaveLength(0); // never reaches Razorpay
+  });
+
+  it("409s a jobs_annual holder trying to downgrade to jobs_quarterly", async () => {
+    await makeStudentOnPlan("u_down", "jobs_annual");
+    asUser({ id: "u_down", role: "student" });
+    const res = await POST(
+      post({ kind: "jobs", plan: "jobs_quarterly" }),
+      undefined,
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("already_on_plan");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("409s a legacy premium holder trying to buy any jobs plan", async () => {
+    await makeStudentOnPlan("u_prem", "premium");
+    asUser({ id: "u_prem", role: "student" });
+    for (const plan of ["jobs_quarterly", "jobs_annual"] as const) {
+      const res = await POST(post({ kind: "jobs", plan }), undefined);
+      expect(res.status).toBe(409);
+      expect((await res.json()).error).toBe("already_on_plan");
+    }
+    expect(calls).toHaveLength(0);
+  });
+
+  it("ALLOWS a jobs_quarterly holder to upgrade to jobs_annual", async () => {
+    await makeStudentOnPlan("u_up", "jobs_quarterly");
+    asUser({ id: "u_up", role: "student" });
+    const expected = jobsPlanPricing("jobs_annual");
+    nextResponse = {
+      status: 200,
+      body: { id: "order_up", amount: expected.totalInPaise, currency: "INR" },
+    };
+    const res = await POST(post({ kind: "jobs", plan: "jobs_annual" }), undefined);
+    expect(res.status).toBe(200);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("ALLOWS a free user to buy any jobs plan", async () => {
+    await makeStudent("u_free_buy");
+    asUser({ id: "u_free_buy", role: "student" });
+    const expected = jobsPlanPricing("jobs_quarterly");
+    nextResponse = {
+      status: 200,
+      body: { id: "order_free", amount: expected.totalInPaise, currency: "INR" },
+    };
+    const res = await POST(
+      post({ kind: "jobs", plan: "jobs_quarterly" }),
+      undefined,
+    );
+    expect(res.status).toBe(200);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("treats an EXPIRED paid plan as free — re-buy is allowed", async () => {
+    // Plans lapse via effectivePlan() once planExpiresAt is in the past.
+    await UserModel.create({
+      _id: "u_lapsed",
+      email: "l@x.test",
+      role: "student",
+      name: "Lapsed",
+      plan: "jobs_quarterly",
+      planType: "quarterly",
+      planExpiresAt: new Date(Date.now() - 86_400_000).toISOString(),
+      createdAt: new Date().toISOString(),
+    });
+    asUser({ id: "u_lapsed", role: "student" });
+    const expected = jobsPlanPricing("jobs_quarterly");
+    nextResponse = {
+      status: 200,
+      body: { id: "order_lapsed", amount: expected.totalInPaise, currency: "INR" },
+    };
+    const res = await POST(
+      post({ kind: "jobs", plan: "jobs_quarterly" }),
+      undefined,
+    );
+    expect(res.status).toBe(200);
+    expect(calls).toHaveLength(1);
   });
 });

@@ -266,12 +266,16 @@ export function SettingsClient({ user }: Props) {
 }
 
 /**
- * Subscription block — shows the current plan (Free or Premium) and the
- * upgrade action. Premium is an annual plan; grandfathered launch buyers
- * (no planExpiresAt) keep lifetime access.
+ * Subscription block — shows the current plan (Free, Jobs · 3 months,
+ * Jobs · 1 year, or legacy Premium) and the upgrade action. Jobs plans are
+ * time-bound; grandfathered launch Premium buyers (no planExpiresAt) keep
+ * lifetime access. The upgrade CTA hides for any paid tier so a paying user
+ * never sees a button that would charge them again.
  */
 function SubscriptionCard({ user }: { user: User }) {
-  const isPremium = (user.plan ?? "free") === "premium";
+  const plan = user.plan ?? "free";
+  const isPremium = plan === "premium";
+  const isPaid = plan !== "free";
   const isLifetime = isPremium && !user.planExpiresAt;
   const renewsOn = user.planExpiresAt
     ? new Date(user.planExpiresAt).toLocaleDateString("en-IN", {
@@ -281,6 +285,24 @@ function SubscriptionCard({ user }: { user: User }) {
       })
     : null;
 
+  const planLabel = isPremium
+    ? isLifetime
+      ? "Premium · lifetime"
+      : "Premium · 1 year"
+    : plan === "jobs_quarterly"
+      ? "Jobs · 3 months"
+      : plan === "jobs_annual"
+        ? "Jobs · 1 year"
+        : "Free · trial";
+
+  const planBody = isPremium
+    ? isLifetime
+      ? "Unlimited applications · AI Coach · all bootcamps · forever."
+      : `Unlimited applications · AI Coach · all bootcamps. Access until ${renewsOn}.`
+    : isPaid
+      ? `Unlimited applications · AI Coach · Q&A. Renews ${renewsOn ?? "soon"}.`
+      : "2 lifetime applications. Upgrade to unlock unlimited access.";
+
   return (
     <GlassCard>
       <p className="text-[10px] uppercase tracking-wider text-brand-primary font-semibold mb-3 flex items-center gap-1.5">
@@ -289,25 +311,15 @@ function SubscriptionCard({ user }: { user: User }) {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="font-display font-bold text-brand-ink">
-            {isPremium
-              ? isLifetime
-                ? "Premium · lifetime"
-                : "Premium · 1 year"
-              : "Free · trial"}{" "}
-            <GlassBadge tone={isPremium ? "brand" : "neutral"} className="ml-1">
+            {planLabel}{" "}
+            <GlassBadge tone={isPaid ? "brand" : "neutral"} className="ml-1">
               current
             </GlassBadge>
           </p>
-          <p className="text-xs text-brand-muted mt-0.5">
-            {isPremium
-              ? isLifetime
-                ? "Unlimited applications · AI Coach · all bootcamps · forever."
-                : `Unlimited applications · AI Coach · all bootcamps. Access until ${renewsOn}.`
-              : "2 lifetime applications. Upgrade to Premium for unlimited access."}
-          </p>
+          <p className="text-xs text-brand-muted mt-0.5">{planBody}</p>
         </div>
         <div className="flex gap-2">
-          {isPremium ? (
+          {isPaid ? (
             <a href="/dashboard" className="text-xs font-semibold text-brand-primary">
               Open dashboard →
             </a>

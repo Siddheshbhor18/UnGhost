@@ -3,7 +3,7 @@ import { Briefcase } from "lucide-react";
 
 interface StatBarProps {
   applicationsUsed: number;
-  /** Cap under the user's plan. `-1` means unlimited (Premium). */
+  /** Cap under the user's plan. `-1` means unlimited (any paid tier). */
   applicationsLimit: number;
 }
 
@@ -29,14 +29,14 @@ export function StatBar({ applicationsUsed, applicationsLimit }: StatBarProps) {
       </span>
       {unlimited ? (
         <span className="text-xs font-semibold text-emerald-600">
-          Unlimited · Premium
+          Unlimited
         </span>
       ) : quotaTight ? (
         <Link
           href="/upgrade"
           className="text-xs font-semibold text-rose-600 hover:underline"
         >
-          Go Premium for unlimited →
+          Upgrade for unlimited →
         </Link>
       ) : (
         <span className="text-xs text-brand-muted">Free tier</span>
