@@ -6,7 +6,6 @@ import { requireSameOrigin } from "@/server/lib/csrf";
 import { parseBody } from "@/server/lib/validate";
 import { withRateLimit } from "@/server/lib/with-rate-limit";
 import { withApiErrorTracking } from "@/server/lib/api-error";
-import { emailMatchesCompanyDomain } from "@/server/lib/email-domain";
 import {
   createJob,
   listJobs,
@@ -100,13 +99,10 @@ async function handler(req: Request) {
     );
   }
 
-  // Hybrid go-live: a verified company, or a recruiter whose work email matches
-  // the company's registered domain, publishes instantly. Everyone else is
-  // held (active:false) for admin approval so fake jobs don't reach students.
-  const trusted =
-    company.verified === true ||
-    emailMatchesCompanyDomain(user.email, company.domain);
-
+  // Recruiter onboarding is now self-serve (no admin approval), so jobs from a
+  // linked, active, non-suspended recruiter publish instantly. Spam/abuse is
+  // bounded by the per-recruiter rate limit below + the company-suspension gate
+  // above rather than a pre-publish review queue.
   const job = await createJob({
     companyId: b.companyId,
     recruiterId: session.user.id,
@@ -121,24 +117,21 @@ async function handler(req: Request) {
     salaryMax: b.salaryMax,
     experienceMin: b.experienceMin,
     experienceMax: b.experienceMax,
-    active: trusted,
+    active: true,
   });
 
   void writeAuditLog({
     actorId: user.id,
     actorRole: "recruiter",
-    action: trusted ? "jobs.create-live" : "jobs.create-pending",
+    action: "jobs.create-live",
     targetType: "job",
     targetId: job.id,
-    summary: `Job "${b.title}" ${trusted ? "published" : "held for approval"} (company ${company.id})`,
+    summary: `Job "${b.title}" published (company ${company.id})`,
   }).catch(() => {
     /* audit failure must not block job creation */
   });
 
-  return NextResponse.json(
-    { ...job, pendingApproval: !trusted },
-    { status: 201 },
-  );
+  return NextResponse.json({ ...job, pendingApproval: false }, { status: 201 });
 }
 
 // Rate limited per recruiter — 20 job posts/min is generous for a real user

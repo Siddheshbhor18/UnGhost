@@ -2,17 +2,12 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { authOptions } from "@/server/auth";
-import { getUserById, countPremiumUsers } from "@/server/store";
+import { getUserById } from "@/server/store";
 import { effectivePlan } from "@/server/lib/quota";
 import { GlassNavbar } from "@/components/glass";
 import { BackdropMesh } from "@/components/ui";
 import { UpgradePlanPicker } from "@/components/student/UpgradePlanPicker";
-import {
-  PLAN_LIMITS,
-  PLAN_PRICING,
-  PREMIUM_GST_PERCENT,
-  PREMIUM_LIFETIME_SEATS,
-} from "@/shared/types";
+import { PLAN_LIMITS, PLAN_PRICING, PREMIUM_GST_PERCENT } from "@/shared/types";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +18,10 @@ interface Props {
 /**
  * /upgrade — student subscription picker.
  *
- * Two tiers: Free and Premium (one-time lifetime). The picker POSTs to
- * /api/billing/checkout which mints a PhonePe order and redirects the
- * browser to the provider redirectUrl. After success the user lands on
- * /upgrade/success?plan=premium.
+ * Two tiers: Free and Premium (annual · 1 year). The picker opens the
+ * automated Razorpay checkout inline; on success the buyer lands on
+ * /upgrade/success?plan=premium. Fulfilment is handled server-side by the
+ * verify route + webhook.
  */
 export default async function UpgradePage({ searchParams }: Props) {
   const session = await getServerSession(authOptions);
@@ -42,12 +37,6 @@ export default async function UpgradePage({ searchParams }: Props) {
   const currentPlan = effectivePlan(user);
   const errorCode = searchParams.error;
 
-  const premiumBaseInPaise = PLAN_PRICING.premium.amountINR * 100;
-
-  // Launch offer: ₹4,999 lifetime is limited to the first N premium buyers.
-  const premiumCount = currentPlan === "premium" ? 0 : await countPremiumUsers();
-  const seatsLeft = Math.max(0, PREMIUM_LIFETIME_SEATS - premiumCount);
-  const offerClosed = currentPlan !== "premium" && seatsLeft <= 0;
 
   return (
     <div className="relative min-h-screen">
@@ -63,7 +52,7 @@ export default async function UpgradePage({ searchParams }: Props) {
             <span className="font-medium text-neutral-900">
               {PLAN_PRICING[currentPlan].label}
             </span>
-            . Upgrade once, hire forever.
+            . Plans below; bootcamp courses are bought separately.
           </p>
           {errorCode ? (
             <p className="mt-5 inline-block rounded-full bg-red-50 text-red-700 text-body-sm px-4 py-2">
@@ -75,11 +64,11 @@ export default async function UpgradePage({ searchParams }: Props) {
 
         <UpgradePlanPicker
           currentPlan={currentPlan}
-          recommended={searchParams.to === "premium" ? "premium" : null}
-          premiumBaseInPaise={premiumBaseInPaise}
-          gstPercent={PREMIUM_GST_PERCENT}
-          offerClosed={offerClosed}
-          seatsLeft={currentPlan === "premium" ? null : seatsLeft}
+          prefill={{
+            name: user.name ?? undefined,
+            email: user.email ?? undefined,
+            contact: user.profile?.contactPhone ?? undefined,
+          }}
         />
 
         <div className="mt-14 text-center">
@@ -100,8 +89,8 @@ export default async function UpgradePage({ searchParams }: Props) {
             body={`${PLAN_LIMITS.free.applicationCap.kind === "trial" ? PLAN_LIMITS.free.applicationCap.count : 0} lifetime applications. No card needed.`}
           />
           <FeatureRow
-            title="Premium · lifetime"
-            body="Unlimited applications + AI Coach + every bootcamp included. Pay once."
+            title="Bootcamp courses"
+            body="₹5,000 per course · ₹11,999 for all six. Bought separately on the courses page."
           />
         </section>
       </main>

@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { Briefcase, GraduationCap } from "lucide-react";
+import { Briefcase, GraduationCap, Trophy } from "lucide-react";
 import { authOptions } from "@/server/auth";
 import {
   GlassNavbar,
@@ -25,7 +26,10 @@ import {
   maybeRunSlaSweep,
 } from "@/server/store";
 import { computeMatchScore } from "@/server/lib/matching";
-import { canonicalizeSkills } from "@/server/lib/skill-canon";
+import {
+  canonicalizeSkills,
+  canonicalizeSkillsWarm,
+} from "@/server/lib/skill-canon";
 import { computeCompleteness } from "@/server/lib/profile-completeness";
 import { effectivePlan } from "@/server/lib/quota";
 import { PLAN_LIMITS } from "@/shared/types";
@@ -51,14 +55,14 @@ export default async function DashboardPage() {
   }
 
   // Cheap, throttled SLA sweep — fires breach/warning notifications so the
-  // student lands with fresh state. Throttled to 60s. Run it CONCURRENTLY with
-  // the page's data fetch (was a blocking pre-step that added a full
-  // applications-collection scan to the critical path on every cold start).
-  // The cron at /api/cron/sla-sweep is the durable mechanism; this is a
-  // best-effort top-up. Worst case is a one-render staleness for the single
-  // request that trips the throttle — corrected on the next load.
+  // student lands with fresh state. Throttled to 60s. Fire-and-forget so the
+  // applications-collection scan never gates the dashboard render: the cron at
+  // /api/cron/sla-sweep is the durable mechanism, this is only a best-effort
+  // top-up. Worst case is a one-render staleness — corrected on the next load.
+  void maybeRunSlaSweep().catch(() => {
+    /* best-effort top-up; the cron is the source of truth */
+  });
   const [
-    ,
     user,
     apps,
     allJobs,
@@ -70,7 +74,6 @@ export default async function DashboardPage() {
     savedJobs,
     upcomingLive,
   ] = await Promise.all([
-    maybeRunSlaSweep(),
     getUserById(session.user.id),
     listApplicationsByStudent(session.user.id),
     listJobs(),
@@ -97,11 +100,18 @@ export default async function DashboardPage() {
   // Canonicalize student + verified + all job skills once (one cached batch),
   // then score each job on the canonical forms (skills/experience/location).
   const verifiedSkills = user?.profile?.verifiedSkills ?? [];
-  const skillCanon = await canonicalizeSkills([
+  const allSkillStrings = [
     ...studentSkills,
     ...verifiedSkills,
     ...jobs.flatMap((j) => j.skills),
-  ]);
+  ];
+  // Cache-only on the render path so we never block on LLM latency; misses use
+  // the deterministic identity match (same as the no-key fallback). Warm the
+  // cache in the background so subsequent loads get the canonical merges.
+  const skillCanon = await canonicalizeSkills(allSkillStrings, undefined, {
+    cacheOnly: true,
+  });
+  canonicalizeSkillsWarm(allSkillStrings);
   const jobsWithMatch = jobs.map((j) => ({
     ...j,
     matchPct: user?.profile ? computeMatchScore(user.profile, j, skillCanon) : 0,
@@ -165,6 +175,13 @@ export default async function DashboardPage() {
               })}
             </p>
           </div>
+          <Link
+            href="/competitions"
+            className="btn-brand btn-md inline-flex items-center gap-2 comp-attn"
+          >
+            <Trophy size={16} />
+            Enter Competition
+          </Link>
         </div>
 
         {/* Daily Briefing */}

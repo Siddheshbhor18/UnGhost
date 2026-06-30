@@ -361,8 +361,8 @@ function FrameSLA() {
             </div>
           </div>
           <motion.div
-            initial={{ scale: 0, rotate: -20 }}
-            animate={{ scale: 1, rotate: 0 }}
+            initial={{ scale: 0.95, opacity: 0, rotate: -20 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
             transition={{
               delay: 0.4,
               type: "spring",
@@ -427,7 +427,7 @@ function FrameReply() {
         </motion.div>
       </div>
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{
           delay: 0.5,

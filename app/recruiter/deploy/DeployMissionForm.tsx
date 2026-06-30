@@ -145,15 +145,11 @@ export default function DeployMissionForm({ companyId }: { companyId: string }) 
       setLaunching(false);
       return;
     }
-    const body = await res.json().catch(() => ({}));
+    await res.json().catch(() => ({}));
     await new Promise((r) => setTimeout(r, 900));
-    // Held for approval (unverified company / non-matching work email) → tell
-    // the recruiter it's pending instead of pretending it's live.
-    router.push(
-      body?.pendingApproval
-        ? "/recruiter/command?pending=1"
-        : "/recruiter/command",
-    );
+    // Jobs now publish instantly (no admin approval), so always land on the
+    // live pipeline.
+    router.push("/recruiter/command");
   }
 
   return (

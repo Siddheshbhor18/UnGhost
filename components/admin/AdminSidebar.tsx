@@ -24,6 +24,9 @@ import {
   Wallet,
   Radio,
   Video,
+  Sparkles,
+  Coins,
+  Banknote,
 } from "lucide-react";
 import { Logo, GlassBadge } from "@/components/glass";
 
@@ -47,6 +50,9 @@ const NAV = [
   { href: "/admin/telemetry", label: "Telemetry", icon: TrendingUp },
   { href: "/admin/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/admin/partners", label: "Partners", icon: Handshake },
+  { href: "/admin/creators", label: "Creators", icon: Sparkles },
+  { href: "/admin/rewards", label: "Creator rewards", icon: Coins },
+  { href: "/admin/payouts", label: "Creator payouts", icon: Banknote },
   { href: "/admin/integrations", label: "Integrations", icon: Plug },
 ];
 

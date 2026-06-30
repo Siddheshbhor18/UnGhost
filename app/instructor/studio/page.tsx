@@ -31,10 +31,12 @@ import {
   Briefcase,
   ArrowLeft,
   ArrowRight,
+  Workflow,
 } from "lucide-react";
 
 const ROOM_ICON: Record<BootcampCategory, React.ReactNode> = {
   ai: <Brain size={22} />,
+  gtm: <Workflow size={22} />,
   marketing: <Megaphone size={22} />,
   sales: <Handshake size={22} />,
   entrepreneurship: <Rocket size={22} />,

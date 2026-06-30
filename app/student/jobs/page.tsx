@@ -14,6 +14,8 @@ import { computeMatchScore } from "@/server/lib/matching";
 import { canonicalizeSkills } from "@/server/lib/skill-canon";
 import { checkApplyQuota } from "@/server/lib/quota";
 import { JobsExplorer } from "@/components/student/JobsExplorer";
+import { JobsPricingStrip } from "@/components/student/JobsPricingStrip";
+import { effectivePlan } from "@/server/lib/quota";
 
 export default async function StudentJobsPage() {
   const session = await getServerSession(authOptions);
@@ -69,6 +71,19 @@ export default async function StudentJobsPage() {
             companies. Filter, shortlist, and apply — every role is SLA-bound.
           </p>
         </div>
+
+        {user ? (
+          <JobsPricingStrip
+            quotaExhausted={quotaExhausted}
+            onPaidPlan={effectivePlan(user) !== "free"}
+            freeUsage={
+              quota && quota.windowKind === "trial"
+                ? { used: quota.cap - quota.remaining, limit: quota.cap }
+                : undefined
+            }
+          />
+        ) : null}
+
 
         <JobsExplorer
           jobs={jobsWithMatch}

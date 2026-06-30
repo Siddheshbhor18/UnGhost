@@ -39,7 +39,9 @@ function isExemptPath(pathname: string): boolean {
   return (
     pathname === "/login" ||
     pathname === "/signup" ||
-    pathname.startsWith("/api/auth/")
+    pathname.startsWith("/api/auth/") ||
+    // Public creator referral entry — anonymous, no revocation gate.
+    pathname.startsWith("/r/")
   );
 }
 

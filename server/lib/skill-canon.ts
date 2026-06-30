@@ -33,6 +33,7 @@ const cacheKey = (k: string) => `skillcanon:v1:${k}`;
 export async function canonicalizeSkills(
   skills: string[],
   adapter?: AIAdapter,
+  opts?: { cacheOnly?: boolean },
 ): Promise<Map<string, string>> {
   const out = new Map<string, string>();
 
@@ -64,8 +65,12 @@ export async function canonicalizeSkills(
   );
 
   // 2. Resolve misses in one batched adapter call.
+  // `cacheOnly` callers (e.g. the dashboard render path) skip the LLM entirely
+  // so the request never blocks on model latency — misses fall through to the
+  // identity match below, exactly like the no-API-key / failure fallback. A
+  // background warm (see canonicalizeSkillsWarm) fills the cache for next time.
   const misses = keyList.filter((k) => !resolved.has(k));
-  if (misses.length > 0) {
+  if (misses.length > 0 && !opts?.cacheOnly) {
     const a = adapter ?? (await import("@/server/integrations/ai")).getAI();
     const knownCanon = [...new Set(resolved.values())];
     try {
@@ -100,4 +105,17 @@ export async function canonicalizeSkills(
     out.set(s, resolved.get(k) ?? k);
   }
   return out;
+}
+
+/**
+ * Fire-and-forget cache warm. Resolves any uncached skills via the LLM and
+ * writes them to Redis WITHOUT blocking the caller. Pair it with a
+ * `cacheOnly: true` read on the critical path: this render uses cached/identity
+ * values instantly, and the next render finds the freshly-warmed canon. Never
+ * throws.
+ */
+export function canonicalizeSkillsWarm(skills: string[]): void {
+  void canonicalizeSkills(skills).catch(() => {
+    /* best-effort — the cacheOnly read already returned a usable map */
+  });
 }

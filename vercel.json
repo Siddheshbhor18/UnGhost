@@ -17,6 +17,14 @@
     {
       "path": "/api/cron/inmail-refund-sweep",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/referral-session-sweep",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/reward-reconcile",
+      "schedule": "0 6 * * *"
     }
   ]
 }

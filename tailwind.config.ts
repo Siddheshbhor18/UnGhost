@@ -7,6 +7,7 @@ import type { Config } from "tailwindcss";
  * components continue to render during the migration.
  */
 const config: Config = {
+  darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -92,12 +93,12 @@ const config: Config = {
 
       // ── TYPOGRAPHY ──────────────────────────────────────────────
       fontFamily: {
-        // Display: Inter Display (we use Inter w/ optical sizing axis)
-        display: ["var(--font-inter-display)", "var(--font-inter)", "system-ui", "sans-serif"],
+        // Display: Geist Sans
+        display: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         // Body / UI
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         // Code / data
-        mono: ["var(--font-jetbrains)", "ui-monospace", "monospace"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
         // Legacy
         pixel: ["var(--font-press-start)", "monospace"],
       },
@@ -155,12 +156,12 @@ const config: Config = {
       // ── BORDER RADIUS (8 tokens) ────────────────────────────────
       borderRadius: {
         none: "0",
-        sm: "6px",
-        md: "10px",
-        lg: "14px",
-        xl: "20px",
-        "2xl": "28px",
-        "3xl": "40px",
+        sm: "4px",
+        md: "8px",
+        lg: "12px",
+        xl: "16px",
+        "2xl": "20px",
+        "3xl": "24px",
         full: "9999px",
       },
 

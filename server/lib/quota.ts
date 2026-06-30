@@ -12,16 +12,47 @@
  *   - checkApplyQuota(user) → { allowed, remaining, reason? }
  */
 import { ApplicationModel } from "@/server/db/models";
-import type { SubscriptionPlan, User } from "@/shared/types";
+import type { SubscriptionPlan, User, BootcampCategory } from "@/shared/types";
 import { PLAN_LIMITS } from "@/shared/types";
 
 /**
- * Returns the user's *effective* plan. Two tiers only: premium (lifetime) or
- * free. Anything that isn't an active premium — including any legacy "pro"
- * value still sitting on an old record — collapses to free.
+ * Returns the user's *effective* plan. Two tiers only: premium or free.
+ * Anything that isn't an active premium — including any legacy "pro" value
+ * still sitting on an old record — collapses to free.
+ *
+ * Annual premium carries a `planExpiresAt`; we enforce it here so access is
+ * revoked the instant the term ends rather than waiting for the daily
+ * subscription-sweep cron (defense in depth — the sweep still runs to do the
+ * DB cleanup + lapse notification). Grandfathered launch buyers ("lifetime")
+ * have NO `planExpiresAt`, so they skip the check and stay premium forever.
  */
-export function effectivePlan(user: Pick<User, "plan" | "planExpiresAt" | "planType">): SubscriptionPlan {
-  return user.plan === "premium" ? "premium" : "free";
+export function effectivePlan(
+  user: Pick<User, "plan" | "planExpiresAt" | "planType">,
+): SubscriptionPlan {
+  const plan = user.plan ?? "free";
+  if (plan === "free") return "free";
+  // Any paid plan (jobs_quarterly / jobs_annual / legacy premium) lapses to
+  // free once its term ends. Grandfathered premium with no expiry stays.
+  if (user.planExpiresAt && Date.parse(user.planExpiresAt) <= Date.now()) {
+    return "free";
+  }
+  return plan;
+}
+
+/**
+ * Bootcamp access is now per-course (room) ownership, NOT a plan bundle —
+ * except grandfathered premium, which still includes every bootcamp until it
+ * expires (`bootcampsIncluded`). `courseId` is the bootcamp's room/category.
+ */
+export function ownsCourse(
+  user: Pick<User, "plan" | "planExpiresAt" | "planType" | "ownedCourses">,
+  courseId: BootcampCategory,
+): boolean {
+  if (PLAN_LIMITS[effectivePlan(user)].bootcampsIncluded) return true;
+  const now = Date.now();
+  return (user.ownedCourses ?? []).some(
+    (g) => g.course === courseId && Date.parse(g.expiresAt) > now,
+  );
 }
 
 export function planAllowsCoach(user: User): boolean {

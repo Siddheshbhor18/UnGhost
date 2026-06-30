@@ -41,6 +41,7 @@ import {
   UserModel,
   unwrap,
   unwrapAll,
+  type ProcessedTxn,
 } from "@/server/db/models";
 import type {
   AICoachConversation,
@@ -76,8 +77,12 @@ import type {
   SponsorshipStatus,
   Stage,
   User,
+  SubscriptionPlan,
+  BootcampCategory,
+  CourseGrant,
 } from "@/shared/types";
 import { PLAN_PRICING } from "@/shared/types";
+import { COURSE_DURATION_DAYS } from "@/shared/lib/courses";
 
 async function db() {
   await connectMongo();
@@ -318,13 +323,18 @@ export async function markEmailVerified(userId: string): Promise<void> {
 /**
  * Activate a student's subscription plan.
  *
- * For `premium` (lifetime), no expiry is set.
+ * For `premium`:
+ *   - pass `opts.durationDays` (e.g. 365) to grant an **annual** term —
+ *     sets `planType: "annual"` + a `planExpiresAt` the sweep enforces.
+ *   - omit it to grant **lifetime** access (grandfathered launch buyers) —
+ *     no `planExpiresAt`, so the sweep never demotes them.
  * For `free`, all plan fields are cleared.
  */
 export async function activateUserPlan(
   userId: string,
-  plan: "free" | "premium",
+  plan: SubscriptionPlan,
   txnId?: string,
+  opts?: { durationDays?: number },
 ): Promise<void> {
   await db();
   const now = new Date();
@@ -338,12 +348,34 @@ export async function activateUserPlan(
     );
     return;
   }
-  // premium — lifetime, no expiry
+  // Fixed-term plan (jobs_quarterly 90d / jobs_annual 365d / annual premium).
+  // planType mirrors the plan's cadence; the daily sweep enforces planExpiresAt.
+  if (opts?.durationDays && opts.durationDays > 0) {
+    const expiresAt = new Date(
+      now.getTime() + opts.durationDays * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    await UserModel.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          plan,
+          planType: PLAN_PRICING[plan].cadence,
+          planActivatedAt: now.toISOString(),
+          planExpiresAt: expiresAt,
+          lastBillingTxnId: txnId,
+          // A fresh purchase un-cancels any prior renewal opt-out.
+          planRenewalCancelled: false,
+        },
+      },
+    );
+    return;
+  }
+  // Lifetime, no expiry — grandfathered launch buyers only.
   await UserModel.updateOne(
     { _id: userId },
     {
       $set: {
-        plan: "premium",
+        plan,
         planType: "lifetime",
         planActivatedAt: now.toISOString(),
         lastBillingTxnId: txnId,
@@ -351,6 +383,72 @@ export async function activateUserPlan(
       $unset: { planExpiresAt: "" },
     },
   );
+}
+
+/**
+ * Grant bootcamp courses (rooms) to a student for a fixed term
+ * (COURSE_DURATION_DAYS, 3 months). Re-granting a course renews its term:
+ * existing grants for these courses are dropped and fresh ones pushed. Returns
+ * the full grant list afterwards.
+ */
+export async function grantCourses(
+  userId: string,
+  courses: BootcampCategory[],
+): Promise<CourseGrant[]> {
+  await db();
+  if (courses.length === 0) {
+    const u = await UserModel.findById(userId).select("ownedCourses").lean();
+    return (u?.ownedCourses as CourseGrant[] | undefined) ?? [];
+  }
+  const now = Date.now();
+  const grantedAt = new Date(now).toISOString();
+  const expiresAt = new Date(
+    now + COURSE_DURATION_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  // Drop any prior grants for these courses, then push fresh (renewed) ones.
+  await UserModel.updateOne(
+    { _id: userId },
+    { $pull: { ownedCourses: { course: { $in: courses } } } },
+  );
+  await UserModel.updateOne(
+    { _id: userId },
+    {
+      $push: {
+        ownedCourses: {
+          $each: courses.map((course) => ({ course, grantedAt, expiresAt })),
+        },
+      },
+    },
+  );
+  const updated = await UserModel.findById(userId).select("ownedCourses").lean();
+  return (updated?.ownedCourses as CourseGrant[] | undefined) ?? [];
+}
+
+/**
+ * Revoke a course grant — the inverse of `grantCourses`. Removes any
+ * unexpired grant rows for the listed courses on this user. Idempotent.
+ *
+ * Called by the admin refund flow when reversing a course purchase: pull
+ * the grant immediately so the buyer's room access stops, instead of
+ * silently letting them keep watching until the 3-month expiry runs out.
+ *
+ * Returns the surviving grants. Empty `courses` is a no-op.
+ */
+export async function revokeCourse(
+  userId: string,
+  courses: BootcampCategory[],
+): Promise<CourseGrant[]> {
+  await db();
+  if (courses.length === 0) {
+    const u = await UserModel.findById(userId).select("ownedCourses").lean();
+    return (u?.ownedCourses as CourseGrant[] | undefined) ?? [];
+  }
+  await UserModel.updateOne(
+    { _id: userId },
+    { $pull: { ownedCourses: { course: { $in: courses } } } },
+  );
+  const updated = await UserModel.findById(userId).select("ownedCourses").lean();
+  return (updated?.ownedCourses as CourseGrant[] | undefined) ?? [];
 }
 
 /**
@@ -406,7 +504,7 @@ function freshPartnerToken(): string {
 }
 
 /** Slug a free-form name into a URL-safe partner code. */
-function slugify(s: string): string {
+export function slugify(s: string): string {
   return s
     .toLowerCase()
     .trim()
@@ -656,10 +754,10 @@ export async function listUsersExpiringSoon(
  */
 export async function recordProcessedTxn(input: {
   txnId: string;
-  provider: "phonepe" | "mock";
+  provider: "phonepe" | "razorpay" | "mock";
   orderId: string;
   userId: string;
-  plan: "premium" | "sponsorship";
+  plan: "premium" | "sponsorship" | "jobs_quarterly" | "jobs_annual" | "courses";
   amountPaise: number;
   status: "success" | "failed" | "pending";
   via: "callback" | "webhook";
@@ -687,6 +785,76 @@ export async function recordProcessedTxn(input: {
   }
 }
 
+/**
+ * List every processed payment txn for a single user — used by the admin
+ * billing tab on the student detail page. Newest first so the ledger reads
+ * top-down. Includes refunds (negative-amount rows) so the admin sees the
+ * full money trail per user in one place.
+ */
+export async function listProcessedTxnsByUser(
+  userId: string,
+): Promise<ProcessedTxn[]> {
+  await db();
+  const docs = await ProcessedTxnModel.find({ userId })
+    .sort({ processedAt: -1 })
+    .lean();
+  return unwrapAll(docs as unknown as ProcessedTxn[]);
+}
+
+/**
+ * Fetch a single processed payment txn by its id (= payment id from the
+ * provider). The admin refund route uses this to discover which provider
+ * processed the original payment so it can dispatch to the matching refund
+ * adapter. Returns undefined when no row matches (refund will reject).
+ */
+export async function getProcessedTxnById(
+  txnId: string,
+): Promise<ProcessedTxn | undefined> {
+  await db();
+  const doc = await ProcessedTxnModel.findById(txnId).lean();
+  return doc ? unwrapAll([doc as unknown as ProcessedTxn])[0] : undefined;
+}
+
+/**
+ * Fetch a processed payment txn by its provider-side `orderId`. Used by the
+ * admin refund path to detect "is there already a refund row for this exact
+ * original payment?" — the pre-call idempotency gate that survives the 24h
+ * Razorpay idempotency-key window. `orderId` is already indexed.
+ */
+export async function getProcessedTxnByOrderId(
+  orderId: string,
+): Promise<ProcessedTxn | undefined> {
+  await db();
+  const doc = await ProcessedTxnModel.findOne({ orderId }).lean();
+  return doc ? unwrapAll([doc as unknown as ProcessedTxn])[0] : undefined;
+}
+
+/**
+ * Paginated platform-wide payment ledger for the admin billing dashboard.
+ * Cursor is the `processedAt` ISO timestamp of the last visible row, so the
+ * caller can request "older than this" without offset drift as new payments
+ * land. Defaults to the most recent 50 rows. Inclusive bounds keep the
+ * `kind`/`provider` filters cheap (compound indexes already exist).
+ */
+export async function listProcessedTxns(opts: {
+  limit?: number;
+  before?: string;
+  plan?: ProcessedTxn["plan"];
+  provider?: ProcessedTxn["provider"];
+} = {}): Promise<ProcessedTxn[]> {
+  await db();
+  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+  const filter: Record<string, unknown> = {};
+  if (opts.plan) filter.plan = opts.plan;
+  if (opts.provider) filter.provider = opts.provider;
+  if (opts.before) filter.processedAt = { $lt: opts.before };
+  const docs = await ProcessedTxnModel.find(filter)
+    .sort({ processedAt: -1 })
+    .limit(limit)
+    .lean();
+  return unwrapAll(docs as unknown as ProcessedTxn[]);
+}
+
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -707,6 +875,23 @@ export async function getCompanyById(
 ): Promise<CompanyProfile | undefined> {
   await db();
   const doc = await CompanyModel.findById(id).lean();
+  return unwrap(doc as unknown as CompanyProfile);
+}
+
+/**
+ * Look up a company by its registered domain (case-insensitive). Used by
+ * recruiter signup to reuse an existing company record instead of creating a
+ * duplicate when a second recruiter from the same domain joins.
+ */
+export async function getCompanyByDomain(
+  domain: string,
+): Promise<CompanyProfile | undefined> {
+  await db();
+  const normalised = domain.trim().toLowerCase();
+  if (!normalised) return undefined;
+  const doc = await CompanyModel.findOne({
+    domain: { $regex: `^${escapeRegex(normalised)}$`, $options: "i" },
+  }).lean();
   return unwrap(doc as unknown as CompanyProfile);
 }
 
@@ -3780,9 +3965,15 @@ export async function createLiveSession(input: {
   description?: string;
   startsAt: string;
   durationMin: number;
+  /** Override the default tier. Cohort sessions default to "paid" — they
+   *  belong to a bootcamp and gating goes through the cohort's enrolment
+   *  set. Stand-alone webinars (no bootcampId) stay "free" by default. */
+  tier?: "free" | "paid";
 }): Promise<LiveSession> {
   await db();
   const now = new Date().toISOString();
+  const tier: "free" | "paid" =
+    input.tier ?? (input.bootcampId ? "paid" : "free");
   const session: LiveSession = {
     id: genId("live"),
     bootcampId: input.bootcampId,
@@ -3792,6 +3983,7 @@ export async function createLiveSession(input: {
     startsAt: input.startsAt,
     durationMin: input.durationMin,
     status: "scheduled",
+    tier,
     roomCode: genRoomCode(),
     registeredStudentIds: [],
     attendedStudentIds: [],
@@ -3846,20 +4038,29 @@ export async function listUpcomingLiveForStudent(
 ): Promise<Array<LiveSession & { bootcampTitle: string }>> {
   await db();
   const user = await UserModel.findById(studentId).lean();
-  const enrolled =
-    (user as unknown as User | null)?.profile?.bootcampProgress?.map(
-      (p) => p.bootcampId,
-    ) ?? [];
+  // The enrolled-bootcamps set drives "what live sessions can I see".
+  // Falls back to the legacy bootcampProgress field so a student with
+  // partial activity but no fresh enrolment row still surfaces sessions.
+  // (Auto-enrol writes `profile.enrolledBootcamps` directly, so the
+  // primary path here lights up the moment an owner visits a cohort.)
+  const u = user as unknown as User | null;
+  const enrolledSet = new Set<string>([
+    ...(u?.profile?.enrolledBootcamps ?? []),
+    ...((u?.profile?.bootcampProgress ?? []).map((p) => p.bootcampId)),
+  ]);
+  const enrolled = Array.from(enrolledSet);
   if (enrolled.length === 0) return [];
-  const sessions = await LiveSessionModel.find({
-    bootcampId: { $in: enrolled },
-    status: { $in: ["scheduled", "live"] },
-  })
-    .sort({ startsAt: 1 })
-    .lean();
-  const bootcamps = await BootcampModel.find({
-    _id: { $in: enrolled },
-  }).lean();
+  // Independent of each other (both keyed off `enrolled`) — run concurrently
+  // instead of two sequential round-trips on the dashboard's critical path.
+  const [sessions, bootcamps] = await Promise.all([
+    LiveSessionModel.find({
+      bootcampId: { $in: enrolled },
+      status: { $in: ["scheduled", "live"] },
+    })
+      .sort({ startsAt: 1 })
+      .lean(),
+    BootcampModel.find({ _id: { $in: enrolled } }).lean(),
+  ]);
   const titleMap = new Map<string, string>();
   for (const b of bootcamps as unknown as Bootcamp[]) {
     titleMap.set(b.id ?? (b as unknown as { _id: string })._id, b.title);

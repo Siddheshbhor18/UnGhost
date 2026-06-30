@@ -1,3 +1,10 @@
+/**
+ * @deprecated Superseded by the Creator system (`/admin/creators`) and the
+ * one-way migration `scripts/migrate-partners-to-creators.ts`. Partner writes
+ * are FROZEN pending cutover — do not add new mutations here. Kept read-only
+ * and operational until Creator parity is runtime-confirmed; behaviour below
+ * is intentionally unchanged.
+ */
 import { GlassBadge } from "@/components/glass";
 import { listPartnersWithStats } from "@/server/store";
 import { PartnersClient } from "@/components/admin/PartnersClient";

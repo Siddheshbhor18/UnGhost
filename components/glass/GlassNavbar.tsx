@@ -11,6 +11,7 @@ import { GlassButton } from "./GlassButton";
 import { NotificationBell } from "./NotificationBell";
 import { AccountMenu } from "./AccountMenu";
 import { MobileTabBar } from "./MobileTabBar";
+import { NavCartButton } from "@/components/courses/NavCartButton";
 
 /**
  * Top navigation bar (glass). Single source of truth for in-app wayfinding.
@@ -31,9 +32,9 @@ type NavItem = { href: string; label: string; exact?: boolean };
 
 const NAV_BY_ROLE: Record<string, NavItem[]> = {
   anon: [
-    { href: "/", label: "Missions", exact: true },
+    { href: "/", label: "Who We Are", exact: true },
     { href: "/bootcamps", label: "Bootcamps" },
-    { href: "/recruiter/login", label: "For Recruiters" },
+    { href: "/recruiters", label: "For Recruiters" },
   ],
   student: [
     { href: "/dashboard", label: "Today" },
@@ -196,6 +197,7 @@ export function GlassNavbar() {
                     </GlassButton>
                   </Link>
                 )}
+                {role === "student" ? <NavCartButton /> : null}
                 <NotificationBell />
                 <AccountMenu
                   name={session.user?.name}
@@ -218,6 +220,7 @@ export function GlassNavbar() {
                     <Sparkles size={13} /> Go Premium
                   </GlassButton>
                 </Link>
+                <NavCartButton />
                 {/* Phones: a compact text link (the button chrome is what
                     overflows the pill beside the logo at ≤375px). sm+: the
                     full glass button. */}

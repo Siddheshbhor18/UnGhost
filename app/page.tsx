@@ -7,11 +7,13 @@ import {
   Mail,
   Target,
   Linkedin,
+  Instagram,
   Upload,
   Zap,
   CheckCircle2,
-  BadgeCheck,
+  GraduationCap,
 } from "lucide-react";
+import { Suspense } from "react";
 import { GlassNavbar, Logo } from "@/components/glass";
 import {
   Badge,
@@ -21,9 +23,11 @@ import {
   TierBadge,
 } from "@/components/ui";
 import { HeroDemoLoop } from "@/components/landing/HeroDemoLoop";
-import { GuaranteeClock } from "@/components/landing/GuaranteeClock";
+import { BootcampCardStack } from "@/components/landing/BootcampCardStack";
 import { HeroCTAs } from "@/components/landing/HeroCTAs";
-import { ScrollPrompt } from "@/components/landing/ScrollPrompt";
+import { JobMarquee } from "@/components/landing/JobMarquee";
+import { HeroReveal } from "@/components/landing/HeroReveal";
+import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import dynamic from "next/dynamic";
 // Below-fold — lazy-load to keep initial bundle small
 const FAQ = dynamic(() =>
@@ -38,23 +42,68 @@ import { LiveSessionsTeaser } from "@/components/live/LiveSessionsTeaser";
 import {
   MotionSection,
   RevealText,
-  CountUp,
-  MagneticCard,
   StaggerGrid,
   StaggerItem,
   ParallaxBackdrop,
   ScrollProgress,
 } from "@/components/landing/motion";
 
-// Planned bootcamp tracks — launching with the first cohort. Static by design:
-// no fake catalog data until real bootcamps go live.
-const PLANNED_TRACKS = [
-  "AI",
-  "Marketing",
-  "Sales",
-  "Entrepreneurship",
-  "Freelancing",
-];
+import { CoursesSection } from "@/components/landing/CoursesSection";
+import { GuaranteeClock } from "@/components/landing/GuaranteeClock";
+import { formatPaiseAsINR } from "@/shared/lib/pricing";
+import {
+  COURSE_PRICE_PAISE,
+  EVERYTHING_BUNDLE_PAISE,
+} from "@/shared/lib/courses";
+import { PLAN_PRICING } from "@/shared/types";
+
+// Jobs pricing tiers shown on the landing. Prices flow from PLAN_PRICING and
+// features mirror PLAN_LIMITS (applications · AI Coach · Q&A). Premium is
+// retired, so it is not sold here.
+const JOBS_TIERS = [
+  {
+    name: "Free",
+    price: formatPaiseAsINR(0),
+    cadence: "to start",
+    badge: null,
+    features: [
+      "2 applications (lifetime trial)",
+      "Browse every job & bootcamp",
+      "Slot returned if a recruiter ghosts",
+    ],
+    cta: "Start free",
+    href: "/signup?next=/student/jobs",
+    highlight: false,
+  },
+  {
+    name: "Jobs · 3 months",
+    price: formatPaiseAsINR(PLAN_PRICING.jobs_quarterly.amountINR * 100),
+    cadence: "for 3 months",
+    badge: null,
+    features: [
+      "Unlimited applications",
+      "AI Coach on every application",
+      "Q&A with recruiters",
+    ],
+    cta: "Get 3 months",
+    href: "/upgrade",
+    highlight: false,
+  },
+  {
+    name: "Jobs · 1 year",
+    price: formatPaiseAsINR(PLAN_PRICING.jobs_annual.amountINR * 100),
+    cadence: "for 12 months",
+    badge: "Best value",
+    features: [
+      "Unlimited applications",
+      "AI Coach on every application",
+      "Q&A with recruiters",
+    ],
+    cta: "Get 1 year",
+    href: "/upgrade",
+    highlight: true,
+  },
+] as const;
 
 export default async function LandingPage() {
   const session = await getServerSession(authOptions);
@@ -65,12 +114,19 @@ export default async function LandingPage() {
 
   return (
     <main className="relative min-h-screen" style={{ overflowX: "clip" }}>
+      <SmoothScroll />
       <ParallaxBackdrop />
       <ScrollProgress />
       <GlassNavbar />
-      <CookieConsent />
+      <Suspense fallback={null}>
+        <CookieConsent />
+      </Suspense>
 
       {/* ─────────── HERO ─────────── */}
+      {/* Reveal stage — isolates the sticky hero's pin + z-index so it never
+          bleeds past the void section into the rest of the page. */}
+      <div className="relative isolate">
+      <HeroReveal overlaySelector="#void-section">
       <section className="mx-auto max-w-content px-4 pt-12 md:pt-20 pb-8 relative">
         {/* Grid overlay — editorial Vercel-style backdrop */}
         <div
@@ -161,16 +217,17 @@ export default async function LandingPage() {
             <HeroDemoLoop />
           </MotionSection>
         </div>
-        <ScrollPrompt />
+        
       </section>
+      </HeroReveal>
 
       {/* ─────────── LIVE SESSIONS TEASER ─────────── */}
-      <MotionSection amount={0.3}>
+      <MotionSection amount={0.3} className="relative z-[1]">
         <LiveSessionsTeaser />
       </MotionSection>
 
       {/* ─────────── THE VOID — full-bleed dark beat, still ─────────── */}
-      <MotionSection className="bg-neutral-950 text-white" amount={0.2}>
+      <MotionSection id="void-section" className="bg-neutral-950 text-white relative rounded-t-[32px] md:rounded-t-[40px] shadow-[0_0_80px_rgba(0,0,0,0.18)]" amount={0.2} style={{ zIndex: 10 }}>
         <div className="mx-auto max-w-content px-4 py-24 md:py-32 text-center">
           <h2 className="font-display font-extrabold text-display-xl md:text-6xl text-white max-w-3xl mx-auto mb-5 tracking-tightest leading-[1.05]">
             <RevealText
@@ -192,26 +249,39 @@ export default async function LandingPage() {
             answer. So we changed who pays for the silence.
           </p>
 
-          <div className="mt-16 max-w-2xl mx-auto">
-            <h3 className="font-display font-bold text-display-md md:text-3xl text-white mb-4 tracking-tight">
-              Ghosting isn&apos;t just rude. It&apos;s a broken process.
-            </h3>
-            <p className="text-body-md text-white/70 leading-relaxed">
-              Whether you&apos;re a student waiting weeks for feedback that
-              never came, or a recruiter who lost a top candidate overnight,
-              the hiring process is failing both sides. It&apos;s time to call
-              it out, and fix it.
-            </p>
-          </div>
+          <JobMarquee />
         </div>
       </MotionSection>
+      </div>
 
-      {/* ─────────── THE SLA CLOCK — live countdown (centerpiece) ─────────── */}
+      {/* ─────────── BOOTCAMP CARD STACK — stacking course cards ─────────── */}
       <MotionSection
         className="mx-auto max-w-content px-4 py-20 md:py-28"
         amount={0.15}
       >
-        <GuaranteeClock />
+        <BootcampCardStack />
+      </MotionSection>
+
+      {/* ─────────── SOCIAL PROOF ─────────── */}
+      <MotionSection
+        className="mx-auto max-w-content px-4 py-16"
+        amount={0.15}
+      >
+        <div className="text-center">
+          <p className="text-body-sm font-medium text-neutral-500 mb-6">
+            Trusted by students and recruiters across India
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6 opacity-50">
+            {["IIT Bombay", "NMIMS", "BITS Pilani", "VIT", "SRM", "Manipal"].map((name) => (
+              <span
+                key={name}
+                className="font-display text-xl font-bold text-neutral-400 tracking-tight"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        </div>
       </MotionSection>
 
       {/* ─────────── HOW IT WORKS ─────────── */}
@@ -280,31 +350,38 @@ export default async function LandingPage() {
         </div>
       </MotionSection>
 
-      {/* ─────────── TWO SIDES ─────────── */}
+      {/* ─────────── GUARANTEE CLOCK — public SLA countdown ─────────── */}
+      <MotionSection
+        className="mx-auto max-w-content px-4 py-20"
+        amount={0.15}
+      >
+        <GuaranteeClock />
+      </MotionSection>
+
+      {/* ─────────── JOBS & BOOTCAMPS FOR STUDENTS ─────────── */}
       <MotionSection
         className="mx-auto max-w-content px-4 py-20"
         amount={0.15}
       >
         <SectionHeader
-          title="No ghost. Either direction."
-          subtitle="One promise that holds for the person applying and the person hiring."
+          title="Two ways to fast-track your career."
+          subtitle="Apply to real jobs with guaranteed response times, or level up with hands-on bootcamps. All in one place."
         />
         <div className="mt-10 grid md:grid-cols-2 rounded-2xl overflow-hidden ring-1 ring-neutral-200 shadow-elev-3">
-          {/* Students half — brand-tinted */}
+          {/* Jobs part — brand-tinted */}
           <div className="bg-brand-50/50 p-8 md:p-10 flex flex-col">
             <Badge tone="info" className="mb-4 self-start">
-              For Students
+              Apply to jobs
             </Badge>
             <h3 className="font-display font-bold text-display-md text-neutral-900 tracking-tight mb-4">
-              Stop applying into a void.
+              Apply with confidence. Get replies on time.
             </h3>
             <ul className="space-y-3 text-body-sm text-neutral-700 mb-8 flex-grow">
               {[
-                "AI-matched jobs, not keyword spam",
-                "Your slot returned if a recruiter ghosts",
-                "AI Career Coach with cross-session memory",
-                "Bootcamps with Verified Skill badges",
-                "Top-10 leaderboard featured to recruiters",
+                "See open roles matched specifically to your skills",
+                "Guaranteed response countdowns on every application",
+                "If recruiters ghost you, your application slot is returned immediately",
+                "Get real-time feedback and resume tips from our AI Career Coach",
               ].map((p) => (
                 <li key={p} className="flex items-start gap-2.5">
                   <CheckCircle2
@@ -315,33 +392,31 @@ export default async function LandingPage() {
                 </li>
               ))}
             </ul>
-            <Link href="/signup" className="self-start">
+            <Link href="/signup?next=/student/jobs" className="self-start">
               <Button
                 variant="primary"
                 size="md"
                 trailingIcon={<ArrowRight size={14} />}
               >
-                Get started free
+                Find a job
               </Button>
             </Link>
           </div>
 
-          {/* Recruiters half — clean white, divider between */}
+          {/* Bootcamp part — clean white */}
           <div className="bg-neutral-0 p-8 md:p-10 flex flex-col border-t md:border-t-0 md:border-l border-neutral-200">
             <Badge tone="success" className="mb-4 self-start">
-              For Recruiters
+              Join Bootcamps
             </Badge>
             <h3 className="font-display font-bold text-display-md text-neutral-900 tracking-tight mb-4">
-              Hire pre-qualified candidates.
+              Learn from top operators. Get verified skills.
             </h3>
             <ul className="space-y-3 text-body-sm text-neutral-700 mb-8 flex-grow">
               {[
-                "Tier A to D candidates ranked by AI relevancy",
-                "Custom pipelines with per-stage SLAs",
-                "AI-generated 30-question assessment banks",
-                "Anonymised candidate database with bias controls",
-                "Bootcamp sponsorship to close gaps on demand",
-                "Free forever for posting and hiring",
+                "Hands-on projects designed by developers from top tech firms",
+                "No boring lectures or theory dumps—write real code from day one",
+                "Earn verified skill badges that are directly visible to hiring managers",
+                "Get smart bundle discounts that unlock additional courses for free",
               ].map((p) => (
                 <li key={p} className="flex items-start gap-2.5">
                   <CheckCircle2
@@ -352,47 +427,31 @@ export default async function LandingPage() {
                 </li>
               ))}
             </ul>
-            <Link href="/signup?role=recruiter" className="self-start">
+            <Link href="#bootcamps" className="self-start">
               <Button
                 variant="secondary"
                 size="md"
                 trailingIcon={<ArrowRight size={14} />}
               >
-                Post your first job free
+                Explore bootcamps
               </Button>
             </Link>
           </div>
         </div>
       </MotionSection>
 
-      {/* ─────────── BOOTCAMPS PREVIEW ─────────── */}
+      {/* ─────────── BOOTCAMPS ─────────── */}
       <MotionSection
+        id="bootcamps"
         className="mx-auto max-w-content px-4 py-20"
         amount={0.15}
       >
         <SectionHeader
-          title="Close the gap before you apply."
-          subtitle="Recorded modules, a live workshop, and an AI-graded assignment. Pass and you earn a Verified Skill badge recruiters can filter on."
+          eyebrow="Bootcamps"
+          title="Master the skill. Then land the job."
+          subtitle="Six focused courses built with operators, not academics. Buy only what you need — smart bundles unlock the rest for free."
         />
-        <Badge tone="warning" className="mt-6">
-          Planned · launching with our first cohort
-        </Badge>
-        <StaggerGrid
-          className="mt-6 flex flex-wrap gap-3"
-          stagger={0.05}
-        >
-          {PLANNED_TRACKS.map((track) => (
-            <StaggerItem key={track}>
-              <span className="inline-flex items-center gap-2 rounded-full bg-neutral-0 ring-1 ring-neutral-200 pl-3 pr-4 py-2 text-body-sm font-medium text-neutral-800 shadow-elev-1">
-                <BadgeCheck size={15} className="text-brand-500 shrink-0" />
-                {track}
-              </span>
-            </StaggerItem>
-          ))}
-        </StaggerGrid>
-        <p className="text-body-sm text-neutral-500 mt-5">
-          More tracks added as recruiters tell us what they&apos;re hiring for.
-        </p>
+        <CoursesSection />
       </MotionSection>
 
       {/* ─────────── PRICING ─────────── */}
@@ -401,62 +460,61 @@ export default async function LandingPage() {
         amount={0.15}
       >
         <SectionHeader
-          title="Try 2 free. Upgrade once."
-          subtitle="Recruiters post and hire free. Students pick a plan that fits."
+          title="Apply free. Upgrade once it's working."
+          subtitle="Recruiters post and hire free. Students start with 2 applications, then pick the plan that fits."
         />
 
         <StaggerGrid
-          className="grid md:grid-cols-2 gap-5 mt-10 max-w-3xl mx-auto"
-          stagger={0.1}
+          className="grid md:grid-cols-3 gap-5 mt-10 max-w-5xl mx-auto"
+          stagger={0.08}
         >
-          <StaggerItem>
-            <MagneticCard className="h-full">
-              <PriceCard
-                tier="Free"
-                priceNode={
-                  <span className="font-display font-extrabold text-4xl text-neutral-950 tnum">
-                    ₹0
-                  </span>
-                }
-                sub="trial"
-                features={[
-                  "2 applications (lifetime trial)",
-                  "Browse all bootcamps + jobs",
-                  "Slot returned on recruiter ghost",
-                  "Upgrade anytime",
-                ]}
-                cta="Start free"
-                href="/signup"
-              />
-            </MagneticCard>
-          </StaggerItem>
-          <StaggerItem>
-            <MagneticCard className="h-full">
-              <PriceCard
-                tier="Premium"
-                priceNode={
-                  <span className="font-display font-extrabold text-4xl text-neutral-950 tnum">
-                    <CountUp to={4999} prefix="₹" format duration={2} />
-                  </span>
-                }
-                sub="one-time + 18% GST"
-                note="Lifetime access. First 150 students only."
-                features={[
-                  "Unlimited applications",
-                  "AI Coach + Q&A forever",
-                  "Every bootcamp included",
-                  "Priority support queue",
-                ]}
-                cta="Go Premium"
-                href="/upgrade?to=premium"
-                highlight
-              />
-            </MagneticCard>
-          </StaggerItem>
+          {JOBS_TIERS.map((tier) => (
+            <StaggerItem key={tier.name} className="h-full">
+              <JobsTierCard {...tier} />
+            </StaggerItem>
+          ))}
         </StaggerGrid>
         <p className="text-center text-body-xs text-neutral-500 mt-6">
-          Price excludes tax · 18% GST added at checkout · All sales final · Pay by UPI
+          Prices exclude 18% GST, added at checkout · Pay by UPI · Cancel anytime
         </p>
+
+        {/* Courses callout — bootcamp pricing lives in the cart */}
+        <div className="mt-12 max-w-5xl mx-auto">
+          <div className="relative overflow-hidden rounded-2xl bg-neutral-0 ring-1 ring-neutral-200 shadow-elev-3 p-7 md:p-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-500 ring-1 ring-brand-100 shrink-0">
+                <GraduationCap size={22} />
+              </div>
+              <div>
+                <p className="font-display font-bold text-neutral-900 text-lg">
+                  Want the skills too?
+                </p>
+                <p className="text-body-sm text-neutral-500 mt-1 max-w-md leading-relaxed">
+                  Bootcamp courses are sold separately —{" "}
+                  {formatPaiseAsINR(COURSE_PRICE_PAISE)} per course, or{" "}
+                  {formatPaiseAsINR(EVERYTHING_BUNDLE_PAISE)} for all six with
+                  bundle unlocks.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3 shrink-0">
+              <Link href="#bootcamps">
+                <Button variant="secondary" size="md">
+                  Browse courses
+                </Button>
+              </Link>
+              <Link href="/bootcamps/checkout">
+                <Button
+                  variant="primary"
+                  size="md"
+                  trailingIcon={<ArrowRight size={14} />}
+                >
+                  View cart
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
       </MotionSection>
 
       {/* ─────────── FAQ ─────────── */}
@@ -466,7 +524,9 @@ export default async function LandingPage() {
       >
         <SectionHeader title="The honest questions." />
         <div className="mt-10">
-          <FAQ />
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl bg-neutral-100" />}>
+            <FAQ />
+          </Suspense>
         </div>
       </MotionSection>
 
@@ -479,7 +539,7 @@ export default async function LandingPage() {
         <div className="relative">
           <Card
             surface="glass-tinted"
-            className="!py-14 !px-8 text-center !rounded-2xl relative overflow-hidden"
+            className="py-14 px-8 text-center rounded-2xl relative overflow-hidden"
           >
             {/* Dot grid overlay */}
             <div
@@ -516,13 +576,13 @@ export default async function LandingPage() {
                 Symmetry, built in.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
-                <Link href="/signup">
+                <Link href="/signup?next=/student/jobs">
                   <Button
                     variant="primary"
                     size="lg"
                     trailingIcon={<ArrowRight size={16} />}
                   >
-                    I&apos;m looking
+                    Find a job
                   </Button>
                 </Link>
                 <Link href="/signup?role=recruiter">
@@ -565,6 +625,15 @@ export default async function LandingPage() {
                 <Linkedin size={14} />
               </a>
               <a
+                href="https://www.instagram.com/unghost.in/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="unGhost on Instagram"
+                className="social-icon grid place-items-center w-8 h-8 rounded-lg bg-neutral-100 text-brand-500 hover:bg-brand-500 hover:text-white transition"
+              >
+                <Instagram size={14} />
+              </a>
+              <a
                 href="mailto:hello@unghost.in"
                 aria-label="Email unGhost"
                 className="social-icon grid place-items-center w-8 h-8 rounded-lg bg-neutral-100 text-brand-500 hover:bg-brand-500 hover:text-white transition"
@@ -576,9 +645,9 @@ export default async function LandingPage() {
           <FootCol
             title="For Students"
             links={[
-              ["Find Jobs", "/signup"],
+              ["Find Jobs", "/signup?next=/student/jobs"],
               ["Bootcamps", "/bootcamps"],
-              ["AI Coach", "/signup"],
+              ["AI Coach", "/signup?next=/student/coach"],
               ["Pricing", "/upgrade"],
             ]}
           />
@@ -587,7 +656,7 @@ export default async function LandingPage() {
             links={[
               ["Post Job", "/signup?role=recruiter"],
               ["Database Search", "/signup?role=recruiter"],
-              ["Sponsorship", "/for-recruiters"],
+              ["Sponsorship", "/recruiters"],
               ["Anti-Ghost SLA", "/how-it-works"],
             ]}
           />
@@ -707,66 +776,56 @@ function FlowStep({
   );
 }
 
-function PriceCard({
-  tier,
-  priceNode,
-  sub,
-  note,
+function JobsTierCard({
+  name,
+  price,
+  cadence,
+  badge,
   features,
   cta,
   href,
   highlight,
 }: {
-  tier: string;
-  priceNode: React.ReactNode;
-  sub: string;
-  note?: string;
-  features: string[];
+  name: string;
+  price: string;
+  cadence: string;
+  badge: string | null;
+  features: readonly string[];
   cta: string;
   href: string;
-  highlight?: boolean;
+  highlight: boolean;
 }) {
   return (
     <Card
       selected={highlight}
-      className={`!p-8 h-full flex flex-col ${highlight ? "shadow-elev-4" : ""}`}
+      className={`!p-7 h-full flex flex-col ${highlight ? "shadow-elev-4" : ""}`}
     >
-      {/* Fixed-height badge slot on BOTH cards so titles/prices/rows line up
-          whether or not the card is highlighted. */}
+      {/* Fixed-height badge slot so titles/prices line up across all 3 cards. */}
       <div className="h-6 mb-3 flex items-center">
-        {highlight && (
-          <Badge tone="info" className="pop-in">
-            Best value
+        {badge && (
+          <Badge tone="success" className="pop-in">
+            {badge}
           </Badge>
         )}
       </div>
-      <p className="font-display font-bold text-neutral-900 text-lg">{tier}</p>
-      <div className="flex items-baseline gap-2 mt-2 mb-1">
-        {priceNode}
-        <span className="text-body-sm text-neutral-500">{sub}</span>
+      <p className="font-display font-bold text-neutral-900 text-lg">{name}</p>
+      <div className="flex items-baseline gap-2 mt-2 mb-5">
+        <span className="font-display font-extrabold text-4xl text-neutral-950 tnum">
+          {price}
+        </span>
+        <span className="text-body-sm text-neutral-500">{cadence}</span>
       </div>
-      {note ? (
-        <p className="text-body-xs font-semibold text-brand-600 mb-1">{note}</p>
-      ) : null}
-      <ul className="space-y-2 my-6 text-body-sm text-neutral-700">
+      <ul className="space-y-2.5 mb-7 text-body-sm text-neutral-700">
         {features.map((f) => (
           <li key={f} className="flex items-start gap-2">
-            <CheckCircle2
-              size={14}
-              className="text-brand-500 mt-0.5 shrink-0"
-            />
+            <CheckCircle2 size={15} className="text-brand-500 mt-0.5 shrink-0" />
             {f}
           </li>
         ))}
       </ul>
-      {/* mt-auto pins the CTA to the card bottom so both buttons align even
-          when feature lists differ in length. */}
+      {/* mt-auto pins the CTA to the card bottom across uneven feature lists. */}
       <Link href={href} className="mt-auto block">
-        <Button
-          variant={highlight ? "primary" : "secondary"}
-          size="md"
-          fullWidth
-        >
+        <Button variant={highlight ? "primary" : "secondary"} size="md" fullWidth>
           {cta}
         </Button>
       </Link>

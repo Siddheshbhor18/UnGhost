@@ -55,7 +55,7 @@ const SIGNUP_TWO: RoleOption[] = [
     id: "recruiter",
     label: "Hire talent",
     roleWord: "Recruiter",
-    desc: "Post jobs · needs a work email.",
+    desc: "Post jobs and hire talent.",
     icon: <Briefcase size={16} />,
   },
 ];

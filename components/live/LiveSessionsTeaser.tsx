@@ -16,6 +16,7 @@
  * unauthenticated visitors.
  */
 import Link from "next/link";
+import { Video } from "lucide-react";
 import { listFreeLiveTeaserSessions, type TeaserLiveSession } from "@/server/store";
 
 export async function LiveSessionsTeaser() {
@@ -253,7 +254,7 @@ function RecentRecordingCard({ session }: { session: TeaserLiveSession }) {
         <div className="flex items-start gap-5 flex-col sm:flex-row sm:items-center">
           <div className="shrink-0">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-ink/[0.05] text-brand-ink text-[11px] font-semibold">
-              📺 Recent recording
+              <Video size={12} className="text-neutral-500" /> Recent recording
             </span>
           </div>
           <div className="flex-1 min-w-0">

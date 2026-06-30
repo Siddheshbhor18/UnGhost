@@ -194,4 +194,64 @@ export const INDEXES: IndexSpec[] = [
     options: { name: "ix_emailtpl_key", unique: true },
     reason: "Render-time template lookups by stable code (e.g. password_reset).",
   },
+
+  // ── Creator platform ───────────────────────────────────────────────────
+  {
+    collection: "creatorprofiles",
+    keys: { referralCode: 1 },
+    options: { name: "ux_creator_referralCode", unique: true },
+    reason: "Public /r/[code] entry resolves a creator by their unique code.",
+  },
+  {
+    collection: "commissionagreements",
+    keys: { creatorId: 1, status: 1 },
+    options: {
+      name: "ux_commission_one_active_per_creator",
+      unique: true,
+      partialFilterExpression: { status: "active" },
+    },
+    reason: "At most one active agreement per creator; reads of the active rate.",
+  },
+  {
+    collection: "referralsessions",
+    keys: { sessionToken: 1 },
+    options: { name: "ux_referral_sessionToken", unique: true },
+    reason: "Signup attribution resolves the session from the ug_ref cookie.",
+  },
+  {
+    collection: "referralsessions",
+    keys: { status: 1, expiresAt: 1 },
+    options: { name: "ix_referral_status_expiry" },
+    reason: "Daily sweep cron scans active sessions past expiresAt.",
+  },
+  {
+    collection: "creatorrewards",
+    keys: { paymentId: 1 },
+    options: { name: "ux_reward_paymentId", unique: true },
+    reason: "One reward per payment — idempotent reward creation (§9.7).",
+  },
+  {
+    collection: "creatorrewards",
+    keys: { status: 1, createdAt: -1 },
+    options: { name: "ix_reward_status_recent" },
+    reason: "Admin reward queue filters by status, newest first.",
+  },
+  {
+    collection: "creditledgers",
+    keys: { creatorId: 1, createdAt: -1 },
+    options: { name: "ix_ledger_creator_recent" },
+    reason: "Balance aggregation + ledger history scoped to one creator.",
+  },
+  {
+    collection: "payoutrequests",
+    keys: { status: 1, requestedAt: -1 },
+    options: { name: "ix_payout_status_recent" },
+    reason: "Admin payout queue filters by status, oldest-requested first.",
+  },
+  {
+    collection: "creatorevents",
+    keys: { entityType: 1, entityId: 1, createdAt: -1 },
+    options: { name: "ix_creator_events_entity_recent" },
+    reason: "Timeline view of one entity's audit events, newest first.",
+  },
 ];

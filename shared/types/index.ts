@@ -1,6 +1,6 @@
 // Domain types for NoGhost.com — single source of truth.
 
-export type Role = "student" | "recruiter" | "admin" | "instructor";
+export type Role = "student" | "recruiter" | "admin" | "instructor" | "creator";
 export type Trajectory =
   | "actively_hunting"
   | "casually_exploring"
@@ -188,10 +188,19 @@ export interface EmailTemplate {
 export type UserStatus = "active" | "suspended" | "banned" | "soft_deleted";
 
 // ── Subscription plans (student-only) ─────────────────────────────────────
-// Two tiers only:
-// FREE       → ₹0 · 2 lifetime applications · no AI Coach · no Q&A · no bootcamps
-// PREMIUM    → ₹4999 one-time lifetime · unlimited apps · AI Coach · Q&A · all bootcamps free
-export type SubscriptionPlan = "free" | "premium";
+// Tiers:
+// FREE            → ₹0 · 2 lifetime applications · no AI Coach · no Q&A
+// JOBS_QUARTERLY  → ₹149 · 3 months · unlimited applications · AI Coach · Q&A
+// JOBS_ANNUAL     → ₹299 · 1 year · unlimited applications · AI Coach · Q&A
+// PREMIUM (legacy)→ retired for new sales; existing holders grandfathered until
+//                   expiry (unlimited apps + AI Coach + Q&A + all bootcamps).
+// Bootcamp access is no longer bundled here — it is bought per-course (₹5k) via
+// shared/lib/courses.ts and tracked on User.ownedCourses.
+export type SubscriptionPlan =
+  | "free"
+  | "jobs_quarterly"
+  | "jobs_annual"
+  | "premium";
 
 export interface PlanLimits {
   /** "trial" = lifetime cap, "monthly" = rolling-30d cap, "unlimited" = no cap. */
@@ -211,6 +220,20 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     questionAndAnswer: false,
     bootcampsIncluded: false,
   },
+  jobs_quarterly: {
+    applicationCap: { kind: "unlimited" },
+    aiCoach: true,
+    questionAndAnswer: true,
+    bootcampsIncluded: false,
+  },
+  jobs_annual: {
+    applicationCap: { kind: "unlimited" },
+    aiCoach: true,
+    questionAndAnswer: true,
+    bootcampsIncluded: false,
+  },
+  // Legacy all-in-one. Not sold anymore; grandfathered holders keep bootcamp
+  // access via bootcampsIncluded until planExpiresAt.
   premium: {
     applicationCap: { kind: "unlimited" },
     aiCoach: true,
@@ -221,11 +244,23 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
 
 export const PLAN_PRICING: Record<
   SubscriptionPlan,
-  { label: string; amountINR: number; cadence: "free" | "monthly" | "lifetime" }
+  {
+    label: string;
+    amountINR: number;
+    cadence: "free" | "quarterly" | "annual" | "lifetime";
+    /** Access duration granted per purchase; null = not time-bound. */
+    durationDays: number | null;
+  }
 > = {
-  free:    { label: "Free",    amountINR: 0,    cadence: "free" },
-  premium: { label: "Premium", amountINR: 4999, cadence: "lifetime" },
+  free:           { label: "Free",             amountINR: 0,    cadence: "free",      durationDays: null },
+  jobs_quarterly: { label: "Jobs · 3 months",  amountINR: 149,  cadence: "quarterly", durationDays: 90 },
+  jobs_annual:    { label: "Jobs · 1 year",    amountINR: 299,  cadence: "annual",    durationDays: 365 },
+  premium:        { label: "Premium (legacy)", amountINR: 4999, cadence: "annual",    durationDays: 365 },
 };
+
+/** Plans a student can actively purchase today (premium is retired). */
+export const PURCHASABLE_JOBS_PLANS = ["jobs_quarterly", "jobs_annual"] as const;
+export type PurchasableJobsPlan = (typeof PURCHASABLE_JOBS_PLANS)[number];
 
 /**
  * Premium is priced **exclusive of tax**. `amountINR` above is the base; this
@@ -233,12 +268,31 @@ export const PLAN_PRICING: Record<
  */
 export const PREMIUM_GST_PERCENT = 18;
 
+/** Platform GST rate (%). Applies to every paid SKU — jobs plans, courses,
+ *  and legacy premium. (`PREMIUM_GST_PERCENT` kept as an alias for back-compat.) */
+export const GST_PERCENT = 18;
+
 /**
- * The ₹4,999 one-time lifetime price is a launch offer limited to the first
- * N students who actually purchase Premium. Once this many premium buyers
- * exist, the offer is closed (no new lifetime purchases).
+ * Premium is a **1-year** plan. A purchase grants access for this many days
+ * from the activation timestamp; the daily subscription-sweep cron demotes
+ * the user back to Free once `planExpiresAt` passes.
+ */
+export const PREMIUM_PLAN_DURATION_DAYS = 365;
+
+/**
+ * @deprecated Launch-era lifetime seat cap. The plan is now annual, so the
+ * cap no longer gates the live Razorpay checkout. Kept only so the dormant
+ * PhonePe/manual-payment routes still compile. Do not use in new code.
  */
 export const PREMIUM_LIFETIME_SEATS = 150;
+
+/** A time-bound bootcamp-course grant. `course` is the room id; access is valid
+ *  while `expiresAt` is in the future (3 months from purchase, renewable). */
+export interface CourseGrant {
+  course: BootcampCategory;
+  grantedAt: string;
+  expiresAt: string;
+}
 
 export interface User {
   id: string;
@@ -273,12 +327,17 @@ export interface User {
   // ── Subscription ───────────────────────────────────────────────────────
   /** Active subscription plan. Defaults to "free". Recruiters/admins ignore. */
   plan?: SubscriptionPlan;
-  /** Pricing cadence — "monthly" for pro, "lifetime" for premium. */
-  planType?: "monthly" | "lifetime" | "free";
+  /** Pricing cadence — "annual" for premium, "lifetime" for grandfathered
+   *  launch buyers, "monthly" for legacy pro, "free" otherwise. */
+  planType?: "monthly" | "quarterly" | "annual" | "lifetime" | "free";
   /** ISO timestamp the current plan started. */
   planActivatedAt?: string;
   /** ISO timestamp the current plan expires. Null for premium (lifetime) + free. */
   planExpiresAt?: string;
+  /** Bootcamp **courses** (rooms) the student has bought. Each ₹5k purchase
+   *  grants 3-month access to every cohort in that room; a re-purchase renews
+   *  the term. Resolved through the bundle engine (shared/lib/courses.ts). */
+  ownedCourses?: CourseGrant[];
   /** Last payment provider txn id (PhonePe). Used to dedupe callbacks. */
   lastBillingTxnId?: string;
   /** True after the user clicked Cancel on their Pro renewal. */
@@ -291,6 +350,13 @@ export interface User {
    *  captured during the visit. Powers /admin/partners + /p/[code] stats. */
   referrerPartnerId?: string;
   referrerCapturedAt?: string;
+  /** Creator-platform attribution. Set ONCE at signup if a valid `ug_ref`
+   *  referral-session cookie was present (first-touch wins, immutable —
+   *  enforced in the service layer). `creatorId` here equals the creator's
+   *  `User._id`. Powers the creator dashboard + reward engine. */
+  referredByCreatorId?: string;
+  /** The `referralSessions.sessionToken` that produced the attribution above. */
+  referralSessionId?: string;
   /** OAuth provider used on first signin ("google" | "linkedin"). Null/absent
    *  for credentials-only signups. Informational — auth decisions never key
    *  off this field. */
@@ -318,6 +384,11 @@ export interface Partner {
   createdAt: string;
   createdByAdminId: string;
   tokenRotatedAt?: string;
+  /** Set once by `scripts/migrate-partners-to-creators.ts` when this legacy
+   *  partner has been mirrored into the Creator system. Holds the new creator's
+   *  `User._id`. Presence ⇒ already migrated (re-run short-circuit). Never read
+   *  by live partner code — purely a one-way migration idempotency marker. */
+  migratedToCreatorId?: string;
 }
 
 /** Aggregate stats for a single partner. Computed on demand. */

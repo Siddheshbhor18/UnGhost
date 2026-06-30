@@ -1,156 +1,129 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import clsx from "clsx";
-import type { SubscriptionPlan } from "@/shared/types";
+import {
+  PLAN_PRICING,
+  GST_PERCENT,
+  type SubscriptionPlan,
+  type PurchasableJobsPlan,
+} from "@/shared/types";
 import { computeTotalPaise, formatPaiseAsINR } from "@/shared/lib/pricing";
+import { CheckoutButton } from "@/components/courses/CheckoutButton";
 
 interface PickerProps {
   currentPlan: SubscriptionPlan;
-  recommended: "premium" | null;
-  /** Premium base price (pre-GST) in paise — the picker computes the display. */
-  premiumBaseInPaise: number;
-  /** GST percent applied on top of the base. */
-  gstPercent: number;
-  /** Lifetime offer is sold out — no new premium purchases. */
-  offerClosed: boolean;
-  /** Remaining lifetime seats (for a scarcity nudge); null when not shown. */
-  seatsLeft: number | null;
+  prefill?: { name?: string; email?: string; contact?: string };
 }
 
+const JOBS: {
+  plan: PurchasableJobsPlan;
+  title: string;
+  cadence: string;
+  badge?: string;
+}[] = [
+  { plan: "jobs_quarterly", title: "Jobs · 3 months", cadence: "for 3 months" },
+  { plan: "jobs_annual", title: "Jobs · 1 year", cadence: "for 12 months", badge: "Best value" },
+];
+
+const PAID_FEATURES = [
+  "Unlimited job applications",
+  "AI Career Coach (cross-session memory)",
+  "Q&A access",
+  "Slot returned on recruiter ghost",
+];
+
 /**
- * Two-card subscription picker. Free is the default tier; Premium kicks off
- * a /api/billing/checkout POST (currently routed to the manual QR payment
- * page) and, once paid + approved, unlocks lifetime access.
+ * Jobs-plan picker. Free is the baseline; the two paid plans (₹149 / ₹299) open
+ * the Razorpay checkout inline. Bootcamp courses are bought separately on
+ * /bootcamps/checkout. Grandfathered premium shows an all-inclusive note.
  */
-export function UpgradePlanPicker({
-  currentPlan,
-  recommended,
-  premiumBaseInPaise,
-  gstPercent,
-  offerClosed,
-  seatsLeft,
-}: PickerProps) {
-  const router = useRouter();
-  const [submittingPlan, setSubmittingPlan] = useState<"premium" | null>(null);
-
-  const { baseInPaise, totalInPaise } = computeTotalPaise({
-    priceInPaise: premiumBaseInPaise,
-    gstPercent,
-  });
-  const premiumPriceLabel = formatPaiseAsINR(baseInPaise);
-  const premiumGstNote = `+ ${gstPercent}% GST · ${formatPaiseAsINR(totalInPaise, { withPaise: true })} total`;
-
-  function buy(plan: "premium") {
-    setSubmittingPlan(plan);
-    // Redirect to manual QR payment page (stopgap until PhonePe KYC clears).
-    router.push(`/upgrade/pay?plan=${plan}`);
-  }
-
+export function UpgradePlanPicker({ currentPlan, prefill }: PickerProps) {
   return (
-    <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto">
-      <Card
-        tier="free"
-        title="Free"
-        price="₹0"
-        sub="lifetime trial"
-        features={[
-          "2 applications (lifetime)",
-          "Browse all jobs + bootcamps",
-          "Application credit back if a recruiter ghosts",
-        ]}
-        currentPlan={currentPlan}
-        recommended={false}
-      >
-        <Cta state={currentPlan === "free" ? "current" : "free-active"} />
+    <div className="grid gap-5 sm:grid-cols-3 max-w-4xl mx-auto">
+      <Card title="Free" price="₹0" sub="2 lifetime applications" features={["2 lifetime applications", "Browse all jobs + courses", "Upgrade anytime"]}>
+        <Cta state={currentPlan === "free" ? "current" : "baseline"} />
       </Card>
 
-      <Card
-        tier="premium"
-        title="Premium"
-        price={premiumPriceLabel}
-        sub={premiumGstNote}
-        features={[
-          "Unlimited applications",
-          "AI Coach + Q&A forever",
-          "Every bootcamp included",
-          "Verified Skill badges from bootcamps",
-        ]}
-        currentPlan={currentPlan}
-        recommended={recommended === "premium"}
-      >
-        {currentPlan === "premium" ? (
-          <Cta state="current" />
-        ) : offerClosed ? (
-          <div className="w-full rounded-xl bg-neutral-100 text-neutral-500 text-body-sm font-medium py-3 text-center">
-            Lifetime offer closed
-          </div>
-        ) : (
-          <>
-            {seatsLeft !== null && seatsLeft <= 30 ? (
-              <p className="mb-2 text-center text-body-xs font-medium text-violet-700">
-                Only {seatsLeft} lifetime {seatsLeft === 1 ? "seat" : "seats"} left
-              </p>
-            ) : null}
-            <button
-              disabled={submittingPlan !== null}
-              onClick={() => buy("premium")}
-              className="w-full rounded-xl bg-violet-600 text-white text-body-sm font-medium py-3 hover:bg-violet-700 disabled:opacity-50"
-            >
-              {submittingPlan === "premium" ? <Spinner /> : "Go Premium"}
-            </button>
-          </>
-        )}
-      </Card>
+      {JOBS.map(({ plan, title, cadence, badge }) => {
+        const base = PLAN_PRICING[plan].amountINR * 100;
+        const { totalInPaise } = computeTotalPaise({
+          priceInPaise: base,
+          gstPercent: GST_PERCENT,
+        });
+        const isCurrent = currentPlan === plan;
+        return (
+          <Card
+            key={plan}
+            title={title}
+            price={formatPaiseAsINR(base)}
+            sub={`+ ${GST_PERCENT}% GST · ${formatPaiseAsINR(totalInPaise, { withPaise: true })} total · ${cadence}`}
+            features={PAID_FEATURES}
+            badge={badge}
+            highlight={badge === "Best value"}
+          >
+            {isCurrent ? (
+              <Cta state="current" />
+            ) : (
+              <CheckoutButton
+                body={{ kind: "jobs", plan }}
+                description={`unGhost ${title}`}
+                successUrl="/upgrade/success"
+                label={`Get ${title}`}
+                prefill={prefill}
+              />
+            )}
+          </Card>
+        );
+      })}
+
+      {currentPlan === "premium" && (
+        <p className="sm:col-span-3 text-center text-body-sm text-neutral-500">
+          You're on legacy Premium — unlimited applications, AI Coach, and every
+          bootcamp are included until your plan expires.
+        </p>
+      )}
     </div>
   );
 }
 
 function Card({
-  tier,
   title,
   price,
   sub,
   features,
-  recommended,
+  badge,
+  highlight,
   children,
 }: {
-  tier: SubscriptionPlan;
   title: string;
   price: string;
   sub: string;
   features: string[];
-  currentPlan: SubscriptionPlan;
-  recommended: boolean;
+  badge?: string;
+  highlight?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div
       className={clsx(
-        "rounded-2xl p-6 flex flex-col border bg-white/80 backdrop-blur",
-        recommended
-          ? "border-violet-400 ring-2 ring-violet-200 shadow-lg"
-          : "border-neutral-200",
-        tier === "premium" && "lg:scale-[1.02]",
+        "relative rounded-2xl border bg-white p-6 flex flex-col",
+        highlight ? "border-brand-300 ring-2 ring-brand-100" : "border-neutral-200",
       )}
     >
-      {recommended ? (
-        <span className="self-start mb-3 inline-block rounded-full bg-violet-600 text-white text-body-xs font-medium px-3 py-1">
-          Recommended
+      {badge && (
+        <span className="absolute -top-3 left-6 rounded-full bg-brand-500 px-3 py-1 text-[11px] font-semibold text-white">
+          {badge}
         </span>
-      ) : null}
-      <p className="font-display font-bold text-neutral-900 text-lg">{title}</p>
-      <p className="mt-4 mb-1">
-        <span className="font-display font-extrabold text-3xl text-neutral-950">{price}</span>{" "}
-        <span className="text-body-xs text-neutral-500">{sub}</span>
-      </p>
-      <ul className="mt-5 space-y-2 text-body-sm text-neutral-700 flex-1">
+      )}
+      <h3 className="font-display text-lg font-bold text-neutral-900">{title}</h3>
+      <p className="mt-2 font-display text-3xl font-extrabold text-neutral-950">{price}</p>
+      <p className="mt-1 text-body-xs text-neutral-500">{sub}</p>
+      <ul className="mt-5 space-y-2.5 flex-1">
         {features.map((f) => (
-          <li key={f} className="flex items-start gap-2">
-            <Check size={14} className="mt-1 text-green-600 shrink-0" />
-            <span>{f}</span>
+          <li key={f} className="flex items-start gap-2.5 text-body-sm text-neutral-700">
+            <Check size={16} className="mt-0.5 shrink-0 text-brand-500" />
+            {f}
           </li>
         ))}
       </ul>
@@ -159,25 +132,17 @@ function Card({
   );
 }
 
-function Cta({ state }: { state: "current" | "free-active" }) {
-  if (state === "current") {
-    return (
-      <div className="w-full rounded-xl bg-neutral-100 text-neutral-700 text-body-sm font-medium py-3 text-center">
-        Current plan
-      </div>
-    );
-  }
+function Cta({ state }: { state: "current" | "baseline" }) {
   return (
-    <div className="w-full rounded-xl bg-neutral-100 text-neutral-700 text-body-sm font-medium py-3 text-center">
-      Default tier
+    <div
+      className={clsx(
+        "rounded-xl px-6 py-3.5 text-center text-base font-semibold",
+        state === "current"
+          ? "bg-neutral-100 text-neutral-500"
+          : "bg-neutral-100 text-neutral-700",
+      )}
+    >
+      {state === "current" ? "Current plan" : "Included"}
     </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <span className="inline-flex items-center justify-center gap-2">
-      <Loader2 size={14} className="animate-spin" /> Redirecting…
-    </span>
   );
 }

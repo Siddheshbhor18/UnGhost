@@ -2,10 +2,13 @@ import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import {
+  enrollStudentInBootcamp,
   getBootcampById,
+  getUserById,
   listLiveSessionsByBootcamp,
   listPublishedRecordingsByBootcamp,
 } from "@/server/store";
+import { ownsCourse } from "@/server/lib/quota";
 import { BlobField, GlassNavbar } from "@/components/glass";
 import { BootcampDetailClient } from "./BootcampDetailClient";
 
@@ -26,18 +29,31 @@ export default async function BootcampPage({ params }: Props) {
   ]);
   if (!bootcamp) notFound();
 
-  const initialEnrolled =
-    !!session?.user?.id &&
-    (bootcamp.enrolledStudentIds ?? []).includes(session.user.id);
+  // Resolve "owns the parent course". Course ownership is the single gate —
+  // any student who owns the room owns every cohort inside it (the user-
+  // facing flow no longer requires a per-cohort "Enroll" click; that step is
+  // implicit). For analytics we still record enrolment, idempotently.
+  const user = session?.user?.id ? await getUserById(session.user.id) : null;
+  const ownsRoom = user ? ownsCourse(user, bootcamp.category) : false;
+  const alreadyEnrolled =
+    !!user && (bootcamp.enrolledStudentIds ?? []).includes(user.id);
 
-  // Only published bootcamps are public. Drafts / in-review / changes-requested
-  // / archived are visible to the owning instructor, admins, or already-enrolled
-  // students — everyone else gets a 404 (don't leak unpublished content).
+  // Auto-enrol on first owner view — silent, idempotent, fire-and-forget so
+  // the page render isn't gated on the write. Failure here just delays the
+  // analytics signal; the buyer still sees full content because `ownsRoom`
+  // drives access.
+  if (user && ownsRoom && !alreadyEnrolled) {
+    void enrollStudentInBootcamp(user.id, bootcamp.id).catch(() => {});
+  }
+
+  // Drafts / in-review / changes-requested / archived stay invisible to
+  // anyone but the owning instructor, admins, or already-enrolled students
+  // — don't leak unpublished content.
   const isPublished = (bootcamp.status ?? "published") === "published";
   const canViewUnpublished =
     session?.user?.id === bootcamp.instructorId ||
     session?.user?.role === "admin" ||
-    initialEnrolled;
+    alreadyEnrolled;
   if (!isPublished && !canViewUnpublished) notFound();
 
   // Only surface scheduled + live sessions — ended/cancelled clutter UI.
@@ -59,7 +75,8 @@ export default async function BootcampPage({ params }: Props) {
       <GlassNavbar />
       <BootcampDetailClient
         bootcamp={bootcamp}
-        initialEnrolled={initialEnrolled}
+        ownsRoom={ownsRoom}
+        initialEnrolled={alreadyEnrolled || ownsRoom}
         recordings={recordings}
         liveSessions={visibleSessions}
       />
