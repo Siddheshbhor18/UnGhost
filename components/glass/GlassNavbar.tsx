@@ -209,17 +209,14 @@ export function GlassNavbar() {
               </>
             ) : (
               <>
-                {/* Landing-page conversion CTA. Routes through /upgrade, which
-                    gates anon visitors to sign in first. Pulses every 5s to
-                    draw the eye; sm+ only so the mobile pill doesn't overflow. */}
-                <Link href="/upgrade" className="premium-attn hidden sm:inline-block">
-                  <GlassButton
-                    variant="brand"
-                    size="sm"
-                    className="whitespace-nowrap"
-                  >
-                    <Sparkles size={13} /> See plans
-                  </GlassButton>
+                {/* Pricing is a quiet text link, not a second filled button.
+                    "Get started" is the single primary nav CTA so the click
+                    signal isn't split across two brand pills. sm+ only. */}
+                <Link
+                  href="/upgrade"
+                  className="hidden sm:inline-flex items-center whitespace-nowrap px-2 text-sm font-medium text-brand-muted transition-colors hover:text-brand-ink"
+                >
+                  See plans
                 </Link>
                 {/* Phones: a compact text link (the button chrome is what
                     overflows the pill beside the logo at ≤375px). sm+: the

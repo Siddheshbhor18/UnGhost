@@ -8,20 +8,17 @@
  * lives in `/public/abhinav-ranka.jpg` and is rendered via next/image so
  * Next can serve responsive sizes + AVIF/WebP (sharp on hi-DPI screens).
  *
- * --- TODO: swap before launch ---
- *   WORKSHOP_DATE / WORKSHOP_TIME — currently from the mock; confirm with the
- *                                    speaker's office once a slot lands.
+ * Workshop cadence is evergreen: sessions are announced inside the WhatsApp
+ * community, so the panel carries no fixed date that can go stale.
  */
 
 import Image from "next/image";
-import { Award, Calendar, Clock, Star, Trophy } from "lucide-react";
+import { Award, Calendar, Star, Trophy } from "lucide-react";
 
 const GOLD = "#D4B07A";
 const GOLD_LIGHT = "#E8C896";
 const PANEL_BG = "#0A0907";
 
-const WORKSHOP_DATE = "5th July 2025";
-const WORKSHOP_TIME = "11:00 AM IST";
 
 // Real Poem Capital community invite. When admin approval is enabled the
 // click sends a join request the admin then approves — keep the host as
@@ -101,7 +98,7 @@ export function FeaturedSpeaker() {
             <p>
               A Chartered Accountant (CA) and Company Secretary (CS), he
               played a key leadership role in building two of India&apos;s
-              unicorn companies — PharmEasy and CoinDCX.
+              unicorn companies, PharmEasy and CoinDCX.
             </p>
             <p>
               Recognized among India&apos;s top finance leaders with accolades
@@ -203,15 +200,9 @@ export function FeaturedSpeaker() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-5 text-[13px] text-white/80 md:border-l md:border-white/10 md:pl-6 shrink-0">
-              <div className="flex items-center gap-2">
-                <Calendar size={13} style={{ color: GOLD_LIGHT }} />
-                <span className="tnum">{WORKSHOP_DATE}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock size={13} style={{ color: GOLD_LIGHT }} />
-                <span className="tnum">{WORKSHOP_TIME}</span>
-              </div>
+            <div className="flex items-center gap-2 text-[13px] text-white/80 md:border-l md:border-white/10 md:pl-6 shrink-0">
+              <Calendar size={13} style={{ color: GOLD_LIGHT }} />
+              <span>New sessions announced in the community</span>
             </div>
           </div>
 
@@ -229,7 +220,7 @@ export function FeaturedSpeaker() {
             Request to join the WhatsApp community
           </a>
           <p className="mt-2 text-[12px] text-white/45 max-w-md">
-            Opens WhatsApp — admin approves your request, then you&apos;re in.
+            Opens WhatsApp. An admin approves your request, then you&apos;re in.
           </p>
         </div>
 

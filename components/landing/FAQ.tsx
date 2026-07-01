@@ -12,19 +12,19 @@ import {
 const FAQS = [
   {
     q: "What does \"anti-ghosting SLA\" actually mean?",
-    a: "Every recruiter commits to a response time per pipeline stage — 24, 48, or 72 hours. If they miss it, your application credit is refunded and the recruiter's public Ghosting Rate increments. Reputational accountability is built into the product.",
+    a: "Every recruiter commits to a response time per pipeline stage: 24, 48, or 72 hours. If they miss it, your application credit is refunded and the recruiter's public Ghosting Rate increments. Reputational accountability is built into the product.",
   },
   {
     q: "Is unGhost free to use?",
-    a: "Free tier gives you 2 lifetime applications. For unlimited applications plus AI Coach and Q&A, the Jobs plan is ₹149 for 3 months or ₹299 for a year. Bootcamp courses are separate — ₹5,000 each (or ₹11,999 for all six). Recruiters post and hire for free.",
+    a: "Free tier gives you 2 lifetime applications. For unlimited applications plus AI Coach and Q&A, the Jobs plan is ₹149 for 3 months or ₹299 for a year. Bootcamp courses are separate: ₹5,000 each (or ₹11,999 for all six). Recruiters post and hire for free.",
   },
   {
-    q: "Is the Premium purchase refundable?",
-    a: "Bootcamp courses are sold per course at ₹5,000 (₹11,999 for all six). Buying AI or GTM Engineering unlocks Marketing, Sales & Entrepreneurship free; buying any one of Entrepreneurship/Freelancing/Marketing/Sales unlocks the other three. All sales are final, with consent recorded at checkout. If an instructor cancels a live session, we reschedule it or share the recording.",
+    q: "Are payments refundable?",
+    a: "Jobs plans (₹149 for 3 months, ₹299 for a year) and bootcamp courses (₹5,000 each, or ₹11,999 for all six) are final sales, with consent recorded at checkout. Buying AI or GTM Engineering unlocks Marketing, Sales, and Entrepreneurship free; buying any one of Entrepreneurship, Freelancing, Marketing, or Sales unlocks the other three. If an instructor cancels a live session, we reschedule it or share the recording.",
   },
   {
     q: "How does the AI grade my assessment?",
-    a: "MCQ questions are auto-graded. Scenario questions are graded by Claude with a rubric covering depth, evidence, and trade-offs. Recruiters see your raw score plus AI grading notes — no black box.",
+    a: "MCQ questions are auto-graded. Scenario questions are graded by Claude with a rubric covering depth, evidence, and trade-offs. Recruiters see your raw score plus AI grading notes, no black box.",
   },
   {
     q: "Can recruiters see my name and photo before I'm shortlisted?",
@@ -36,11 +36,11 @@ const FAQS = [
   },
   {
     q: "Where is my data stored?",
-    a: "All Indian user data lives in MongoDB Atlas Mumbai (ap-south-1) — DPDP Act compliant. Cross-border replicas are read-only and non-PII. You can export or delete your data anytime via Settings → Privacy.",
+    a: "All Indian user data lives in MongoDB Atlas Mumbai (ap-south-1), DPDP Act compliant. Cross-border replicas are read-only and non-PII. You can export or delete your data anytime via Settings → Privacy.",
   },
   {
     q: "How is unGhost different from Naukri or LinkedIn?",
-    a: "Naukri and LinkedIn optimise for volume — apply into a void. We optimise for response: every application gets either a real recruiter reply or a refund. Plus AI-graded assessments, embedded skill bootcamps, and a public leaderboard recruiters hire from.",
+    a: "Naukri and LinkedIn optimise for volume, so you apply into a void. We optimise for response: every application gets either a real recruiter reply or a refund. Plus AI-graded assessments, embedded skill bootcamps, and a public leaderboard recruiters hire from.",
   },
 ];
 

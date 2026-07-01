@@ -136,7 +136,7 @@ export function BootcampCardStack() {
           Learn the skill. Then land the role.
         </h2>
         <p className="mt-4 max-w-prose text-body-md leading-relaxed text-neutral-500">
-          Six focused bootcamps — built with operators, not academics. Each
+          Six focused bootcamps, built with operators, not academics. Each
           course ends with a Verified Skill badge that recruiters on unGhost
           actually see. No theory dumps. No passive video. Hands-on from day
           one.
@@ -146,8 +146,8 @@ export function BootcampCardStack() {
         <div className="mt-8 flex flex-wrap gap-3">
           {[
             { value: "6", label: "Courses" },
-            { value: "36", label: "Weeks total" },
-            { value: "36", label: "Modules total" },
+            { value: "36", label: "Weeks of content" },
+            { value: "1", label: "Verified badge / course" },
           ].map((stat) => (
             <div
               key={stat.label}

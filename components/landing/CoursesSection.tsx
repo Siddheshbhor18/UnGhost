@@ -55,8 +55,8 @@ const TECH_ANCHORS: readonly BootcampCategory[] = ["ai", "gtm"];
 
 function bundleHint(id: BootcampCategory): string {
   return TECH_ANCHORS.includes(id)
-    ? "Unlocks Marketing, Sales & Entrepreneurship — free"
-    : "Buy one, get the other three — free";
+    ? "Unlocks Marketing, Sales & Entrepreneurship for free"
+    : "Buy one, get the other three for free";
 }
 
 const COURSE_PRICE = formatPaiseAsINR(COURSE_PRICE_PAISE);
@@ -148,8 +148,8 @@ function EverythingBanner({
             All six courses. One price.
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-neutral-500">
-            Every room — AI, GTM, Marketing, Sales, Entrepreneurship &amp;
-            Freelancing — unlocked for life.
+            Every room (AI, GTM, Marketing, Sales, Entrepreneurship &amp;
+            Freelancing) unlocked for life.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-2">
             {ROOMS.map((r) => {

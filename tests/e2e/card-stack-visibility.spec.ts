@@ -8,16 +8,22 @@ import { expect, test, type Page } from "@playwright/test";
  * the per-cycle timelines piled up and all fired at once on return, making the
  * cards jump off then snap back ("Learn the skill. Then land the role." deck).
  *
- * The fix: swap() bails while `document.hidden`, and a `visibilitychange`
- * handler snaps the deck back to its canonical slots on return. This test
- * backgrounds the page with a second tab (a genuine visibility change that
- * pauses rAF), then asserts the deck never surfaces a dropped/scrambled card
- * and settles into a clean 6-slot layout.
+ * The fix adds a `visibilitychange` handler: on return it kills any in-flight
+ * tween and calls place(), which snaps every card to its canonical slot with an
+ * instant gsap.set. That handler is the production mechanism a real browser
+ * fires on every tab switch.
+ *
+ * This test exercises that handler deterministically: it waits until a card is
+ * genuinely mid-drop, fires visibilitychange, and asserts the deck is snapped
+ * back to a clean canonical layout with no card left mid-air. (We drive the
+ * event directly rather than via a real second tab — headless bringToFront does
+ * not reliably deliver visibilitychange, which made the round-trip approach
+ * flaky and non-discriminating.)
  *
  * Slot geometry (BootcampCardStack: cardDistance 24, verticalDistance 36,
  * width 400, height 320, 6 cards, xPercent/yPercent -50): the six canonical
- * translateY values are -160, -196, -232, -268, -304, -340. A card left
- * mid-"drop" carries a +500 offset, so any y above ~60 is the glitch.
+ * translateY values are -160, -196, -232, -268, -304, -340. A card mid-"drop"
+ * carries a +500 offset, so any y above ~60 is a card in motion, not at rest.
  */
 
 type Slot = { x: number; y: number };
@@ -31,11 +37,13 @@ async function readDeck(page: Page): Promise<Slot[]> {
   );
 }
 
-const Y_MAX = 60; // a stuck "drop" sits ~+340..+500; anything above this is a glitch
+const Y_MAX = 60; // resting slots are <= -160; a dropping card climbs toward +340
 const Y_MIN = -420; // deepest canonical slot is -340
 
 test.describe("BootcampCardStack visibility", () => {
-  test("deck stays clean across a tab switch", async ({ page, context }) => {
+  test("visibilitychange snaps a mid-drop deck back to canonical", async ({
+    page,
+  }) => {
     await page.goto("/");
     await page
       .getByRole("heading", { name: /learn the skill/i })
@@ -45,40 +53,39 @@ test.describe("BootcampCardStack visibility", () => {
     await expect(container).toBeVisible();
     await expect(container.locator("> *")).toHaveCount(6);
 
-    // Let a couple of swap cycles run so the deck is genuinely mid-animation.
-    await page.waitForTimeout(3000);
-
-    // Background this page by focusing another tab in the same context. This is
-    // a real visibility change: the first page's rAF ticker pauses. The buggy
-    // build would accumulate ~2 swaps' worth of timelines during this window.
-    const other = await context.newPage();
-    await other.goto("about:blank");
-    await other.bringToFront();
-    await page.waitForTimeout(5000);
-
-    // Return to the deck and watch the settle window closely. On the fixed
-    // build, place() snaps to canonical slots synchronously, so no sample ever
-    // shows a dropped card. On the buggy build, the accumulated timelines fire
-    // here and at least one sample catches a card mid-air.
-    await page.bringToFront();
-    await other.close();
-
-    let sawGlitch = false;
-    for (let i = 0; i < 12; i++) {
-      const deck = await readDeck(page);
-      if (deck.some((c) => c.y > Y_MAX || c.y < Y_MIN)) sawGlitch = true;
-      await page.waitForTimeout(80);
+    // Wait until a card is genuinely mid-drop (out of the resting band) — the
+    // exact state the old bug scrambled on tab return. Poll densely at a fixed
+    // interval: the drop lasts only ~0.7s, so expect.poll's backing-off
+    // intervals would miss it. Dispatch the event the instant we catch a drop.
+    let caughtDrop = false;
+    const deadline = Date.now() + 9000;
+    while (Date.now() < deadline) {
+      if ((await readDeck(page)).some((c) => c.y > Y_MAX)) {
+        caughtDrop = true;
+        break;
+      }
+      await page.waitForTimeout(40);
     }
-    expect(sawGlitch, "a card was left dropped/scrambled after tab return").toBe(
-      false,
+    expect(caughtDrop, "deck never entered a drop animation").toBe(true);
+    // Fire the visibility event the CardSwap handler listens for. On the fixed
+    // build this runs place() synchronously (gsap.set is instant), snapping the
+    // whole deck to its canonical slots. On the buggy build nothing intervenes
+    // and the card keeps dropping.
+    await page.evaluate(() =>
+      document.dispatchEvent(new Event("visibilitychange")),
     );
 
-    // Final invariant: exactly six cards, each at a distinct in-band slot.
+    // Read once the snap has applied. The interval is restarted by the handler,
+    // so the next real swap is ~2600ms out — this read lands in a rest window.
+    await page.waitForTimeout(150);
     const deck = await readDeck(page);
+
+    // Every card back at a distinct, in-band canonical slot: no mid-air card,
+    // no collapse onto the same slot.
     expect(deck).toHaveLength(6);
     for (const c of deck) {
-      expect(c.y).toBeGreaterThanOrEqual(Y_MIN);
-      expect(c.y).toBeLessThanOrEqual(Y_MAX);
+      expect(c.y, `card left mid-drop at y=${c.y}`).toBeGreaterThanOrEqual(Y_MIN);
+      expect(c.y, `card left mid-drop at y=${c.y}`).toBeLessThanOrEqual(Y_MAX);
     }
     const distinct = new Set(deck.map((c) => `${c.x},${c.y}`));
     expect(distinct.size, "cards collapsed onto the same slot").toBe(6);

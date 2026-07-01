@@ -64,3 +64,6 @@ offer_letters_samples/
 scripts/clear-bootcamp-videos.ts
 scripts/whois-inmail.ts
 scripts/list-bootcamp-videos.ts
+
+# Impeccable design-skill critique snapshots (local backlog, not source)
+.impeccable/

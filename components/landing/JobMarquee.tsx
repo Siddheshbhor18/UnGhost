@@ -136,6 +136,9 @@ export function JobMarquee() {
           See open roles
         </Link>
       </div>
+      <p className="mb-8 text-center text-[12px] text-white/45">
+        Sample roles, shown for illustration. Real openings appear once you sign up.
+      </p>
 
       {reduce ? (
         <div className="flex flex-wrap justify-center gap-4">

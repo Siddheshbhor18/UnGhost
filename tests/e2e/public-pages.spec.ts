@@ -4,7 +4,13 @@ test.describe("Public pages", () => {
   test("landing renders hero + metrics", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /we don.t ghost/i })).toBeVisible();
-    await expect(page.getByText(/Drop your resume/i).first()).toBeVisible();
+    // The resume-drop demo renders twice (mobile `lg:hidden` + desktop
+    // `hidden lg:block`), cycling in sync — so `.first()` in DOM order is the
+    // hidden mobile instance. Filter to the visible one, which is what a real
+    // desktop visitor actually sees.
+    await expect(
+      page.getByText(/Drop your resume/i).filter({ visible: true }).first(),
+    ).toBeVisible();
   });
 
   test("bootcamps catalogue lists at least one bootcamp", async ({ page }) => {

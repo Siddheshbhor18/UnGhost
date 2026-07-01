@@ -26,6 +26,7 @@ import { JobMarquee } from "@/components/landing/JobMarquee";
 import { FeaturedSpeaker } from "@/components/landing/FeaturedSpeaker";
 import { HeroReveal } from "@/components/landing/HeroReveal";
 import { SmoothScroll } from "@/components/landing/SmoothScroll";
+import { StickyCTA } from "@/components/landing/StickyCTA";
 import dynamic from "next/dynamic";
 // Below-fold — lazy-load to keep initial bundle small
 const FAQ = dynamic(() =>
@@ -57,11 +58,32 @@ import { PLAN_PRICING } from "@/shared/types";
 // Jobs pricing tiers shown on the landing. Prices flow from PLAN_PRICING and
 // features mirror PLAN_LIMITS (applications · AI Coach · Q&A). Premium is
 // retired, so it is not sold here.
+const MONTHS_QUARTERLY = Math.round(
+  (PLAN_PRICING.jobs_quarterly.durationDays ?? 90) / 30,
+);
+const MONTHS_ANNUAL = Math.round(
+  (PLAN_PRICING.jobs_annual.durationDays ?? 365) / 30,
+);
+// Per-month figures make the annual plan's real advantage legible: the same
+// features for roughly half the monthly cost. Derived from PLAN_PRICING so a
+// price change never leaves the marketing math stale.
+const STANDARD_PER_MONTH = Math.round(
+  PLAN_PRICING.jobs_quarterly.amountINR / MONTHS_QUARTERLY,
+);
+const PRO_PER_MONTH = Math.round(
+  PLAN_PRICING.jobs_annual.amountINR / MONTHS_ANNUAL,
+);
+const PRO_SAVINGS_PCT = Math.round(
+  (1 - PRO_PER_MONTH / STANDARD_PER_MONTH) * 100,
+);
+
 const JOBS_TIERS = [
   {
     name: "Free",
     price: formatPaiseAsINR(0),
     cadence: "to start",
+    perMonth: null,
+    note: null,
     badge: null,
     features: [
       "2 applications (lifetime trial)",
@@ -76,6 +98,8 @@ const JOBS_TIERS = [
     name: "Standard",
     price: formatPaiseAsINR(PLAN_PRICING.jobs_quarterly.amountINR * 100),
     cadence: "for 3 months",
+    perMonth: `about ${formatPaiseAsINR(STANDARD_PER_MONTH * 100)}/mo`,
+    note: null,
     badge: null,
     features: [
       "Unlimited applications",
@@ -90,6 +114,8 @@ const JOBS_TIERS = [
     name: "Pro",
     price: formatPaiseAsINR(PLAN_PRICING.jobs_annual.amountINR * 100),
     cadence: "for 12 months",
+    perMonth: `about ${formatPaiseAsINR(PRO_PER_MONTH * 100)}/mo`,
+    note: `${PRO_SAVINGS_PCT}% cheaper per month than Standard`,
     badge: "Best value",
     features: [
       "Unlimited applications",
@@ -118,6 +144,7 @@ export default async function LandingPage() {
       <Suspense fallback={null}>
         <CookieConsent />
       </Suspense>
+      <StickyCTA />
 
       {/* ─────────── HERO ─────────── */}
       {/* Reveal stage — isolates the sticky hero's pin + z-index so it never
@@ -174,33 +201,55 @@ export default async function LandingPage() {
               count against your limit.
             </MotionSection>
 
-            {/* Mobile-only demo. Desktop renders the same component in the
-                right column below. Two instances are intentional: each is
-                display:none at its non-matching breakpoint, so only one ticks
-                visually at a time. The cost is one extra setInterval (every
-                2.2s) — acceptable for the conversion lift of showing product
-                above the fold on mobile. */}
             <MotionSection
               as="div"
-              className="lg:hidden -mx-4 sm:mx-0"
               delay={0.74}
-              y={0}
-              amount={0}
-            >
-              <HeroDemoLoop />
-            </MotionSection>
-
-            <MotionSection
-              as="div"
-              delay={0.86}
               y={16}
               amount={0}
             >
               <HeroCTAs />
             </MotionSection>
+
+            {/* Honest proof strip: mechanics we actually enforce, no invented
+                metrics (PRODUCT.md bans fake stats). Sits directly under the
+                CTAs so the promise carries evidence the moment it's read. */}
+            <MotionSection
+              as="div"
+              className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-5 text-body-sm text-neutral-600"
+              delay={0.82}
+              y={12}
+              amount={0}
+            >
+              {[
+                "Public response SLA on every role",
+                "Credit refunded if a recruiter ghosts",
+                "AI-graded fit, no black box",
+                "Data in Mumbai, DPDP compliant",
+              ].map((point) => (
+                <span key={point} className="inline-flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-brand-500 shrink-0" />
+                  {point}
+                </span>
+              ))}
+            </MotionSection>
+
+            {/* Mobile-only demo, rendered BELOW the CTAs + proof so the primary
+                action stays inside the first screen on phones. Desktop renders
+                the same component in the right column; each instance is
+                display:none at its non-matching breakpoint, so only one ticks
+                at a time (one extra 2.2s setInterval, worth the mobile lift). */}
+            <MotionSection
+              as="div"
+              className="lg:hidden -mx-4 sm:mx-0"
+              delay={0.9}
+              y={0}
+              amount={0}
+            >
+              <HeroDemoLoop />
+            </MotionSection>
           </div>
 
-          {/* Desktop-only demo (mobile renders inline above CTAs). */}
+          {/* Desktop-only demo (mobile renders the same loop below the CTAs). */}
           <MotionSection
             as="div"
             className="hidden lg:block lg:col-span-5"
@@ -369,7 +418,7 @@ export default async function LandingPage() {
       >
         <SectionHeader
           title="Pick your courses."
-          subtitle="Buy only what you need — smart bundles unlock the rest for free."
+          subtitle="Buy only what you need. Smart bundles unlock the rest for free."
         />
         <div className="mt-10">
           <CoursesSection />
@@ -409,7 +458,7 @@ export default async function LandingPage() {
         {/* Courses callout — bootcamp pricing lives in the cart */}
         {/* Bootcamps cross-sell — pared down to a single line in the premium pass */}
         <p className="mt-12 max-w-5xl mx-auto text-center text-body-sm text-neutral-500">
-          Bootcamps sold separately —{" "}
+          Bootcamps sold separately:{" "}
           <span className="text-neutral-900 font-medium">
             {formatPaiseAsINR(COURSE_PRICE_PAISE)}
           </span>{" "}
@@ -618,6 +667,8 @@ function JobsTierCard({
   name,
   price,
   cadence,
+  perMonth,
+  note,
   badge,
   features,
   cta,
@@ -627,6 +678,8 @@ function JobsTierCard({
   name: string;
   price: string;
   cadence: string;
+  perMonth: string | null;
+  note: string | null;
   badge: string | null;
   features: readonly string[];
   cta: string;
@@ -647,11 +700,27 @@ function JobsTierCard({
         )}
       </div>
       <p className="font-display font-bold text-neutral-900 text-lg">{name}</p>
-      <div className="flex items-baseline gap-2 mt-2 mb-5">
+      <div className="mt-2 mb-1 flex items-baseline gap-2">
         <span className="font-display font-extrabold text-4xl text-neutral-950 tnum">
           {price}
         </span>
         <span className="text-body-sm text-neutral-500">{cadence}</span>
+      </div>
+      {/* Per-month line makes the annual plan's value legible; reserves a
+          fixed-height row so all three cards keep their prices aligned. */}
+      <div className="h-5 mb-1">
+        {perMonth && (
+          <span className="text-body-sm font-medium text-neutral-500 tnum">
+            {perMonth}
+          </span>
+        )}
+      </div>
+      <div className="h-5 mb-4">
+        {note && (
+          <span className="text-body-xs font-semibold text-brand-600">
+            {note}
+          </span>
+        )}
       </div>
       <ul className="space-y-2.5 mb-7 text-body-sm text-neutral-700">
         {features.map((f) => (

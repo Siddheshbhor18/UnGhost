@@ -117,8 +117,8 @@ export function HeroDemoLoop() {
             />
           ))}
         </div>
-        <span className="text-[9px] font-semibold uppercase tracking-wider text-neutral-400">
-          Demo
+        <span className="rounded-full bg-neutral-900/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+          Demo · sample data
         </span>
       </div>
 
@@ -330,7 +330,7 @@ function FrameSLA() {
       exit="exit"
       className="flex flex-col gap-3"
     >
-      <p className="text-xs text-neutral-500 px-1">Top match — your move</p>
+      <p className="text-xs text-neutral-500 px-1">Top match. Your move.</p>
       <motion.div
         initial={{ rotateY: 90 }}
         animate={{ rotateY: 0 }}
