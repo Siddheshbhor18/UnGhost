@@ -160,21 +160,39 @@ export default function CardSwap({
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const container = useRef<HTMLDivElement>(null);
+  const hovered = useRef(false);
 
   useEffect(() => {
     const total = refs.length;
-    refs.forEach((r, i) => {
-      if (r.current) {
-        placeNow(
-          r.current,
-          makeSlot(i, cardDistance, verticalDistance, total),
-          skewAmount,
-        );
-      }
-    });
+
+    // Position every card by its CURRENT slot in `order` (front = slot 0).
+    // Used for the initial layout AND to re-sync after the tab regains focus.
+    const place = () => {
+      order.current.forEach((refIdx, slotPos) => {
+        const el = refs[refIdx].current;
+        if (el) {
+          placeNow(
+            el,
+            makeSlot(slotPos, cardDistance, verticalDistance, total),
+            skewAmount,
+          );
+        }
+      });
+    };
+
+    place();
 
     const swap = () => {
-      if (order.current.length < 2) return;
+      // Never advance while the tab is backgrounded. GSAP's rAF ticker is
+      // frozen there, so rotating `order` and spawning timelines would pile up
+      // and all fire at once on return — the cards visibly jump, then snap
+      // back on the next tick. Bailing here (plus the visibility handler
+      // below) keeps the deck in a clean state across tab switches.
+      if (document.hidden || order.current.length < 2) return;
+
+      // Drop any timeline still in flight before starting a new one so tweens
+      // can't stack up and fight each other.
+      tlRef.current?.kill();
 
       const [front, ...rest] = order.current;
       // Update order immediately so subsequent ticks get correct front card
@@ -248,25 +266,54 @@ export default function CardSwap({
     // Do not swap immediately to let the user view the first card
     intervalRef.current = setInterval(swap, delay);
 
-    if (pauseOnHover && container.current) {
-      const node = container.current;
-      const pause = () => {
-        tlRef.current?.pause();
+    const node = container.current;
+
+    const pause = () => {
+      hovered.current = true;
+      tlRef.current?.pause();
+      clearInterval(intervalRef.current);
+    };
+    const resume = () => {
+      hovered.current = false;
+      if (document.hidden) return;
+      tlRef.current?.play();
+      clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(swap, delay);
+    };
+
+    // Tab visibility sync. On hide: stop cycling + freeze the current tween.
+    // On show: kill anything mid-flight, snap the whole deck back to its
+    // canonical layout, then resume cycling — unless the cursor is still
+    // resting on the deck, in which case pauseOnHover keeps it stopped.
+    const onVisibility = () => {
+      if (document.hidden) {
         clearInterval(intervalRef.current);
-      };
-      const resume = () => {
-        tlRef.current?.play();
-        intervalRef.current = setInterval(swap, delay);
-      };
+        tlRef.current?.pause();
+      } else {
+        tlRef.current?.kill();
+        tlRef.current = null;
+        place();
+        clearInterval(intervalRef.current);
+        if (!(pauseOnHover && hovered.current)) {
+          intervalRef.current = setInterval(swap, delay);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    if (pauseOnHover && node) {
       node.addEventListener("mouseenter", pause);
       node.addEventListener("mouseleave", resume);
-      return () => {
+    }
+
+    return () => {
+      clearInterval(intervalRef.current);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (pauseOnHover && node) {
         node.removeEventListener("mouseenter", pause);
         node.removeEventListener("mouseleave", resume);
-        clearInterval(intervalRef.current);
-      };
-    }
-    return () => clearInterval(intervalRef.current);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardDistance, verticalDistance, delay, pauseOnHover, skewAmount, easing]);
 
