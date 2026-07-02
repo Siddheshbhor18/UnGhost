@@ -18,11 +18,12 @@ import {
   Workflow,
   type LucideIcon,
 } from "lucide-react";
-import { ROOMS, type BootcampCategory } from "@/shared/rooms";
+import { ROOMS, roomLabel, type BootcampCategory } from "@/shared/rooms";
 import {
   COURSE_IDS,
   COURSE_PRICE_PAISE,
   EVERYTHING_BUNDLE_PAISE,
+  FREE_WITH,
   everythingSelection,
   resolveCart,
 } from "@/shared/lib/courses";
@@ -49,14 +50,19 @@ const COURSE_THEME: Record<BootcampCategory, CourseTheme> = {
   freelancing: { Icon: Briefcase, from: "#06B6D4", to: "#0891B2", glow: "6,182,212" },
 };
 
-/** Technical anchors unlock the 3 business courses; any business course unlocks
- *  the other three. Copy mirrors the free-unlock rules baked into resolveCart. */
-const TECH_ANCHORS: readonly BootcampCategory[] = ["ai", "gtm"];
-
+/** Free unlock hint — always naming the actual courses the buyer gets so the
+ *  page doesn't leave them guessing (previously said just "the other three
+ *  for free" which forced a click). Uses `FREE_WITH` + `roomLabel` so the
+ *  copy stays synced with the bundle engine automatically. */
 function bundleHint(id: BootcampCategory): string {
-  return TECH_ANCHORS.includes(id)
-    ? "Unlocks Marketing, Sales & Entrepreneurship for free"
-    : "Buy one, get the other three for free";
+  const freeIds = FREE_WITH[id];
+  if (freeIds.length === 0) return "";
+  const labels = freeIds.map((f) => roomLabel(f));
+  const joined =
+    labels.length <= 2
+      ? labels.join(" & ")
+      : `${labels.slice(0, -1).join(", ")} & ${labels[labels.length - 1]}`;
+  return `Includes ${joined} FREE`;
 }
 
 const COURSE_PRICE = formatPaiseAsINR(COURSE_PRICE_PAISE);

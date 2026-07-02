@@ -16,11 +16,11 @@ const FAQS = [
   },
   {
     q: "Is unGhost free to use?",
-    a: "Free tier gives you 2 lifetime applications. For unlimited applications plus AI Coach and Q&A, the Jobs plan is ₹149 for 3 months or ₹299 for a year. Bootcamp courses are separate: ₹5,000 each (or ₹11,999 for all six). Recruiters post and hire for free.",
+    a: "Free tier gives you 2 lifetime applications. For unlimited applications plus AI Coach and Q&A, the Jobs plan is ₹149 for 3 months or ₹299 for a year. Bootcamp courses are separate: ₹4,999 each (or ₹11,999 for all six). Recruiters post and hire for free.",
   },
   {
     q: "Are payments refundable?",
-    a: "Jobs plans (₹149 for 3 months, ₹299 for a year) and bootcamp courses (₹5,000 each, or ₹11,999 for all six) are final sales, with consent recorded at checkout. Buying AI or GTM Engineering unlocks Marketing, Sales, and Entrepreneurship free; buying any one of Entrepreneurship, Freelancing, Marketing, or Sales unlocks the other three. If an instructor cancels a live session, we reschedule it or share the recording.",
+    a: "Jobs plans (₹149 for 3 months, ₹299 for a year) and bootcamp courses (₹4,999 each, or ₹11,999 for all six) are final sales, with consent recorded at checkout. Buying AI or GTM Engineering unlocks Marketing, Sales, and Entrepreneurship free; buying any one of Entrepreneurship, Freelancing, Marketing, or Sales unlocks the other three. If an instructor cancels a live session, we reschedule it or share the recording.",
   },
   {
     q: "How does the AI grade my assessment?",

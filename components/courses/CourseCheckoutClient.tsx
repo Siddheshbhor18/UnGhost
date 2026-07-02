@@ -333,7 +333,7 @@ function CheckoutHeader() {
         Bootcamp courses
       </h1>
       <p className="mt-3 max-w-prose text-body-md leading-relaxed text-neutral-500">
-        Each course is ₹5,000 for 3 months. Buy AI or GTM and Marketing,
+        Each course is ₹4,999 for 3 months. Buy AI or GTM and Marketing,
         Sales &amp; Entrepreneurship come free; all six together is the{" "}
         {formatPaiseAsINR(EVERYTHING_BUNDLE_PAISE)} Everything bundle.
       </p>
@@ -370,7 +370,7 @@ function EmptyCart({
           <CoursePicker
             ownedCourses={ownedCourses}
             title="Pick courses"
-            description="₹5,000 each · 3 months access. Buying AI or GTM unlocks Marketing, Sales &amp; Entrepreneurship free."
+            description="₹4,999 each · 3 months access. Buying AI or GTM unlocks Marketing, Sales &amp; Entrepreneurship free."
           />
         </div>
       </div>

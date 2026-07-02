@@ -92,7 +92,7 @@ export default async function UpgradePage({ searchParams }: Props) {
           />
           <FeatureRow
             title="Bootcamp courses"
-            body="₹5,000 per course · ₹11,999 for all six. Bought separately on the courses page."
+            body="₹4,999 per course · ₹11,999 for all six. Bought separately on the courses page."
           />
         </section>
       </main>

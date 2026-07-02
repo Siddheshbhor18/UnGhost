@@ -62,6 +62,7 @@ async function makeCreator(commissionPct = 10): Promise<{
     {
       name: "Influencer",
       email: `inf_${Math.random().toString(36).slice(2, 9)}@x.test`,
+      password: "TestPass1",
       commission: { type: "percentage", value: commissionPct },
     },
     "u_admin",
@@ -153,10 +154,10 @@ describe("Attribution + reward — happy path", () => {
     });
     expect(r.ok).toBe(true);
 
-    // 15% of pre-GST ₹5,000 = ₹750 = 75_000 paise.
+    // 15% of pre-GST ₹4,999 = ₹749.85 = 74_985 paise.
     const reward = await getRewardByPaymentId("pay_first_touch");
-    expect(reward?.calculatedAmount).toBe(75_000);
-    expect(await getBalance(creatorId)).toBe(75_000);
+    expect(reward?.calculatedAmount).toBe(74_985);
+    expect(await getBalance(creatorId)).toBe(74_985);
   });
 
   it("a fresh visitor's second link click never overwrites the first attribution", async () => {
@@ -305,7 +306,7 @@ describe("Webhook idempotency + refund — across the full pipeline", () => {
 
     expect(await ProcessedTxnModel.countDocuments({ _id: "pay_redeliver" })).toBe(1);
     expect(await CreatorRewardModel.countDocuments({ paymentId: "pay_redeliver" })).toBe(1);
-    expect(await getBalance(creatorId)).toBe(75_000); // 15% of ₹5,000
+    expect(await getBalance(creatorId)).toBe(74_985); // 15% of ₹4,999
   });
 
   it("refund webhook reverses the reward end-to-end (purchase + refund through webhook)", async () => {
@@ -331,7 +332,7 @@ describe("Webhook idempotency + refund — across the full pipeline", () => {
         },
       },
     }), undefined);
-    expect(await getBalance(creatorId)).toBe(75_000);
+    expect(await getBalance(creatorId)).toBe(74_985);
 
     // Now the refund event from the provider.
     const refund = await razorpayWebhook(webhookReq({

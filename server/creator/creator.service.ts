@@ -11,6 +11,7 @@ import { randomBytes } from "node:crypto";
 import { connectMongo } from "@/server/db/mongo";
 import { UserModel } from "@/server/db/models";
 import { getUserByEmail, slugify } from "@/server/store";
+import { checkPasswordPolicy, hashPassword } from "@/server/auth/password";
 import {
   CreatorProfileModel,
   cleanDoc,
@@ -32,7 +33,7 @@ import type {
 
 export type CreateCreatorResult =
   | { ok: true; profile: CreatorProfile; agreement: CommissionAgreement }
-  | { ok: false; reason: "email_taken" | "code_taken" };
+  | { ok: false; reason: "email_taken" | "code_taken" | "weak_password"; detail?: string };
 
 /**
  * Mint a unique, URL-safe referral code from a seed (the creator's name or an
@@ -64,20 +65,33 @@ export async function createCreator(
   const existing = await getUserByEmail(email);
   if (existing) return { ok: false, reason: "email_taken" };
 
+  // Admin-set password: reject weak values with the same policy the signup
+  // flow enforces so the two identity-write paths don't drift. The password
+  // itself is bcrypt-hashed (12 rounds via hashPassword) — never persisted
+  // in plaintext and never echoed back on the response.
+  const policy = checkPasswordPolicy(input.password);
+  if (!policy.ok) {
+    return { ok: false, reason: "weak_password", detail: policy.reason };
+  }
+  const passwordHash = await hashPassword(input.password);
+
   const referralCode = await generateReferralCode(
     input.referralCode ?? input.name,
   );
   const now = new Date().toISOString();
   const creatorId = `cr_${randomBytes(8).toString("hex")}`;
 
-  // Creator User: no password yet (set via the invite flow), email unverified,
-  // account active so they can log in once they accept.
+  // Creator User: bcrypt-hashed password from admin input. Email is marked
+  // unverified because the admin didn't prove the creator owns it — but the
+  // account is `active` (not suspended) so login works immediately with the
+  // credentials the admin hands over out-of-band.
   try {
     await UserModel.create({
       _id: creatorId,
       email,
       role: "creator",
       name: input.name.trim(),
+      passwordHash,
       plan: "free",
       planType: "free",
       emailVerified: false,
@@ -91,13 +105,18 @@ export async function createCreator(
     throw err;
   }
 
+  // Profile lands `active` on day one — no separate token-activation step
+  // ever runs, so we stamp `acceptedAt` = createdAt (same op the activate
+  // route used to do). Downstream views that gate on "active" (payout eligibility,
+  // dashboard visibility) work immediately.
   const profile: CreatorProfile = {
     creatorId,
     referralCode,
-    status: "pending",
+    status: "active",
     socialLinks: input.socialLinks ?? {},
     bio: input.bio,
     invitedAt: now,
+    acceptedAt: now,
     createdByAdminId,
     createdAt: now,
   };

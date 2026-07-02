@@ -48,6 +48,7 @@ export interface CreatorRow {
 interface CreateBody {
   name: string;
   email: string;
+  password: string;
   socialLinks?: SocialLinks;
   commission: { type: CommissionType; value: number };
 }
@@ -63,6 +64,8 @@ const STATUS_FILTERS: readonly { value: CreatorStatus | "all"; label: string }[]
 const CREATE_ERROR: Record<string, string> = {
   email_taken: "A user with this email already exists.",
   code_taken: "That referral code is already taken.",
+  weak_password:
+    "Password too weak — use 8+ characters, including one uppercase letter and one digit.",
 };
 
 export function CreatorsClient({ initial }: { initial: CreatorRow[] }) {
@@ -96,15 +99,35 @@ export function CreatorsClient({ initial }: { initial: CreatorRow[] }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
+      // The server responds either with `{ profile, agreement, referralUrl }`
+      // on success, or with `{ error, message?, detail?, issues? }` on
+      // failure. `parseBody` sends `issues[]` in dev builds — surfacing the
+      // first issue's `path: message` turns a mystery 400 into a fixable one
+      // (previously EVERY validation failure fell through to a generic
+      // "Could not onboard creator" that hid the actual field problem).
       const data = (await res.json()) as {
         referralUrl?: string;
         error?: string;
+        message?: string;
+        detail?: string;
+        issues?: ReadonlyArray<{ path: string; message: string }>;
       };
       if (!res.ok || !data.referralUrl) {
-        setError(
-          (data.error && CREATE_ERROR[data.error]) ??
-            "Could not onboard creator. Check the details and try again.",
-        );
+        const mapped = data.error ? CREATE_ERROR[data.error] : undefined;
+        // Prefer, in order: mapped human copy → weak-password policy detail
+        // → dev-only field issue → server-supplied `message` → generic.
+        const fieldIssue = data.issues && data.issues[0];
+        const message =
+          mapped ??
+          (data.error === "weak_password" && data.detail
+            ? `Password too weak — ${data.detail}`
+            : undefined) ??
+          (fieldIssue
+            ? `${fieldIssue.path || "input"}: ${fieldIssue.message}`
+            : undefined) ??
+          data.message ??
+          "Could not onboard creator. Check the details and try again.";
+        setError(message);
         return;
       }
       const url = data.referralUrl;
@@ -290,6 +313,8 @@ function OnboardForm({
   const [youtube, setYoutube] = useState("");
   const [linkedin, setLinkedin] = useState("");
   const [twitter, setTwitter] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [type, setType] = useState<CommissionType>("percentage");
   const [value, setValue] = useState("15");
 
@@ -299,12 +324,20 @@ function OnboardForm({
   const previewPaise = previewCommissionPaise(type, valuePaise);
 
   const emailOk = /\S+@\S+\.\S+/.test(email.trim());
+  // Mirror `checkPasswordPolicy` server-side: 8+ chars, one uppercase, one
+  // digit, ≤72 bytes. The server re-checks; this keeps the button state honest.
+  const passwordOk =
+    password.length >= 8 &&
+    password.length <= 72 &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password);
   const valueOk =
     Number.isFinite(numeric) &&
     (type === "percentage"
       ? numeric >= 0 && numeric <= MAX_COMMISSION_PERCENT
       : valuePaise > 0 && valuePaise <= BOOTCAMP_BASE_PAISE);
-  const canSubmit = name.trim().length >= 2 && emailOk && valueOk && !submitting;
+  const canSubmit =
+    name.trim().length >= 2 && emailOk && passwordOk && valueOk && !submitting;
 
   function buildSocialLinks(): SocialLinks | undefined {
     const links: SocialLinks = {};
@@ -320,6 +353,7 @@ function OnboardForm({
     onSubmit({
       name: name.trim(),
       email: email.trim().toLowerCase(),
+      password,
       socialLinks: buildSocialLinks(),
       commission: { type, value: valuePaise },
     });
@@ -350,6 +384,30 @@ function OnboardForm({
           />
         </Field>
       </div>
+
+      <Field
+        label="Set password"
+        required
+        hint="8+ characters with one uppercase letter and one digit. Share it with the creator securely — they can rotate it later from /forgot-password."
+      >
+        <div className="relative">
+          <Input
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Set a strong password"
+            autoComplete="new-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-body-xs font-semibold text-neutral-500 hover:text-brand-primary"
+            tabIndex={-1}
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </div>
+      </Field>
 
       <div>
         <p className="section-label mb-2">Social links (optional)</p>

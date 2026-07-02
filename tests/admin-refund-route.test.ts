@@ -381,6 +381,7 @@ describe("POST /api/admin/billing/refund — Razorpay dispatch", () => {
       {
         name: "C",
         email: `c_${Math.random().toString(36).slice(2, 9)}@x.test`,
+        password: "TestPass1",
         commission: { type: "fixed", value: 80_000 },
       },
       "u_admin",

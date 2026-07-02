@@ -53,6 +53,14 @@ async function postHandler(req: Request) {
 
   const result = await createCreator(parsed.data, session.user.id);
   if (!result.ok) {
+    // `weak_password` is admin-input validation, not a duplicate-key state, so
+    // it maps to 400 with the policy detail; the two dedupe reasons keep 409.
+    if (result.reason === "weak_password") {
+      return NextResponse.json(
+        { error: "weak_password", detail: result.detail },
+        { status: 400 },
+      );
+    }
     return NextResponse.json({ error: result.reason }, { status: 409 });
   }
   const { profile, agreement } = result;

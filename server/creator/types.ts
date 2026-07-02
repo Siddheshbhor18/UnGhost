@@ -61,6 +61,14 @@ export const createCreatorInputSchema = z
   .object({
     name: z.string().trim().min(2).max(120),
     email: z.string().trim().toLowerCase().email().max(254),
+    // Password is now set BY THE ADMIN at creation. The old flow shipped an
+    // invite email with a 1-hour token that the creator activated at
+    // `/creatordashboard/activate`; ops asked us to collapse that into a
+    // single step so admin hands the credentials over out-of-band. Enforced
+    // to the same policy the signup form uses (checkPasswordPolicy — 8+
+    // chars, one upper, one digit, ≤72 bytes). Never logged or echoed back
+    // on the response.
+    password: z.string().min(8).max(72),
     socialLinks: socialLinksSchema.optional(),
     bio: z.string().max(2000).optional(),
     commission: commissionInputSchema,

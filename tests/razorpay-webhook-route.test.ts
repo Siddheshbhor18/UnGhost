@@ -79,6 +79,7 @@ async function newCreator(commission = 15): Promise<string> {
     {
       name: "Creator",
       email: `c_${Math.random().toString(36).slice(2, 9)}@x.test`,
+      password: "TestPass1",
       commission: { type: "percentage", value: commission },
     },
     "u_admin",
@@ -157,10 +158,10 @@ describe("POST /api/payments/razorpay/webhook — fulfilment", () => {
     expect((user?.ownedCourses ?? []).map((g) => g.course).sort()).toEqual(
       ["ai", "entrepreneurship", "marketing", "sales"].sort(),
     );
-    // Reward base = pre-GST cart price (₹5,000), 10% = ₹500 = 50_000 paise.
+    // Reward base = pre-GST cart price (₹4,999), 10% = ₹499.90 = 49_990 paise.
     const reward = await getRewardByPaymentId("pay_w_ai");
-    expect(reward?.calculatedAmount).toBe(50_000);
-    expect(await getBalance(creatorId)).toBe(50_000);
+    expect(reward?.calculatedAmount).toBe(49_990);
+    expect(await getBalance(creatorId)).toBe(49_990);
   });
 
   it("payment.authorized also fulfils (Razorpay can deliver it before .captured)", async () => {
@@ -257,8 +258,8 @@ describe("POST /api/payments/razorpay/webhook — fulfilment", () => {
 
     expect(await ProcessedTxnModel.countDocuments({ _id: "pay_dupe_evt" })).toBe(1);
     expect(await CreatorRewardModel.countDocuments({ paymentId: "pay_dupe_evt" })).toBe(1);
-    // 20% of ₹5,000 = ₹1,000 = 100_000 paise. Credited exactly once.
-    expect(await getBalance(creatorId)).toBe(100_000);
+    // 20% of ₹4,999 = ₹999.80 = 99_980 paise. Credited exactly once.
+    expect(await getBalance(creatorId)).toBe(99_980);
   });
 });
 
@@ -282,7 +283,7 @@ describe("POST /api/payments/razorpay/webhook — reversal events", () => {
         },
       },
     }),), undefined);
-    expect(await getBalance(creatorId)).toBe(75_000); // 15% of ₹5,000
+    expect(await getBalance(creatorId)).toBe(74_985); // 15% of ₹4,999
 
     // Now refund.processed → reverse the reward.
     const refundRaw = JSON.stringify({
@@ -314,7 +315,7 @@ describe("POST /api/payments/razorpay/webhook — reversal events", () => {
         },
       },
     }),), undefined);
-    expect(await getBalance(creatorId)).toBe(75_000);
+    expect(await getBalance(creatorId)).toBe(74_985);
 
     const cbRaw = JSON.stringify({
       event: "payment.dispute.lost",

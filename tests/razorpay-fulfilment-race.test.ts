@@ -63,6 +63,7 @@ async function activeCreator(): Promise<string> {
     {
       name: "Race",
       email: `race_${Math.random().toString(36).slice(2, 9)}@x.test`,
+      password: "TestPass1",
       commission: { type: "percentage", value: 10 },
     },
     "u_admin",
@@ -172,8 +173,8 @@ describe("Razorpay fulfilment race (verify ∥ webhook)", () => {
         referenceType: "reward",
       }),
     ).toBe(1);
-    // 10% of pre-GST ₹5,000 = 50_000 paise.
-    expect(await getBalance(creatorId)).toBe(50_000);
+    // 10% of pre-GST ₹4,999 = 49_990 paise.
+    expect(await getBalance(creatorId)).toBe(49_990);
 
     // Course was granted exactly once (no duplicate ownedCourses entries).
     const user = await UserModel.findById(buyerId).lean();

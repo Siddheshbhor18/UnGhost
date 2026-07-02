@@ -30,6 +30,7 @@ describe("fulfilCoursePurchase", () => {
       {
         name: "C",
         email: `c_${Math.random().toString(36).slice(2, 9)}@x.test`,
+        password: "TestPass1",
         commission: { type: "percentage", value: 10 },
       },
       "u_admin",
@@ -67,11 +68,11 @@ describe("fulfilCoursePurchase", () => {
     // Every grant carries a future (3-month) expiry.
     expect((user?.ownedCourses ?? []).every((g) => Date.parse(g.expiresAt) > Date.now())).toBe(true);
 
-    // Reward base = pre-GST ₹5,000 → 10% = ₹500 = 50000 paise.
+    // Reward base = pre-GST ₹4,999 → 10% = ₹499.90 = 49990 paise.
     const reward = await getRewardByPaymentId("pay_course_1");
-    expect(reward?.bootcampPrice).toBe(500_000);
-    expect(reward?.calculatedAmount).toBe(50_000);
-    expect(await getBalance(creatorId)).toBe(50_000);
+    expect(reward?.bootcampPrice).toBe(499_900);
+    expect(reward?.calculatedAmount).toBe(49_990);
+    expect(await getBalance(creatorId)).toBe(49_990);
 
     // Idempotent replay → no double grant / reward.
     const replay = await fulfilCoursePurchase({
@@ -84,6 +85,6 @@ describe("fulfilCoursePurchase", () => {
       via: "webhook",
     });
     expect(replay).toEqual({ ok: true, firstTime: false });
-    expect(await getBalance(creatorId)).toBe(50_000);
+    expect(await getBalance(creatorId)).toBe(49_990);
   });
 });

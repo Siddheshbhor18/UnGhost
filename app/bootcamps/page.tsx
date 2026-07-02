@@ -98,7 +98,7 @@ export default async function BootcampRooms() {
             </span>
             <div>
               <p className="text-body-sm font-semibold text-brand-ink">
-                ₹5,000 per course · ₹11,999 for all six.
+                ₹4,999 per course · ₹11,999 for all six.
               </p>
               <p className="text-body-xs text-brand-muted">
                 Buying AI or GTM unlocks Marketing, Sales &amp; Entrepreneurship

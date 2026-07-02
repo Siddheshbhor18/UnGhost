@@ -2,7 +2,7 @@
  * Bootcamp **course** pricing + bundle engine.
  *
  * A "course" is one of the 6 rooms (shared/rooms.ts). Each course is sold
- * standalone at ₹5,000; buying certain courses unlocks others for free, and
+ * standalone at ₹4,999; buying certain courses unlocks others for free, and
  * owning all 6 is the ₹11,999 "Everything" bundle.
  *
  * Free-unlock rules (one-time, do NOT cascade — only a PAID anchor unlocks):
@@ -16,13 +16,13 @@
  */
 import { ROOM_IDS, type BootcampCategory } from "@/shared/rooms";
 
-/** Price of a single course, in paise (₹5,000). */
-export const COURSE_PRICE_PAISE = 500_000;
+/** Price of a single course, in paise (₹4,999). */
+export const COURSE_PRICE_PAISE = 499_900;
 
 /** Price of the all-6 "Everything" bundle, in paise (₹11,999). */
 export const EVERYTHING_BUNDLE_PAISE = 1_199_900;
 
-/** Course access is time-bound: each ₹5,000 purchase grants this many days. */
+/** Course access is time-bound: each ₹4,999 purchase grants this many days. */
 export const COURSE_DURATION_DAYS = 90;
 
 /** Every sellable course id = every room id. */

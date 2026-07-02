@@ -45,6 +45,7 @@ async function newCreator(opts?: { pct?: number; fixed?: number }) {
     {
       name: `Creator ${Math.random().toString(36).slice(2, 7)}`,
       email: `c_${Math.random().toString(36).slice(2, 9)}@example.com`,
+      password: "TestPass1",
       commission,
     },
     ADMIN,

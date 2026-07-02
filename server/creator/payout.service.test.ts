@@ -38,6 +38,7 @@ async function newCreatorWithBalance(balancePaise: number, verified: boolean) {
     {
       name: `Payout ${Math.random().toString(36).slice(2, 7)}`,
       email: `p_${Math.random().toString(36).slice(2, 9)}@example.com`,
+      password: "TestPass1",
       commission: { type: "percentage", value: 10 },
     },
     ADMIN,
@@ -75,6 +76,7 @@ describe("payout gates", () => {
       {
         name: "NoDetails",
         email: `nd_${Math.random().toString(36).slice(2, 9)}@example.com`,
+        password: "TestPass1",
         commission: { type: "percentage", value: 10 },
       },
       ADMIN,
