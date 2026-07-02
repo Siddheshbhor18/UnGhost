@@ -40,4 +40,16 @@ describe("reset-token", () => {
     const otherEmail = await issueResetToken("u_y", "b@x.com");
     expect(otherEmail.rateLimited).toBe(false);
   });
+
+  it("consume is atomic — concurrent calls only one wins", async () => {
+    // Regression: `get` then `del` split let two concurrent consumers both
+    // see the userId. Switched to `getdel` so only one caller gets the id.
+    const { token } = await issueResetToken("u_race", "race@x.com");
+    const [a, b] = await Promise.all([
+      consumeResetToken(token),
+      consumeResetToken(token),
+    ]);
+    const winners = [a, b].filter((v) => v !== null);
+    expect(winners).toEqual(["u_race"]);
+  });
 });

@@ -33,7 +33,16 @@ const patchSchema = z.object({
   youtubeVideoId: z.string().trim().optional(),
   streamProvider: z.enum(["youtube", "cloudflare"]).optional(),
   status: z.enum(["scheduled", "live", "ended", "cancelled"]).optional(),
-  recordingUrl: z.string().url().optional(),
+  // Same as the instructor-facing route — WHATWG `URL` accepts
+  // `javascript:`, and this value lands in <a href> in the admin panel.
+  recordingUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((u) => /^https?:\/\//i.test(u), {
+      message: "recordingUrl must be http(s)",
+    })
+    .optional(),
 });
 
 /** Extract a YouTube video ID from any of the common URL shapes the admin

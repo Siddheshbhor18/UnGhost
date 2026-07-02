@@ -69,6 +69,6 @@ async function handler(req: Request, { params }: Ctx) {
 }
 
 export const POST = withRateLimit(
-  { bucket: "auth.verify-email", limit: 30, windowSec: 60, by: "ip" },
+  { bucket: "auth.verify-email", limit: 30, windowSec: 60, by: "ip", fallbackInProcess: true },
   withApiErrorTracking(handler),
 );

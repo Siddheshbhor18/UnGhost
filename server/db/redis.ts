@@ -22,6 +22,12 @@ export interface RedisLike {
   ) => Promise<unknown>;
   /** Get a key as string (null if missing). */
   get: (key: string) => Promise<string | null>;
+  /**
+   * Atomic GET+DEL (Redis 6.2 GETDEL). Returns the value AND removes the key
+   * in one round-trip so two concurrent consumers can never both succeed on
+   * a single-use token (auth reset/verify links). Returns null if missing.
+   */
+  getdel: (key: string) => Promise<string | null>;
   /** Delete one or more keys. */
   del: (...keys: string[]) => Promise<number>;
   /** Increment + return new value. Creates the key with TTL when seeded. */
@@ -85,6 +91,14 @@ const upstashClient: RedisLike = {
     if (typeof v === "object") return JSON.stringify(v);
     return String(v);
   },
+  async getdel(key) {
+    // Same JSON-normalisation caveat as `get` — Upstash may hand back a
+    // parsed object; the callers here stored raw strings and expect strings.
+    const v = await upstash().getdel<unknown>(key);
+    if (v === null || v === undefined) return null;
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
+  },
   async del(...keys) {
     if (keys.length === 0) return 0;
     return upstash().del(...keys);
@@ -138,6 +152,14 @@ const mockClient: RedisLike = {
   },
   async get(key) {
     return getMock(key)?.value ?? null;
+  },
+  async getdel(key) {
+    // Node's event loop makes this trivially atomic in-process — no other
+    // callback can interleave between the read and the delete. That
+    // preserves the single-consumer guarantee the mock has to offer.
+    const v = getMock(key)?.value ?? null;
+    mockStore.delete(key);
+    return v;
   },
   async del(...keys) {
     let n = 0;

@@ -1,34 +1,58 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   getUserById,
   updateStudentProfile,
 } from "@/server/store";
-import type { StudentProfile, Trajectory } from "@/shared/types";
+import type { StudentProfile } from "@/shared/types";
 
 export const runtime = "nodejs";
 
-const ALLOWED_KEYS: Array<keyof StudentProfile> = [
-  "alias",
-  "contactEmail",
-  "contactPhone",
-  "trajectory",
-  "skills",
-  "city",
-  "remotePref",
-  "history",
-  "yearsExperience",
-  "searchVisibility",
-  "applicationIdentity",
-];
+// Zod schema replaces the previous hand-rolled `ALLOWED_KEYS` allowlist. The
+// old flow filtered unknown keys but left string sizes unbounded, so a
+// hostile client could still store megabytes into `alias` / `city` /
+// `history[].impact`. Every field here is optional; `.strict()` refuses any
+// field the client tries to sneak past our editable list.
+//
+// `HistoryEntry` (shared/types) requires `id`, `startDate`, `endDate` and
+// `impact`, so the schema below matches those. `id` is client-generated on
+// the profile editor and re-used on subsequent edits.
+const HistoryItem = z.object({
+  id: z.string().min(1).max(64),
+  title: z.string().trim().min(1).max(120),
+  company: z.string().trim().min(1).max(120),
+  startDate: z.string().trim().max(30),
+  endDate: z.string().trim().max(30),
+  impact: z.string().trim().max(500),
+});
 
-const TRAJECTORIES: Trajectory[] = [
-  "actively_hunting",
-  "casually_exploring",
-  "open_to_magic",
-];
+const PatchInput = z
+  .object({
+    alias: z.string().trim().max(80).optional(),
+    contactEmail: z
+      .string()
+      .trim()
+      .max(254)
+      .email()
+      .or(z.literal(""))
+      .optional(),
+    contactPhone: z.string().trim().max(20).optional(),
+    trajectory: z
+      .enum(["actively_hunting", "casually_exploring", "open_to_magic"])
+      .optional(),
+    skills: z.array(z.string().trim().max(60)).max(30).optional(),
+    city: z.string().trim().max(80).optional(),
+    remotePref: z.enum(["remote", "hybrid", "onsite"]).optional(),
+    history: z.array(HistoryItem).max(20).optional(),
+    yearsExperience: z.number().int().min(0).max(60).optional(),
+    searchVisibility: z.boolean().optional(),
+    applicationIdentity: z.enum(["named", "anonymous"]).optional(),
+  })
+  .strict();
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -47,48 +71,13 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id || session.user.role !== "student") {
     return NextResponse.json({ error: "students only" }, { status: 403 });
   }
-  const body = (await req.json().catch(() => null)) as
-    | Partial<StudentProfile>
-    | null;
-  if (!body || typeof body !== "object") {
-    return NextResponse.json({ error: "invalid payload" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, PatchInput);
+  if (!parsed.ok) return parsed.response;
 
-  // Filter to allowed keys + validate enum values
-  const patch: Partial<StudentProfile> = {};
-  for (const key of Object.keys(body) as Array<keyof StudentProfile>) {
-    if (!ALLOWED_KEYS.includes(key)) continue;
-    (patch as any)[key] = body[key];
-  }
-  if (patch.trajectory && !TRAJECTORIES.includes(patch.trajectory)) {
-    return NextResponse.json(
-      { error: "invalid trajectory" },
-      { status: 400 },
-    );
-  }
-  if (
-    patch.applicationIdentity &&
-    !["named", "anonymous"].includes(patch.applicationIdentity)
-  ) {
-    return NextResponse.json(
-      { error: "invalid applicationIdentity" },
-      { status: 400 },
-    );
-  }
-  if (
-    patch.remotePref &&
-    !["remote", "hybrid", "onsite"].includes(patch.remotePref)
-  ) {
-    return NextResponse.json(
-      { error: "invalid remotePref" },
-      { status: 400 },
-    );
-  }
-  if (Array.isArray(patch.skills)) {
-    patch.skills = patch.skills
-      .map((s) => String(s).trim())
-      .filter((s) => s.length > 0)
-      .slice(0, 30);
+  // Drop empty-string skill chips that survived trimming.
+  const patch: Partial<StudentProfile> = { ...parsed.data };
+  if (parsed.data.skills) {
+    patch.skills = parsed.data.skills.filter((s) => s.length > 0);
   }
 
   const updated = await updateStudentProfile(session.user.id, patch);

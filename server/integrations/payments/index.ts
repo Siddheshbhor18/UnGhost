@@ -167,7 +167,13 @@ export async function getPaymentStatus(
     const saltKey = process.env.PHONEPE_SALT_KEY!;
     const saltIndex = process.env.PHONEPE_SALT_INDEX ?? "1";
 
-    const path = `/pg/v1/status/${merchantId}/${orderId}`;
+    // Encode the orderId belt-and-suspenders. Sponsorship ids are minted
+    // fully server-side (see /api/recruiter/sponsorships/route.ts) so no
+    // client input reaches here today, but any future flow that lets an
+    // attacker-influenced string flow into `orderId` could otherwise smuggle
+    // path traversal into our SIGNED PhonePe status call. Encoding a normal
+    // id is a no-op; encoding a hostile one collapses `..` and `/` safely.
+    const path = `/pg/v1/status/${merchantId}/${encodeURIComponent(orderId)}`;
     const sig =
       createHash("sha256").update(path + saltKey).digest("hex") +
       "###" +

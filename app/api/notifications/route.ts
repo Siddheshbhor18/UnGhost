@@ -15,7 +15,13 @@ export async function GET(req: Request) {
   }
   const url = new URL(req.url);
   const unreadOnly = url.searchParams.get("unread") === "1";
-  const limit = Number(url.searchParams.get("limit") ?? 50);
+  // Clamp limit to a sane range so a hostile ?limit=10000000 can't pin the
+  // event loop loading every historical notification into memory. NaN
+  // (limit=abc) falls back to the default.
+  const rawLimit = Number(url.searchParams.get("limit") ?? 50);
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(Math.max(1, Math.trunc(rawLimit)), 200)
+    : 50;
   const [items, unread] = await Promise.all([
     listNotifications(session.user.id, { unreadOnly, limit }),
     countUnreadNotifications(session.user.id),

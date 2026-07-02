@@ -24,13 +24,26 @@ const PLACEMENTS = [
 ] as const;
 const STATUSES = ["draft", "live", "paused"] as const;
 
+// Same URL scheme lockdown as the create route — a compromised admin session
+// mustn't be able to plant a `javascript:` payload on the public landing.
+const httpOrRelative = z
+  .string()
+  .trim()
+  .max(500)
+  .refine(
+    (v) => v === "" || /^https?:\/\//i.test(v) || v.startsWith("/"),
+    { message: "url must be http(s) or a same-origin path" },
+  );
+
 const patchSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   placement: z.enum(PLACEMENTS).optional(),
-  mediaUrl: z.string().trim().max(500).optional(),
+  mediaUrl: httpOrRelative.optional(),
   headline: z.string().trim().min(2).max(140).optional(),
   subtext: z.string().trim().max(280).optional(),
-  targetUrl: z.string().trim().min(1).max(500).optional(),
+  targetUrl: httpOrRelative
+    .refine((v) => v.length >= 1, { message: "targetUrl required" })
+    .optional(),
   status: z.enum(STATUSES).optional(),
 });
 

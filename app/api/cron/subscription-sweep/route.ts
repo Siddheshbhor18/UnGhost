@@ -9,10 +9,8 @@ import {
 } from "@/server/store";
 import { sweepHardDeletes } from "@/server/auth/dpdp";
 import { withApiErrorTracking } from "@/server/lib/api-error";
+import { hasCronBearer } from "@/server/lib/cron-auth";
 import { logger } from "@/server/lib/logger";
-
-export const runtime = "nodejs";
-
 /**
  * Subscription expiry sweep.
  *
@@ -30,11 +28,7 @@ export const runtime = "nodejs";
  * admin can also hit it manually from the browser.
  */
 async function isAuthorised(req: Request): Promise<boolean> {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth === `Bearer ${secret}`) return true;
-  }
+  if (hasCronBearer(req)) return true;
   const session = await getServerSession(authOptions);
   return session?.user?.role === "admin";
 }

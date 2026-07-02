@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   getApplicationById,
   getJobById,
@@ -55,9 +57,12 @@ export async function PATCH(
   if (!app || app.studentId !== session.user.id) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
-  const body = (await req.json().catch(() => ({}))) as {
-    action?: "withdraw" | "request_update";
-  };
+  const parsed = await parseBody(
+    req,
+    z.object({ action: z.enum(["withdraw", "request_update"]) }),
+  );
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   if (body.action === "withdraw") {
     if (["hired", "rejected"].includes(app.stage)) {

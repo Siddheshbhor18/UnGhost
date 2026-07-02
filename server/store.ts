@@ -2284,16 +2284,60 @@ export async function getInMailCredits(recruiterId: string): Promise<number> {
   return user?.inMailCredits ?? 0;
 }
 
+/**
+ * Non-atomic setter kept ONLY for admin panels that need to force a specific
+ * balance (e.g. one-off credits gifted after a support ticket). Route handlers
+ * spending or refunding a credit MUST use `spendInMailCredit` / `refundInMailCredit`
+ * so the balance is bumped inside a single Mongo op — the naive read-then-write
+ * pattern this replaces let two concurrent sends debit the same slot and left
+ * refunds racing with each other under multi-worker cron.
+ */
 export async function adjustInMailCredits(
   recruiterId: string,
   delta: number,
 ): Promise<number> {
   await db();
-  const user = await UserModel.findById(recruiterId);
-  if (!user) return 0;
-  const next = (user.get("inMailCredits") ?? 50) + delta;
-  await UserModel.updateOne({ _id: recruiterId }, { $set: { inMailCredits: next } });
-  return next;
+  const updated = await UserModel.findOneAndUpdate(
+    { _id: recruiterId },
+    { $inc: { inMailCredits: delta } },
+    { returnDocument: "after", projection: { inMailCredits: 1 } },
+  ).lean();
+  return (updated as unknown as { inMailCredits?: number } | null)
+    ?.inMailCredits ?? 0;
+}
+
+/**
+ * Atomically debit one InMail credit. Returns `{ ok: false }` when the
+ * recruiter has no credits left — the caller MUST NOT create the InMail in
+ * that case. This closes the race where a `getInMailCredits > 0` check
+ * followed by a separate `adjustInMailCredits(-1)` let a burst of concurrent
+ * requests each pass the check and then all decrement past zero.
+ */
+export async function spendInMailCredit(
+  recruiterId: string,
+): Promise<{ ok: true; remaining: number } | { ok: false }> {
+  await db();
+  const updated = await UserModel.findOneAndUpdate(
+    { _id: recruiterId, inMailCredits: { $gt: 0 } },
+    { $inc: { inMailCredits: -1 } },
+    { returnDocument: "after", projection: { inMailCredits: 1 } },
+  ).lean();
+  if (!updated) return { ok: false };
+  return {
+    ok: true,
+    remaining:
+      (updated as unknown as { inMailCredits?: number }).inMailCredits ?? 0,
+  };
+}
+
+/**
+ * Atomically refund one InMail credit. Kept as a separate function so callers
+ * can't accidentally pass a negative delta and drain a balance.
+ */
+export async function refundInMailCredit(
+  recruiterId: string,
+): Promise<number> {
+  return adjustInMailCredits(recruiterId, +1);
 }
 
 /** Has the recruiter sent an InMail to this student in the last 90 days that was declined/ignored? */
@@ -2421,13 +2465,20 @@ export async function notify(input: NotifyInput): Promise<void> {
     // it up.
     try {
       const { publish } = await import("@/server/integrations/realtime");
+      // Pusher `user:<id>` is a PUBLIC channel — no `private-` prefix, no
+      // subscription auth. Anyone in the browser with the public
+      // NEXT_PUBLIC_PUSHER_KEY can subscribe to any user's channel by
+      // guessing their id. So we never ship notification contents on the
+      // wire; the NotificationBell only needs a "something arrived" ping
+      // and re-reads via the authenticated `/api/notifications` endpoint,
+      // which server-side scopes to the caller's session. The kind + ts
+      // fields are safe metadata for animation hints; body/title/priority
+      // stay out of the payload.
+      //
+      // Full fix (Phase 6): switch to a `private-user-<id>` channel with a
+      // Pusher auth endpoint that checks `session.user.id === userId`.
       await publish(`user:${input.userId}`, "notification.new", {
-        id: n.id,
-        title: n.title,
-        body: n.body,
-        kind: n.kind,
-        priority: n.priority,
-        createdAt: n.createdAt,
+        ts: n.createdAt,
       });
     } catch (pubErr) {
       // Don't log full stack — too noisy at scale. The mock adapter
@@ -4861,11 +4912,18 @@ export async function expireUnrespondedInMails(): Promise<{ refunded: number }> 
   for (const im of list) {
     try {
       const respondedAt = new Date().toISOString();
-      await InMailModel.updateOne(
-        { _id: im.id },
+      // Status-guarded update is the concurrency lock. Two workers can both
+      // read the same "pending + expired" InMail from `find` above; only the
+      // one whose `updateOne` finds `status: "pending"` still true actually
+      // flips it. The loser's `modifiedCount` is 0 → we skip the refund side
+      // effects. Without this, both would refund the credit and both would
+      // dispatch a duplicate notification (real user-facing bug).
+      const res = await InMailModel.updateOne(
+        { _id: im.id, status: "pending" },
         { $set: { status: "ignored_refunded", respondedAt } },
       );
-      await adjustInMailCredits(im.recruiterId, +1);
+      if ((res.modifiedCount ?? 0) === 0) continue;
+      await refundInMailCredit(im.recruiterId);
       await notify({
         userId: im.recruiterId,
         kind: "inmail_declined",

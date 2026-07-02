@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   getBootcampById,
   notify,
@@ -11,12 +13,10 @@ import {
 
 export const runtime = "nodejs";
 
-type Decision = "approve" | "request_changes" | "archive";
-
-interface Body {
-  decision: Decision;
-  reviewFeedback?: string;
-}
+const Input = z.object({
+  decision: z.enum(["approve", "request_changes", "archive"]),
+  reviewFeedback: z.string().trim().max(2000).optional(),
+});
 
 export async function POST(
   req: Request,
@@ -28,10 +28,9 @@ export async function POST(
   if (!session?.user?.id || session.user.role !== "admin") {
     return NextResponse.json({ error: "admins only" }, { status: 403 });
   }
-  const body = (await req.json().catch(() => null)) as Body | null;
-  if (!body?.decision) {
-    return NextResponse.json({ error: "decision required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, Input);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const bc = await getBootcampById(params.id);
   if (!bc) {
     return NextResponse.json({ error: "not found" }, { status: 404 });

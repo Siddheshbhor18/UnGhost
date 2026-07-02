@@ -55,7 +55,11 @@ type CorrectionKindValue = z.infer<typeof CorrectionKind>;
 
 const Input = z.object({
   userId: z.string().min(1).max(64),
-  originalTxnId: z.string().min(1).max(120),
+  // `originalTxnId` is interpolated into `${RAZORPAY_API}/payments/<id>/refund`
+  // (razorpay path) and `refund_${id}` (mongo key). Pinning the character
+  // class blocks URL-shape smuggling in the downstream refund call and
+  // keeps the mongo id predictable. Same regex the /verify route uses.
+  originalTxnId: z.string().trim().regex(/^[A-Za-z0-9_-]{4,120}$/),
   amountPaise: z.number().int().positive().max(50_000_000),
   /** Forces the admin to categorize this exception. Flows into audit log + */
   /*  reward-reversal metadata so future audits can quantify each carve-out. */

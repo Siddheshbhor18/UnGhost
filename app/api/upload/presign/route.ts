@@ -14,13 +14,18 @@ import { presignUpload, storageMode } from "@/server/integrations/storage";
 export const runtime = "nodejs";
 
 const ALLOWED_PREFIXES = ["resumes", "logos", "avatars", "bootcamp-cover"] as const;
+// Raster + document formats only. `image/svg+xml` is intentionally excluded:
+// SVG can carry <script> and would be a stored-XSS vector the moment it's
+// served from any origin the app trusts (same-origin fetch, an R2 CNAME under
+// unghost.in, a `srcdoc` embed…). The direct company-logo route made the
+// same choice at `app/api/company/logo/route.ts` — this must match it, else
+// the presign path silently reopens the hole for logos/avatars/covers.
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "image/png",
   "image/jpeg",
   "image/webp",
-  "image/svg+xml",
 ];
 
 const Input = z.object({

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   rateLimit,
   rateLimitResponse,
@@ -27,12 +29,21 @@ export const maxDuration = 60;
 const RETRY_COOLDOWN_MIN = 30;
 const MAX_ATTEMPTS = 3;
 
-interface Body {
-  videoId: string;
-  // `questions` from the client is intentionally IGNORED — the answer key is
-  // rebuilt server-side so a tampered request can't forge a pass.
-  answers: Array<{ questionId: string; answer: string | number }>;
-}
+// `questions` on the wire is intentionally IGNORED — the answer key is
+// rebuilt server-side so a tampered request can't forge a pass. The bounds
+// here just cap how much the AI grader has to chew through.
+const PostInput = z.object({
+  videoId: z.string().min(1).max(64),
+  answers: z
+    .array(
+      z.object({
+        questionId: z.string().min(1).max(64),
+        answer: z.union([z.string().max(4000), z.number()]),
+      }),
+    )
+    .min(1)
+    .max(50),
+});
 
 /** GET — sanitized questions (no answer key) for the client to render. */
 export async function GET(
@@ -85,10 +96,9 @@ export async function POST(
     { limit: 20, windowSec: 60 },
   );
   if (!rl.allowed) return rateLimitResponse(rl);
-  const body = (await req.json().catch(() => null)) as Body | null;
-  if (!body?.videoId || !Array.isArray(body.answers)) {
-    return NextResponse.json({ error: "invalid payload" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, PostInput);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const bootcamp = await getBootcampById(params.id);
   if (!bootcamp) {

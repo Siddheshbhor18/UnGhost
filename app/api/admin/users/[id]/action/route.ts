@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   banUser,
   getUserById,
@@ -15,18 +17,32 @@ import type { Role } from "@/shared/types";
 
 export const runtime = "nodejs";
 
-type Action = "suspend" | "ban" | "restore" | "set_role";
-
 // Roles an admin may assign via this tool. Admin is intentionally excluded —
 // admin provisioning is script-only (scripts/create-admin.ts).
-const ASSIGNABLE_ROLES: Role[] = ["student", "recruiter", "instructor"];
+const ASSIGNABLE_ROLES = ["student", "recruiter", "instructor"] as const;
 
-interface Body {
-  action: Action;
-  durationDays?: number;
-  reason?: string;
-  role?: Role;
-}
+// One discriminated schema per action so each variant's required fields are
+// enforced by the parser instead of the handler's if-ladder — a stray shape
+// (e.g. `{ action: "ban" }` with no reason) 400s at the boundary now.
+const Input = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("suspend"),
+    reason: z.string().trim().min(10).max(500),
+    durationDays: z.union([z.literal(7), z.literal(14), z.literal(30)]).default(7),
+  }),
+  z.object({
+    action: z.literal("ban"),
+    reason: z.string().trim().min(10).max(500),
+  }),
+  z.object({
+    action: z.literal("restore"),
+    reason: z.string().trim().max(500).optional(),
+  }),
+  z.object({
+    action: z.literal("set_role"),
+    role: z.enum(ASSIGNABLE_ROLES),
+  }),
+]);
 
 export async function POST(
   req: Request,
@@ -44,10 +60,9 @@ export async function POST(
       { status: 400 },
     );
   }
-  const body = (await req.json().catch(() => null)) as Body | null;
-  if (!body?.action) {
-    return NextResponse.json({ error: "action required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, Input);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const target = await getUserById(params.id);
   if (!target) {
     return NextResponse.json({ error: "user not found" }, { status: 404 });

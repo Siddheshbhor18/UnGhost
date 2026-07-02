@@ -73,6 +73,6 @@ async function handler(req: Request) {
 
 // 10 attempts / 10 min / ip — blunts token-guessing + reused-token replay.
 export const POST = withRateLimit(
-  { bucket: "auth.creator-activate", limit: 10, windowSec: 600, by: "ip" },
+  { bucket: "auth.creator-activate", limit: 10, windowSec: 600, by: "ip", fallbackInProcess: true },
   withApiErrorTracking(handler),
 );

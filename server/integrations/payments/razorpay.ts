@@ -186,7 +186,12 @@ export async function fetchPayment(
   const keySecret = process.env.RAZORPAY_KEY_SECRET!;
   const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
   try {
-    const res = await fetch(`${RAZORPAY_API}/payments/${paymentId}`, {
+    // Belt-and-suspenders: even though the caller Zod-restricts paymentId to
+    // `[A-Za-z0-9_-]`, encode it before interpolating so any future caller
+    // that skips the schema can't smuggle a path traversal (`../account`)
+    // into our authenticated Razorpay call.
+    const safeId = encodeURIComponent(paymentId);
+    const res = await fetch(`${RAZORPAY_API}/payments/${safeId}`, {
       headers: { Authorization: `Basic ${auth}` },
     });
     if (!res.ok) return null;
@@ -252,7 +257,7 @@ export async function refundPayment(
 
   try {
     const res = await fetch(
-      `${RAZORPAY_API}/payments/${input.paymentId}/refund`,
+      `${RAZORPAY_API}/payments/${encodeURIComponent(input.paymentId)}/refund`,
       {
         method: "POST",
         headers: {

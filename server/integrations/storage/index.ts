@@ -90,7 +90,13 @@ function presignR2(
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const dateStamp = amzDate.slice(0, 8);
   const credential = `${accessKey}/${dateStamp}/${region}/${service}/aws4_request`;
-  const signedHeaders = "host";
+  // Sign `content-type` alongside `host`. Without this the browser can PUT
+  // with any content-type it likes (`text/html`, `application/xhtml+xml`,
+  // `image/svg+xml`) and R2 stores what it got — turning any presigned URL
+  // into a stored-XSS vector the moment `R2_PUBLIC_BASE_URL` lives on the
+  // registrable domain (cookies flow to subdomains). Signing pins the
+  // content-type to what the server whitelisted at presign time.
+  const signedHeaders = "content-type;host";
   const expiresIn = PRESIGN_TTL_SEC;
 
   const params = new URLSearchParams({
@@ -106,7 +112,7 @@ function presignR2(
     "PUT",
     canonicalUri,
     params.toString(),
-    `host:${host}\n`,
+    `content-type:${contentType}\nhost:${host}\n`,
     signedHeaders,
     "UNSIGNED-PAYLOAD",
   ].join("\n");
@@ -127,7 +133,8 @@ function presignR2(
     .digest("hex");
 
   params.set("X-Amz-Signature", signature);
-  // Note: avoid `sha256Hex` async helper since this fn is sync.
+  // Note: keep `sha256Hex` referenced so an unused-symbol lint doesn't
+  // strip the async helper future writes will want back.
   void sha256Hex;
 
   const uploadUrl = `https://${host}${canonicalUri}?${params.toString()}`;
@@ -146,14 +153,26 @@ function presignR2(
  * Generate a presigned upload URL. Client PUTs the file directly to the
  * returned `uploadUrl` with the returned headers, then stores `key`/`publicUrl`
  * in our DB (e.g. on the user.resumeUrl field).
+ *
+ * Content-type is enforced at the LIBRARY layer here — not just at the
+ * `/api/upload/presign` route — because `uploadObject` (used by
+ * `/api/parse-resume`) passes the browser-reported `file.type` verbatim.
+ * Without a library-level gate a client can post `Content-Type: text/html`
+ * on the multipart file part and land an HTML doc at a first-party CDN.
+ * The extension is derived from the SERVER-TRUSTED content-type — never from
+ * the client filename — so `filename:"x.html"` cannot dictate the stored key.
  */
 export async function presignUpload(input: {
   prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover" | "bootcamp-video" | "lecture-video";
   contentType: string;
   filename?: string;
 }): Promise<PresignedUpload> {
-  const extFromName = input.filename ? path.extname(input.filename) : "";
-  const ext = extFromName || extFromContentType(input.contentType) || "";
+  const ext = extFromContentType(input.contentType);
+  if (!ext) {
+    throw new Error(
+      `presignUpload: unsupported content-type "${input.contentType}"`,
+    );
+  }
   if (storageMode() === "mock") {
     return presignMock(input.prefix, ext, input.contentType);
   }
@@ -170,8 +189,6 @@ function extFromContentType(ct: string): string {
       return ".jpg";
     case "image/webp":
       return ".webp";
-    case "image/svg+xml":
-      return ".svg";
     case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
       return ".docx";
     case "video/mp4":

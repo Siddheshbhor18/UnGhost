@@ -36,8 +36,16 @@ export function OAuthButtons({ callbackUrl, onError, compact, intentRole }: Prop
     try {
       // Stash the chosen role for the OAuth round-trip. 5-min TTL, Lax so it
       // survives the provider redirect back to us, scoped to the whole site.
+      // `Secure` when the current page is served over HTTPS — HSTS in prod
+      // already forces HTTPS but the flag stops a MITM on an accidental
+      // http:// landing (e.g. bookmarked before HSTS kicked in) from ever
+      // planting or reading this cookie in cleartext.
       if (intentRole) {
-        document.cookie = `ug_oauth_role=${intentRole}; path=/; max-age=300; samesite=lax`;
+        const secure =
+          typeof window !== "undefined" && window.location.protocol === "https:"
+            ? "; Secure"
+            : "";
+        document.cookie = `ug_oauth_role=${intentRole}; path=/; max-age=300; samesite=lax${secure}`;
       }
       await signIn("google", callbackUrl ? { callbackUrl } : undefined);
     } catch {

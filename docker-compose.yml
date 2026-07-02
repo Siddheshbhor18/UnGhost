@@ -3,8 +3,12 @@ services:
     image: mongo:7
     container_name: noghost-mongo
     restart: unless-stopped
+    # Loopback-only bind so a `docker compose up` on a machine with a public
+    # IP never exposes the DB on the internet. The credentials below are dev
+    # defaults — anyone poking port 27018 would be one guess away from full
+    # data access. Prod uses Atlas; this file is dev-only.
     ports:
-      - "27018:27017"
+      - "127.0.0.1:27018:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: noghost
       MONGO_INITDB_ROOT_PASSWORD: noghost

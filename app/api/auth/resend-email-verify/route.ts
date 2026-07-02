@@ -42,6 +42,6 @@ async function handler(req: Request) {
 }
 
 export const POST = withRateLimit(
-  { bucket: "auth.resend-email-verify", limit: 5, windowSec: 600, by: "ip" },
+  { bucket: "auth.resend-email-verify", limit: 5, windowSec: 600, by: "ip", fallbackInProcess: true },
   withApiErrorTracking(handler),
 );

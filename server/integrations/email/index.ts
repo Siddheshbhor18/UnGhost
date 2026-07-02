@@ -24,6 +24,26 @@ export function emailMode(): "live" | "mock" {
   return process.env.RESEND_API_KEY ? "live" : "mock";
 }
 
+/**
+ * Minimal HTML entity escaper for user-controlled interpolations in email
+ * templates below. Every template with `${name}` / `${utr}` / any string
+ * pulled from user input (recruiter's typed name, student's UTR, etc.) MUST
+ * pass the value through `esc()` before dropping it into an `html` string.
+ * Trusted values (URLs we constructed, our own subject strings) stay raw.
+ *
+ * We could pull in a library, but the surface area here is small and the
+ * escaper is trivial. Keeps the module dependency-free.
+ */
+export function esc(value: string | number | undefined | null): string {
+  const s = value == null ? "" : String(value);
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Last issued mock token (for verify-email demos). */
 const mockTokens = new Map<string, { token: string; ts: number }>();
 export function getLastMockEmailToken(email: string): string | undefined {
@@ -142,10 +162,10 @@ export async function sendPaymentReceived(
     html: `
       <div style="font-family:system-ui,sans-serif;padding:24px;max-width:560px;color:#1A1816">
         <h2 style="margin:0 0 12px 0">Payment received ✓</h2>
-        <p>Hi ${name},</p>
-        <p>We received your UPI payment for <strong>${bootcampTitle}</strong>.</p>
+        <p>Hi ${esc(name)},</p>
+        <p>We received your UPI payment for <strong>${esc(bootcampTitle)}</strong>.</p>
         <table style="border-collapse:collapse;margin:16px 0">
-          <tr><td style="padding:4px 12px 4px 0;color:#666">UTR</td><td style="padding:4px 0;font-family:monospace">${utr}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;color:#666">UTR</td><td style="padding:4px 0;font-family:monospace">${esc(utr)}</td></tr>
         </table>
         <p>Our team is verifying it now. <strong>Your account will be activated within ~20 minutes.</strong> You'll get a confirmation email once you're in.</p>
         <p style="color:#666;font-size:13px">Questions? Reply to this email.</p>
@@ -168,8 +188,8 @@ export async function sendEnrollmentApproved(
     html: `
       <div style="font-family:system-ui,sans-serif;padding:24px;max-width:560px;color:#1A1816">
         <h2 style="margin:0 0 12px 0">You're in 🎉</h2>
-        <p>Hi ${name},</p>
-        <p>You're officially enrolled in <strong>${bootcampTitle}</strong>.</p>
+        <p>Hi ${esc(name)},</p>
+        <p>You're officially enrolled in <strong>${esc(bootcampTitle)}</strong>.</p>
         <p><a href="${dashboardUrl}" style="display:inline-block;padding:12px 20px;background:#0191FC;color:#fff;border-radius:12px;text-decoration:none;font-weight:600">Open your dashboard</a></p>
         <p style="color:#666;font-size:13px">You'll see your bootcamp schedule, joining links for live sessions (visible 15 min before start), and recordings as they're posted.</p>
         <p style="color:#999;font-size:11px;margin-top:24px">— Team unGhost</p>
@@ -236,15 +256,15 @@ export async function sendSavedSearchDigest(
         .map(
           (m) => `
           <li style="margin:0 0 14px 0;padding:0">
-            <a href="${absolute(m.link)}" style="color:#0191FC;text-decoration:none;font-weight:600">${m.jobOrCandidateLabel}</a>
-            <div style="color:#666;font-size:13px;margin-top:2px">${m.summary}</div>
+            <a href="${absolute(m.link)}" style="color:#0191FC;text-decoration:none;font-weight:600">${esc(m.jobOrCandidateLabel)}</a>
+            <div style="color:#666;font-size:13px;margin-top:2px">${esc(m.summary)}</div>
           </li>`,
         )
         .join("");
       return `
         <div style="margin:20px 0 8px 0">
           <p style="margin:0 0 8px 0;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#999;font-weight:600">
-            ${groupName} · ${list.length} new
+            ${esc(groupName)} · ${list.length} new
           </p>
           <ul style="list-style:none;padding:0;margin:0">${items}</ul>
         </div>`;
@@ -259,7 +279,7 @@ export async function sendSavedSearchDigest(
     html: `
       <div style="font-family:system-ui,sans-serif;padding:24px;max-width:600px;color:#1A1816">
         <h2 style="margin:0 0 12px 0">${total} new ${total === 1 ? "match" : "matches"} this week</h2>
-        <p>Hi ${name},</p>
+        <p>Hi ${esc(name)},</p>
         <p>Here's what's new on unGhost from your saved searches in the last 7 days:</p>
         ${htmlGroups}
         <p style="margin-top:24px">
@@ -287,10 +307,10 @@ export async function sendEnrollmentRejected(
     html: `
       <div style="font-family:system-ui,sans-serif;padding:24px;max-width:560px;color:#1A1816">
         <h2 style="margin:0 0 12px 0">Payment couldn't be verified</h2>
-        <p>Hi ${name},</p>
-        <p>We weren't able to verify your payment for <strong>${bootcampTitle}</strong>.</p>
+        <p>Hi ${esc(name)},</p>
+        <p>We weren't able to verify your payment for <strong>${esc(bootcampTitle)}</strong>.</p>
         <div style="background:#FEF2F2;border-left:3px solid #DC2626;padding:12px 16px;margin:16px 0;border-radius:6px">
-          <p style="margin:0;color:#7F1D1D"><strong>Reason:</strong> ${reason}</p>
+          <p style="margin:0;color:#7F1D1D"><strong>Reason:</strong> ${esc(reason)}</p>
         </div>
         <p>If this was a mistake, please resubmit with the correct details:</p>
         <p><a href="${retryUrl}" style="display:inline-block;padding:12px 20px;background:#0191FC;color:#fff;border-radius:12px;text-decoration:none;font-weight:600">Resubmit payment</a></p>

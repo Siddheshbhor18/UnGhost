@@ -118,9 +118,23 @@ async function handler(req: Request) {
         let resumeUrl: string | undefined;
         try {
           const buf = Buffer.from(await file.arrayBuffer());
+          // Normalise the content-type against the extension so a browser
+          // that reports `text/html` (or absent) on a `.pdf` file still
+          // uploads with the right MIME. Anything the whitelist doesn't
+          // recognise falls back to `application/pdf` — the resume default.
+          const lowerName = file.name.toLowerCase();
+          const contentType = lowerName.endsWith(".docx")
+            ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            : lowerName.endsWith(".pdf")
+              ? "application/pdf"
+              : file.type === "application/pdf" ||
+                  file.type ===
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                ? file.type
+                : "application/pdf";
           const uploaded = await uploadObject({
             prefix: "resumes",
-            contentType: file.type || "application/pdf",
+            contentType,
             filename: file.name,
             body: buf,
           });

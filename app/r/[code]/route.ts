@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { createReferralSession } from "@/server/creator/referral.service";
 import { REFERRAL_SESSION_TTL_DAYS } from "@/server/creator/types";
+import { clientIp } from "@/server/lib/client-ip";
 import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
@@ -28,7 +29,10 @@ export async function GET(req: Request, { params }: Ctx) {
   const home = new URL("/", appUrl);
 
   const campaign = url.searchParams.get("campaign")?.slice(0, 80) || undefined;
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  // Use the trusted extractor (prefers non-spoofable `x-real-ip`) so a bot
+  // rotating `x-forwarded-for` can't fake unique visitors and inflate the
+  // per-code analytics. Fallback "" → no hash, still redirects fine.
+  const ip = clientIp(req, "");
   const ipHash = ip
     ? createHash("sha256").update(ip).digest("hex").slice(0, 32)
     : undefined;

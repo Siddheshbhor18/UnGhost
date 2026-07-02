@@ -19,10 +19,23 @@ import { requireSameOrigin } from "@/server/lib/csrf";
 import { setBootcampVideoUrl } from "@/server/store";
 import { logger } from "@/server/lib/logger";
 
+// URL is stored raw and rendered client-side by <source src>. The <video>
+// element itself won't execute `javascript:` schemes, but the same URL leaks
+// into anchor links / share sheets elsewhere. Restrict to http(s) so a
+// hostile instructor can't plant a `javascript:` payload in the field. Empty
+// string + null both mean "clear".
 const PatchSchema = z.object({
   videoId: z.string().trim().min(1).max(64),
-  // URL: optional + nullable (empty string + null both mean "clear").
-  url: z.string().trim().max(2048).nullable().optional(),
+  url: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine(
+      (v) => v === "" || /^https?:\/\//i.test(v),
+      { message: "url must start with http:// or https://" },
+    )
+    .nullable()
+    .optional(),
 });
 
 export async function PATCH(

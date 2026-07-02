@@ -92,3 +92,50 @@ describe("server.store.emailTemplates", () => {
     expect(found?.subject).toBe("Rotated subject");
   });
 });
+
+describe("server.store.spendInMailCredit", () => {
+  it("only debits once when two concurrent spends race the last credit", async () => {
+    // Regression: naive read-then-write let two concurrent sends each observe
+    // `credits === 1` and both proceed. `spendInMailCredit` is an atomic
+    // findOneAndUpdate gated on `inMailCredits > 0`, so exactly one wins.
+    const { UserModel } = await import("./db/models");
+    const { spendInMailCredit } = await import("./store");
+    await UserModel.create({
+      _id: "u_race",
+      email: "race@x.com",
+      name: "Race",
+      role: "recruiter",
+      passwordHash: "",
+      inMailCredits: 1,
+      createdAt: new Date().toISOString(),
+    });
+    const [a, b] = await Promise.all([
+      spendInMailCredit("u_race"),
+      spendInMailCredit("u_race"),
+    ]);
+    const wins = [a, b].filter((r) => r.ok);
+    const losses = [a, b].filter((r) => !r.ok);
+    expect(wins).toHaveLength(1);
+    expect(losses).toHaveLength(1);
+    const doc = await UserModel.findById("u_race").lean();
+    expect(
+      (doc as unknown as { inMailCredits: number }).inMailCredits,
+    ).toBe(0);
+  });
+
+  it("refuses when balance is already zero", async () => {
+    const { UserModel } = await import("./db/models");
+    const { spendInMailCredit } = await import("./store");
+    await UserModel.create({
+      _id: "u_zero",
+      email: "zero@x.com",
+      name: "Zero",
+      role: "recruiter",
+      passwordHash: "",
+      inMailCredits: 0,
+      createdAt: new Date().toISOString(),
+    });
+    const r = await spendInMailCredit("u_zero");
+    expect(r.ok).toBe(false);
+  });
+});

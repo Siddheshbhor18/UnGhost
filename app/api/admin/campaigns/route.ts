@@ -26,13 +26,29 @@ const PLACEMENTS = [
 ] as const;
 const STATUSES = ["draft", "live", "paused"] as const;
 
+// Public-facing surface — landing hero, dashboard top, bootcamp inline. Both
+// URL fields land in `href=`/`src=` attributes. Restricting to http(s) or
+// same-origin relative paths defends against a compromised admin (or session
+// hijack) planting a `javascript:` payload that would XSS every visitor. Empty
+// string is preserved for the "clear" UX.
+const httpOrRelative = z
+  .string()
+  .trim()
+  .max(500)
+  .refine(
+    (v) => v === "" || /^https?:\/\//i.test(v) || v.startsWith("/"),
+    { message: "url must be http(s) or a same-origin path" },
+  );
+
 const inputSchema = z.object({
   name: z.string().trim().min(2).max(120),
   placement: z.enum(PLACEMENTS),
-  mediaUrl: z.string().trim().max(500).optional().or(z.literal("")),
+  mediaUrl: httpOrRelative.optional().or(z.literal("")),
   headline: z.string().trim().min(2).max(140),
   subtext: z.string().trim().max(280).optional().or(z.literal("")),
-  targetUrl: z.string().trim().min(1).max(500),
+  targetUrl: httpOrRelative.refine((v) => v.length >= 1, {
+    message: "targetUrl required",
+  }),
   status: z.enum(STATUSES).default("draft"),
 });
 

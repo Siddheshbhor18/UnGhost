@@ -47,14 +47,18 @@ export interface ConsumeResult {
   reason?: "expired" | "invalid";
 }
 
-/** Verify-and-burn. Returns the user id on success, deletes the token always. */
+/**
+ * Verify-and-burn atomically. Uses Upstash `getdel` (single Redis round-trip)
+ * so two concurrent GET+DEL callers can't both see the value and both delete
+ * — a plain get/del split let both consumers report `ok: true` with the same
+ * userId, letting a lurking attacker replay a legitimately-clicked verify
+ * link within the millisecond window before deletion.
+ */
 export async function consumeEmailVerifyToken(
   token: string,
 ): Promise<ConsumeResult> {
   if (!token || token.length < 32) return { ok: false, reason: "invalid" };
-  const r = redis();
-  const userId = await r.get(tokenKey(token));
+  const userId = await redis().getdel(tokenKey(token));
   if (!userId) return { ok: false, reason: "expired" };
-  await r.del(tokenKey(token));
   return { ok: true, userId };
 }

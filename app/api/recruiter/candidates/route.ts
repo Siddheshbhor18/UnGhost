@@ -1,13 +1,29 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
-import {
-  searchCandidates,
-  type CandidateSearchFilters,
-} from "@/server/store";
+import { parseBody } from "@/server/lib/validate";
+import { searchCandidates } from "@/server/store";
 
 export const runtime = "nodejs";
+
+// Filters mirror `CandidateSearchFilters`. Explicit bounds stop an attacker
+// from sending a mega-array of skills to burn CPU on the JS-side scan, or a
+// non-string `query` that would throw in `.split()`. Every field optional —
+// the store treats absence as "don't filter on this".
+const Input = z.object({
+  query: z.string().trim().max(500).optional(),
+  skills: z.array(z.string().trim().max(60)).max(20).optional(),
+  city: z.string().trim().max(80).optional(),
+  remotePref: z.enum(["remote", "hybrid", "onsite"]).optional(),
+  minYearsExperience: z.number().int().min(0).max(60).optional(),
+  verifiedOnly: z.boolean().optional(),
+  topPerformersOnly: z.boolean().optional(),
+  trajectory: z
+    .enum(["actively_hunting", "casually_exploring", "open_to_magic"])
+    .optional(),
+});
 
 export async function POST(req: Request) {
   const csrf = requireSameOrigin(req);
@@ -16,8 +32,9 @@ export async function POST(req: Request) {
   if (!session?.user?.id || session.user.role !== "recruiter") {
     return NextResponse.json({ error: "recruiters only" }, { status: 403 });
   }
-  const body = (await req.json().catch(() => ({}))) as CandidateSearchFilters;
-  const results = await searchCandidates(body);
+  const parsed = await parseBody(req, Input);
+  if (!parsed.ok) return parsed.response;
+  const results = await searchCandidates(parsed.data);
 
   // Anonymise PII for cards (recruiter unlocks via InMail).
   const anonymised = results.map((r) => ({

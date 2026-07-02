@@ -44,28 +44,64 @@ const postSchema = z.object({
     .max(1000, "Message too long (1000 chars max)"),
 });
 
-/** Fetch latest N messages after an optional `since` cursor. */
+/**
+ * Fetch latest N messages after an optional `since` cursor.
+ *
+ * Requires a logged-in user. Prior implementation left this open with a
+ * comment saying "the page enforces auth" — but the API is directly
+ * reachable, so anyone with a public room code could scrape every message
+ * body + attendee display name (real PII: some students paste emails /
+ * phone numbers into chat). Same enrollment gate the POST route uses now
+ * applies here for paid sessions so only enrolled students can read the
+ * transcript.
+ */
 export async function GET(
   request: Request,
   { params }: { params: { code: string } },
 ): Promise<NextResponse> {
+  const authSession = await getServerSession(authOptions);
+  if (!authSession?.user?.id) {
+    return NextResponse.json(
+      { error: "Sign in to view chat" },
+      { status: 401 },
+    );
+  }
+
   const url = new URL(request.url);
   const since = url.searchParams.get("since");
   const limitParam = Number(url.searchParams.get("limit") ?? "100");
   const limit = Math.min(Math.max(1, limitParam || 100), 200);
 
   await connectMongo();
-  const session = await LiveSessionModel.findOne({
+  const liveSession = await LiveSessionModel.findOne({
     roomCode: params.code,
   })
-    .select("_id")
+    .select("_id tier bootcampId")
     .lean();
-  if (!session) {
+  if (!liveSession) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
+  // Paid sessions: only enrolled students (and instructors/admins) can read.
+  if (liveSession.tier === "paid" && liveSession.bootcampId) {
+    const role = authSession.user.role;
+    const isPrivileged = role === "instructor" || role === "admin";
+    if (!isPrivileged) {
+      const { BootcampModel } = await import("@/server/db/models");
+      const bc = await BootcampModel.findById(liveSession.bootcampId)
+        .select("enrolledStudentIds")
+        .lean();
+      if (!bc?.enrolledStudentIds?.includes(authSession.user.id)) {
+        return NextResponse.json(
+          { error: "You're not enrolled in this bootcamp." },
+          { status: 403 },
+        );
+      }
+    }
+  }
+
   const query: Record<string, unknown> = {
-    sessionId: String(session._id),
+    sessionId: String(liveSession._id),
     deletedAt: null,
   };
   // `since` is a message _id. We fetch the cursor's createdAt then ask for

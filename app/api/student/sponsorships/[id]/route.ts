@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   enrollStudentInBootcamp,
   getBootcampById,
@@ -13,9 +15,7 @@ import {
 
 export const runtime = "nodejs";
 
-interface ActionBody {
-  action: "accept" | "decline";
-}
+const Input = z.object({ action: z.enum(["accept", "decline"]) });
 
 export async function PATCH(
   req: Request,
@@ -44,7 +44,9 @@ export async function PATCH(
       { status: 410 },
     );
   }
-  const body = (await req.json().catch(() => null)) as ActionBody | null;
+  const parsed = await parseBody(req, Input);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const [student, bc] = await Promise.all([
     getUserById(sp.studentId),
     getBootcampById(sp.bootcampId),

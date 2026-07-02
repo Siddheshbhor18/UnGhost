@@ -1,21 +1,22 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
-import {
-  decideModerationFlag,
-  writeAuditLog,
-} from "@/server/store";
-import type { ModerationDecision } from "@/shared/types";
+import { parseBody } from "@/server/lib/validate";
+import { decideModerationFlag, writeAuditLog } from "@/server/store";
 
 export const runtime = "nodejs";
 
-const DECISIONS: ModerationDecision[] = [
-  "approved",
-  "removed_warning",
-  "removed_suspension",
-  "escalated",
-];
+const Input = z.object({
+  decision: z.enum([
+    "approved",
+    "removed_warning",
+    "removed_suspension",
+    "escalated",
+  ]),
+  decisionNote: z.string().trim().max(2000).optional(),
+});
 
 export async function POST(
   req: Request,
@@ -27,13 +28,9 @@ export async function POST(
   if (!session?.user?.id || session.user.role !== "admin") {
     return NextResponse.json({ error: "admins only" }, { status: 403 });
   }
-  const body = (await req.json().catch(() => null)) as {
-    decision: ModerationDecision;
-    decisionNote?: string;
-  } | null;
-  if (!body || !DECISIONS.includes(body.decision)) {
-    return NextResponse.json({ error: "invalid decision" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, Input);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const flag = await decideModerationFlag(
     params.id,
     body.decision,

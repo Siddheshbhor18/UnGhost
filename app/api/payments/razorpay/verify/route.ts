@@ -24,10 +24,23 @@ import {
 
 export const runtime = "nodejs";
 
+// Razorpay IDs are `<prefix>_<32 base62>` in practice (`order_`, `pay_`).
+// Pinning the character class stops URL-shape smuggling in the downstream
+// `${RAZORPAY_API}/payments/${paymentId}` call — a raw `.string()` would let
+// `paymentId = "../../account"` normalise off-path via WHATWG URL rules and
+// hit our own Razorpay account with our Basic auth. The regex is a superset
+// of the real shape (a few chars slack + generous max) so a Razorpay format
+// tweak doesn't false-negative us, while blocking `/`, `..`, `?`, `#`, `%`.
+// Length range is generous — Razorpay live ids are typically 14+ chars but
+// test fixtures use short prefixes like `pay_x`; the real defence here is
+// the char class blocking `/`, `..`, `?`, `#`, `%`.
+const rzpId = z.string().trim().regex(/^[A-Za-z0-9_-]{4,64}$/);
+const rzpSig = z.string().trim().regex(/^[a-f0-9]{40,128}$/);
+
 const Input = z.object({
-  razorpay_order_id: z.string().trim().min(1),
-  razorpay_payment_id: z.string().trim().min(1),
-  razorpay_signature: z.string().trim().min(1),
+  razorpay_order_id: rzpId,
+  razorpay_payment_id: rzpId,
+  razorpay_signature: rzpSig,
 });
 
 /**

@@ -12,9 +12,8 @@ import {
   type SavedSearchDigestMatch,
 } from "@/server/integrations/email";
 import { withApiErrorTracking } from "@/server/lib/api-error";
+import { hasCronBearer } from "@/server/lib/cron-auth";
 import { logger } from "@/server/lib/logger";
-
-export const runtime = "nodejs";
 
 /**
  * Saved-search weekly digest.
@@ -28,11 +27,7 @@ export const runtime = "nodejs";
  * Vercel cron uses CRON_SECRET bearer, an admin can also trigger manually.
  */
 async function isAuthorised(req: Request): Promise<boolean> {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth === `Bearer ${secret}`) return true;
-  }
+  if (hasCronBearer(req)) return true;
   const session = await getServerSession(authOptions);
   return session?.user?.role === "admin";
 }

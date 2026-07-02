@@ -57,7 +57,7 @@ function LoginInner() {
   const { data: sessionData, status: sessionStatus } = useSession();
   useEffect(() => {
     if (sessionStatus !== "authenticated") return;
-    const r = (sessionData?.user as any)?.role as Role | undefined;
+    const r = sessionData?.user?.role as Role | undefined;
     const dest = nextParam ?? (r ? HREF_BY_ROLE[r] : "/dashboard");
     router.replace(dest);
   }, [sessionStatus, sessionData, nextParam, router]);

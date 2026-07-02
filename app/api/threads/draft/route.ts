@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   rateLimit,
   rateLimitResponse,
@@ -19,10 +21,12 @@ export const runtime = "nodejs";
 // isn't killed mid-request. Phase 1 (Inngest) moves these off the request path.
 export const maxDuration = 60;
 
-interface Body {
-  threadId: string;
-  intent?: string;
-}
+// Bound the intent hint so the AI-drafting prompt can't be padded with
+// megabytes of user-supplied text.
+const Input = z.object({
+  threadId: z.string().min(1).max(64),
+  intent: z.string().max(500).optional(),
+});
 
 export async function POST(req: Request) {
   const csrf = requireSameOrigin(req);
@@ -39,10 +43,9 @@ export async function POST(req: Request) {
     { limit: 20, windowSec: 60 },
   );
   if (!rl.allowed) return rateLimitResponse(rl);
-  const body = (await req.json().catch(() => null)) as Body | null;
-  if (!body?.threadId) {
-    return NextResponse.json({ error: "threadId required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, Input);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const t = await getMessageThreadById(body.threadId);
   if (!t || (t.recruiterId !== session.user.id && t.studentId !== session.user.id)) {
     return NextResponse.json({ error: "not found" }, { status: 404 });

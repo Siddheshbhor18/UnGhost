@@ -9,14 +9,25 @@
  * Local (default):   npx tsx scripts/seed-launch-inventory.ts
  * Production:        SEED_ALLOW_PROD=true npx tsx scripts/seed-launch-inventory.ts
  *
- * Recruiter passwords: the seed data carries the PLAINTEXT shared password in
- * `passwordHash`; we bcrypt-hash it here before writing (same convention as
- * scripts/seed.ts). To roll the batch back: npx tsx scripts/unseed-launch-inventory.ts
+ * Recruiter passwords: the seed data ships a SHARED plaintext string in
+ * `passwordHash` — historically that string was written straight in, giving
+ * every seeded recruiter the same credential. That's a mass-compromise if
+ * the seed ever ran against prod. We now IGNORE the shared string on write
+ * and generate a per-recruiter cryptographically random password instead;
+ * the accounts are effectively invite-only after seeding — ops issues
+ * password-reset links from the admin panel to activate each recruiter.
+ *
+ * The random passwords are NEVER logged. Onboarding path: admin panel →
+ * user detail → "Send password-reset" (uses the same reset-token machinery
+ * as /forgot-password).
+ *
+ * To roll the batch back: npx tsx scripts/unseed-launch-inventory.ts
  */
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
 
+import { randomBytes } from "node:crypto";
 import mongoose from "mongoose";
 import { connectMongo } from "../server/db/mongo";
 import { CompanyModel, JobModel, UserModel } from "../server/db/models";
@@ -53,21 +64,38 @@ async function main() {
   }
   console.log("[launch-seed] upserted companies:", companies.length);
 
-  // 2) Recruiters — bcrypt-hash the shared password, then upsert by _id.
+  // 2) Recruiters — the seed's shared plaintext is DELIBERATELY IGNORED.
+  //    We mint a fresh 32-byte random password per recruiter and bcrypt-hash
+  //    that. On existing rows we only touch the non-credential fields via
+  //    `$set` (below) so re-running the seeder doesn't rotate live
+  //    passwords out from under active users. Fresh inserts get the random
+  //    password + no way to log in until an admin sends a reset link.
   //    createdAt is only set on insert (never overwritten on re-runs).
   for (const r of recruiters) {
-    const { id, passwordHash, ...rest } = r;
-    const hashed = await hashPassword(passwordHash);
+    const { id, passwordHash: _sharedPlaintext, ...rest } = r;
+    // Random per-account credential — never logged, never in-repo.
+    const disposable = randomBytes(32).toString("hex");
+    const hashed = await hashPassword(disposable);
     await UserModel.updateOne(
       { _id: id },
       {
-        $set: { _id: id, passwordHash: hashed, ...rest },
-        $setOnInsert: { createdAt: new Date().toISOString() },
+        // Field-level whitelist keeps the credential OUT of the update path
+        // for rows that already exist. Only the display / linkage fields
+        // refresh on re-runs; the random passwordHash lands only on insert.
+        $set: { _id: id, ...rest },
+        $setOnInsert: {
+          createdAt: new Date().toISOString(),
+          passwordHash: hashed,
+        },
       },
       { upsert: true },
     );
   }
-  console.log("[launch-seed] upserted recruiters:", recruiters.length);
+  console.log(
+    "[launch-seed] upserted recruiters:",
+    recruiters.length,
+    "(new accounts are locked until an admin sends a password-reset link)",
+  );
 
   // 3) Jobs — upsert by _id (createdAt comes from the dataset itself).
   for (const j of jobs) {

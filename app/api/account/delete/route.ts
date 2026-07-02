@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   // OAuth-only users (Google sign-in, no password set) skip the password
   // check — they're already authenticated via their OAuth session. Hybrid
   // users who later set a password still need to confirm it.
-  const isOAuthOnly = !!(user as any).oauthProvider && !user.passwordHash;
+  const isOAuthOnly = !!user.oauthProvider && !user.passwordHash;
   if (!isOAuthOnly) {
     if (!parsed.data.password) {
       return NextResponse.json({ error: "password_required" }, { status: 400 });

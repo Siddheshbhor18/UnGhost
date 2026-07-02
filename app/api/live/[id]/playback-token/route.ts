@@ -17,7 +17,7 @@ import { generateStreamPlaybackToken } from "@/server/store";
 import { withRateLimit } from "@/server/lib/with-rate-limit";
 import { withApiErrorTracking } from "@/server/lib/api-error";
 import { connectMongo } from "@/server/db/mongo";
-import { LiveSessionModel } from "@/server/db/models";
+import { LiveSessionModel, UserModel } from "@/server/db/models";
 
 export const runtime = "nodejs";
 
@@ -25,38 +25,56 @@ interface Ctx {
   params: { id: string };
 }
 
-async function handler(req: Request, { params }: Ctx) {
+// Minimal shape of the fields we `.select()` from LiveSession. Mongoose's
+// `.lean()` returns FlattenMaps which loses our domain-type refinements;
+// naming the shape here lets us skip an `as any` at every field read.
+interface LiveSessionForPlayback {
+  streamProvider?: string;
+  tier?: string;
+  bootcampId?: string;
+}
+
+interface UserProfileEnrolments {
+  profile?: { enrolledBootcamps?: string[] };
+}
+
+async function handler(req: Request, { params }: Ctx): Promise<Response> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
 
   await connectMongo();
-  const live = await LiveSessionModel.findById(params.id)
-    .select("streamProvider tier bootcampId registeredStudentIds")
-    .lean();
+  const live = (await LiveSessionModel.findById(params.id)
+    .select("streamProvider tier bootcampId")
+    .lean()) as LiveSessionForPlayback | null;
 
   if (!live) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  if ((live as any).streamProvider !== "cloudflare") {
+  if (live.streamProvider !== "cloudflare") {
     return NextResponse.json(
       { error: "not_cloudflare_session" },
       { status: 400 },
     );
   }
 
-  // Paid sessions: verify enrollment (admin/instructor bypass)
+  // Paid sessions: check *bootcamp enrollment*, not the live session's
+  // `registeredStudentIds`. `registerForLiveSession` is open to any
+  // logged-in user (no enrollment gate) — using it here let any student
+  // register for a paid session, receive a Cloudflare Stream token, and
+  // watch content they never paid for. Mirror `video-token/route.ts`.
   if (
-    (live as any).tier === "paid" &&
+    live.tier === "paid" &&
     session.user.role === "student" &&
     live.bootcampId
   ) {
-    const enrolled = (live.registeredStudentIds ?? []).includes(
-      session.user.id,
-    );
-    if (!enrolled) {
+    const user = (await UserModel.findById(session.user.id)
+      .select("profile.enrolledBootcamps")
+      .lean()) as UserProfileEnrolments | null;
+    const enrolled = user?.profile?.enrolledBootcamps ?? [];
+    if (!enrolled.includes(live.bootcampId)) {
       return NextResponse.json(
         { error: "not_enrolled" },
         { status: 403 },
@@ -77,5 +95,5 @@ async function handler(req: Request, { params }: Ctx) {
 
 export const GET = withRateLimit(
   { bucket: "live.playback-token", limit: 12, windowSec: 300, by: "user" },
-  withApiErrorTracking(handler as any),
+  withApiErrorTracking(handler),
 );

@@ -44,12 +44,16 @@ export async function peekResetToken(token: string): Promise<string | null> {
   return redis().get(tokenKey(token));
 }
 
-/** Consume a reset token. Returns the user id, or null if expired/missing. */
+/**
+ * Consume a reset token. Returns the user id, or null if expired/missing.
+ *
+ * Uses Upstash `getdel` (atomic GET+DEL — single Redis round-trip) so two
+ * concurrent clicks on the same reset link can never both succeed. With a
+ * plain `get` then `del`, both callers could read the token before either
+ * deleted it — letting the second consumer install a different password
+ * moments after the legitimate one (email-relay + attacker race).
+ */
 export async function consumeResetToken(token: string): Promise<string | null> {
   if (!token || typeof token !== "string") return null;
-  const r = redis();
-  const userId = await r.get(tokenKey(token));
-  if (!userId) return null;
-  await r.del(tokenKey(token));
-  return userId;
+  return redis().getdel(tokenKey(token));
 }

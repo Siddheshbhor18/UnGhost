@@ -1,34 +1,29 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   createBootcamp,
   listBootcampsByInstructor,
 } from "@/server/store";
-import type { Bootcamp } from "@/shared/types";
 import { ROOM_IDS } from "@/shared/rooms";
 
 export const runtime = "nodejs";
 
-const CATEGORIES = ROOM_IDS;
-
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "instructor") {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-  return NextResponse.json(await listBootcampsByInstructor(session.user.id));
-}
-
-interface CreateBody {
-  title: string;
-  skill: string;
-  category: Bootcamp["category"];
-  description?: string;
-  priceINR?: number;
-  durationWeeks?: number;
-}
+// Instructor-supplied prices reach the checkout / bundle engine after admin
+// review, so keep them in a sane paise-safe range at write time. Duration
+// weeks + description bounds match the schema in `updateBootcamp`'s EDITABLE
+// whitelist for consistency.
+const CreateInput = z.object({
+  title: z.string().trim().min(3).max(200),
+  skill: z.string().trim().min(1).max(80),
+  category: z.enum(ROOM_IDS),
+  description: z.string().trim().max(10_000).optional(),
+  priceINR: z.number().int().min(0).max(99_999).optional(),
+  durationWeeks: z.number().int().min(1).max(52).optional(),
+});
 
 export async function POST(req: Request) {
   const csrf = requireSameOrigin(req);
@@ -37,19 +32,9 @@ export async function POST(req: Request) {
   if (!session?.user?.id || session.user.role !== "instructor") {
     return NextResponse.json({ error: "instructors only" }, { status: 403 });
   }
-  const body = (await req.json().catch(() => null)) as CreateBody | null;
-  if (!body?.title?.trim() || !body.skill?.trim() || !body.category) {
-    return NextResponse.json(
-      { error: "title, skill, category required" },
-      { status: 400 },
-    );
-  }
-  if (!CATEGORIES.includes(body.category)) {
-    return NextResponse.json(
-      { error: "invalid category" },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseBody(req, CreateInput);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const bc = await createBootcamp({
     instructorId: session.user.id,
     title: body.title.trim(),

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/server/auth";
 import { expireUnrespondedInMails } from "@/server/store";
 import { rateLimit, rateLimitResponse } from "@/server/lib/rate-limit";
+import { requireSameOrigin } from "@/server/lib/csrf";
+import { authoriseCron } from "@/server/lib/cron-auth";
 import { logger } from "@/server/lib/logger";
 
 export const runtime = "nodejs";
@@ -13,32 +13,22 @@ export const runtime = "nodejs";
  * back one InMail. Runs daily via Vercel Cron — deadlines move at day
  * granularity so hourly is overkill.
  *
- * Two trigger modes (mirrors sla-sweep):
- *   1. Scheduled — `Authorization: Bearer ${CRON_SECRET}` header.
- *   2. Manual admin trigger — authenticated admin session, rate-limited so
- *      a panicked click can't fan out.
+ * Two trigger modes:
+ *   1. Scheduled — `Authorization: Bearer ${CRON_SECRET}` (timing-safe compare).
+ *   2. Manual admin trigger — session + same-origin + rate-limit.
  */
-async function isAuthorised(
-  req: Request,
-): Promise<{ ok: boolean; bypassRl: boolean }> {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth === `Bearer ${secret}`) return { ok: true, bypassRl: true };
-  }
-  const session = await getServerSession(authOptions);
-  return {
-    ok: session?.user?.role === "admin",
-    bypassRl: false,
-  };
-}
 
 export async function POST(req: Request) {
-  const auth = await isAuthorised(req);
+  const auth = await authoriseCron(req);
   if (!auth.ok) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   if (!auth.bypassRl) {
+    // Admin browser path — mirror every other admin mutation with a same-
+    // origin guard so a CSRF-shaped request from an attacker page can't
+    // trigger a mass credit-refund via a logged-in admin's session.
+    const csrf = requireSameOrigin(req);
+    if (csrf) return csrf;
     const rl = await rateLimit("inmail-refund-sweep.manual", "global", {
       limit: 6,
       windowSec: 60,

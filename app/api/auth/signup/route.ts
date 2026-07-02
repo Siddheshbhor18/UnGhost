@@ -240,6 +240,6 @@ async function handler(req: Request) {
 }
 
 export const POST = withRateLimit(
-  { bucket: "auth.signup", limit: 5, windowSec: 60, by: "ip" },
+  { bucket: "auth.signup", limit: 5, windowSec: 60, by: "ip", fallbackInProcess: true },
   withApiErrorTracking(handler),
 );

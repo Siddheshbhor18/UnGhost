@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   getInMailById,
   getOrCreateInMailThread,
@@ -12,9 +14,7 @@ import {
 
 export const runtime = "nodejs";
 
-interface Body {
-  action: "accept" | "decline";
-}
+const Input = z.object({ action: z.enum(["accept", "decline"]) });
 
 export async function PATCH(
   req: Request,
@@ -36,10 +36,9 @@ export async function PATCH(
       { status: 409 },
     );
   }
-  const body = (await req.json().catch(() => null)) as Body | null;
-  if (body?.action !== "accept" && body?.action !== "decline") {
-    return NextResponse.json({ error: "unknown action" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, Input);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const updated = await updateInMailStatus(
     params.id,
     body.action === "accept" ? "accepted" : "declined",

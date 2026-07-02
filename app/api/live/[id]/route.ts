@@ -9,6 +9,7 @@ import {
   deleteLiveSession,
   getBootcampById,
   getLiveSessionById,
+  getUserById,
   registerForLiveSession,
   setLiveSessionStatus,
   setLiveSessionStream,
@@ -22,6 +23,10 @@ interface Ctx {
   params: { id: string };
 }
 
+// `recordingUrl` lands in <a href> and <video src> on the instructor
+// recordings page. `z.string().url()` accepts `javascript:` (WHATWG parses
+// it) so a hostile instructor could plant a click-XSS payload against any
+// admin/instructor viewing the recording. Lock the scheme to http(s).
 const PatchInput = z.object({
   action: z.enum([
     "register",
@@ -32,7 +37,14 @@ const PatchInput = z.object({
     "setStream",
   ]),
   youtubeVideoId: z.string().trim().min(1).max(200).optional(),
-  recordingUrl: z.string().trim().url().max(500).optional(),
+  recordingUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((u) => /^https?:\/\//i.test(u), {
+      message: "recordingUrl must be http(s)",
+    })
+    .optional(),
 });
 
 /** GET — fetch one session. */
@@ -67,6 +79,26 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (action === "register" || action === "unregister") {
     if (session.user.role !== "student") {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+    // Paid live sessions gate registration on bootcamp enrolment. Without
+    // this, a free-plan student could register for a paid session (roster
+    // += self) and pick up the "you're registered" UI. Previously this
+    // wasn't a leak on its own — content stayed gated at playback — but
+    // it presented a misleading "you're in" signal AND fed the roster that
+    // the playback-token route was using before it was hardened.
+    if (action === "register" && live.tier === "paid" && live.bootcampId) {
+      const user = await getUserById(session.user.id);
+      const enrolled = user?.profile?.enrolledBootcamps ?? [];
+      if (!enrolled.includes(live.bootcampId)) {
+        return NextResponse.json(
+          {
+            error: "not_enrolled",
+            message:
+              "You need to be enrolled in this bootcamp to register for this session.",
+          },
+          { status: 403 },
+        );
+      }
     }
     if (action === "register") {
       await registerForLiveSession(params.id, session.user.id);

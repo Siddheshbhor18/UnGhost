@@ -16,6 +16,18 @@ export const dynamic = "force-dynamic";
  *   - GitHub Actions post-deploy smoke
  *   - Better Stack synthetic uptime checks
  */
+function sanitiseError(err: unknown): string {
+  // In dev keep the full message for debuggability. In prod the health
+  // endpoint is public — a failing check would otherwise leak Mongo/Redis
+  // driver text (auth mechanism, DB name, sometimes a URI substring) to
+  // anyone probing `/api/health`. Sentry + `logger.error` still get the
+  // full stack via the caller, so ops loses nothing.
+  if (process.env.NODE_ENV !== "production") {
+    return err instanceof Error ? err.message : "unknown";
+  }
+  return "unavailable";
+}
+
 export async function GET() {
   const t0 = Date.now();
   const result: Record<string, unknown> = {
@@ -26,6 +38,11 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     checks: {} as Record<string, { ok: boolean; latencyMs?: number; mode?: string; error?: string }>,
   };
+
+  // Full error strings collected here for logging; the payload sent on the
+  // wire uses `sanitiseError` so the public endpoint never leaks driver
+  // internals.
+  const rawErrors: Record<string, string> = {};
 
   // Mongo check — connect (cached) + ping
   try {
@@ -38,9 +55,10 @@ export async function GET() {
     };
   } catch (e) {
     result.ok = false;
+    rawErrors.mongo = e instanceof Error ? e.message : "unknown";
     (result.checks as Record<string, unknown>).mongo = {
       ok: false,
-      error: e instanceof Error ? e.message : "unknown",
+      error: sanitiseError(e),
     };
   }
 
@@ -58,9 +76,10 @@ export async function GET() {
     };
   } catch (e) {
     result.ok = false;
+    rawErrors.redis = e instanceof Error ? e.message : "unknown";
     (result.checks as Record<string, unknown>).redis = {
       ok: false,
-      error: e instanceof Error ? e.message : "unknown",
+      error: sanitiseError(e),
     };
   }
 
@@ -75,7 +94,12 @@ export async function GET() {
 
   result.totalLatencyMs = Date.now() - t0;
   if (!result.ok) {
-    logger.error({ checks: result.checks }, "health.failed");
+    // The public payload was sanitised; the log gets the full driver text
+    // so ops / Sentry still has everything to diagnose.
+    logger.error(
+      { checks: result.checks, rawErrors },
+      "health.failed",
+    );
   }
   return NextResponse.json(result, {
     status: result.ok ? 200 : 503,

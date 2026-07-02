@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   getBootcampById,
   getBootcampProgress,
@@ -11,13 +13,21 @@ import type { BootcampProgress } from "@/shared/types";
 
 export const runtime = "nodejs";
 
-interface Body {
-  videoId?: string;
-  watched?: boolean;
-  notes?: { videoId: string; content: string };
-  liveAttended?: boolean;
-  liveAttendancePct?: number;
-}
+// Progress is self-reported. Even so, `videoId` should stay bounded and
+// `liveAttendancePct` should be a real percentage — unbounded values would
+// pollute analytics and could carry an arbitrarily large blob into Mongo.
+const Input = z.object({
+  videoId: z.string().min(1).max(64).optional(),
+  watched: z.boolean().optional(),
+  notes: z
+    .object({
+      videoId: z.string().min(1).max(64),
+      content: z.string().max(20_000),
+    })
+    .optional(),
+  liveAttended: z.boolean().optional(),
+  liveAttendancePct: z.number().min(0).max(100).optional(),
+});
 
 export async function GET(
   _req: Request,
@@ -43,10 +53,9 @@ export async function POST(
   if (!session?.user?.id || session.user.role !== "student") {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const body = (await req.json().catch(() => null)) as Body | null;
-  if (!body) {
-    return NextResponse.json({ error: "invalid payload" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, Input);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const bootcamp = await getBootcampById(params.id);
   if (!bootcamp) {
     return NextResponse.json({ error: "bootcamp not found" }, { status: 404 });

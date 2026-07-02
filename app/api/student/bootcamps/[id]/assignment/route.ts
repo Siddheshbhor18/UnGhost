@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/server/auth";
 import { requireSameOrigin } from "@/server/lib/csrf";
+import { parseBody } from "@/server/lib/validate";
 import {
   rateLimit,
   rateLimitResponse,
@@ -61,11 +63,16 @@ const RUBRIC: AssignmentRubricCriterion[] = [
   },
 ];
 
-interface SubmitBody {
-  writeup: string;
-  reflection: string;
-  fileNames?: string[];
-}
+// Bounds tuned so an assignment stays a real one-page writeup — not a
+// megabyte of text a hostile client can push into a paid AI grade call.
+// 100 words is the floor enforced further down; the ceiling caps the LLM
+// prompt cost. `fileNames` is metadata only (real files land in R2), so a
+// small array cap is plenty.
+const SubmitInput = z.object({
+  writeup: z.string().min(1).max(50_000),
+  reflection: z.string().min(1).max(20_000),
+  fileNames: z.array(z.string().max(200)).max(20).optional(),
+});
 
 export async function POST(
   req: Request,
@@ -86,13 +93,9 @@ export async function POST(
     { limit: 10, windowSec: 60 },
   );
   if (!rl.allowed) return rateLimitResponse(rl);
-  const body = (await req.json().catch(() => null)) as SubmitBody | null;
-  if (!body?.writeup || !body.reflection) {
-    return NextResponse.json(
-      { error: "writeup and reflection are required" },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseBody(req, SubmitInput);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const wordCount = body.writeup.split(/\s+/).filter(Boolean).length;
   if (wordCount < 100) {
     return NextResponse.json(
