@@ -117,7 +117,7 @@ export function HeroDemoLoop() {
             />
           ))}
         </div>
-        <span className="rounded-full bg-neutral-900/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+        <span className="rounded-full bg-neutral-900/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-900">
           Demo · sample data
         </span>
       </div>
@@ -189,7 +189,7 @@ function FrameDrop() {
         <p className="font-display text-lg font-bold text-neutral-900 mb-1">
           Drop your resume
         </p>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-neutral-900">
           PDF or DOCX · parsed in seconds
         </p>
       </motion.div>
@@ -228,7 +228,7 @@ function FrameParse() {
             arjun_resume.pdf
           </p>
         </div>
-        <p className="relative text-xs text-neutral-500 mb-3">
+        <p className="relative text-xs text-neutral-900 mb-3">
           Reading skills, history, impact…
         </p>
         <div className="relative flex flex-wrap gap-1.5">
@@ -287,7 +287,7 @@ function FrameMatch() {
             <p className="text-sm font-bold text-neutral-900 truncate">
               {j.co}
             </p>
-            <p className="text-[11px] text-neutral-500 truncate mb-1.5">
+            <p className="text-[11px] text-neutral-900 truncate mb-1.5">
               {j.role}
             </p>
             <div className="flex flex-wrap gap-1">
@@ -309,7 +309,7 @@ function FrameMatch() {
             <p className="text-base font-extrabold text-brand-500 tnum">
               {j.match}%
             </p>
-            <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-semibold">
+            <p className="text-[9px] uppercase tracking-wider text-neutral-700 font-semibold">
               match
             </p>
           </div>
@@ -330,7 +330,7 @@ function FrameSLA() {
       exit="exit"
       className="flex flex-col gap-3"
     >
-      <p className="text-xs text-neutral-500 px-1">Top match. Your move.</p>
+      <p className="text-xs text-neutral-900 px-1">Top match. Your move.</p>
       <motion.div
         initial={{ rotateY: 90 }}
         animate={{ rotateY: 0 }}
@@ -341,7 +341,7 @@ function FrameSLA() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-base font-bold text-neutral-900">Northwind</p>
-            <p className="text-xs text-neutral-500 mt-0.5">
+            <p className="text-xs text-neutral-900 mt-0.5">
               Senior Product Engineer · Bangalore
             </p>
             <p className="text-xs text-neutral-700 mt-2">₹35–60 LPA</p>
@@ -398,7 +398,7 @@ function FrameReply() {
       exit="exit"
       className="flex flex-col gap-3"
     >
-      <p className="text-xs text-neutral-500 px-1">Northwind · 3h ago</p>
+      <p className="text-xs text-neutral-900 px-1">Northwind · 3h ago</p>
       <div
         className={`${tileGlass} p-4`}
         style={{ rotate: "0.4deg" }}
@@ -419,7 +419,7 @@ function FrameReply() {
                 call Thursday?
               </p>
             </div>
-            <p className="text-[11px] text-neutral-500 mt-1.5 flex items-center gap-1">
+            <p className="text-[11px] text-neutral-900 mt-1.5 flex items-center gap-1">
               <CheckCircle2 size={10} className="text-success" /> SLA met · 21h
               early
             </p>

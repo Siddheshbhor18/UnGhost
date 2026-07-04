@@ -117,7 +117,7 @@ export function GuaranteeClock() {
         <h2 className="font-display text-display-lg font-extrabold tracking-tighter text-neutral-950">
           Reply, or your slot comes back.
         </h2>
-        <p className="mt-4 max-w-prose text-body-md leading-relaxed text-neutral-500">
+        <p className="mt-4 max-w-prose text-body-md leading-relaxed text-neutral-900">
           Every recruiter picks a response window before a role goes live, and
           the clock is public. Miss it and the slot returns automatically. It
           won&apos;t count against the student&apos;s limit.
@@ -125,7 +125,7 @@ export function GuaranteeClock() {
 
         {/* Segmented window selector — drives the dial on the right. */}
         <div className="mt-8">
-          <p className="mb-3 text-body-sm font-medium text-neutral-500">
+          <p className="mb-3 text-body-md font-medium text-neutral-900">
             Pick a window to watch the clock:
           </p>
           <div
@@ -172,7 +172,7 @@ export function GuaranteeClock() {
         />
 
         <div className="mx-auto w-full max-w-md rounded-2xl bg-neutral-0 p-6 shadow-elev-4 ring-1 ring-neutral-200/80 sm:p-8">
-          <p className="mb-4 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+          <p className="mb-4 text-[11px] font-medium uppercase tracking-wider text-neutral-900">
             Example scenario
           </p>
 
@@ -272,7 +272,7 @@ export function GuaranteeClock() {
                 >
                   {formatHMS(remaining)}
                 </div>
-                <div className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+                <div className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-900">
                   remaining
                 </div>
               </div>
@@ -286,7 +286,7 @@ export function GuaranteeClock() {
             </span>
             <p className="text-body-sm leading-snug text-neutral-700">
               If it hits zero, the application slot returns.{" "}
-              <span className="text-neutral-500">No charge.</span>
+              <span className="text-neutral-900">No charge.</span>
             </p>
           </div>
         </div>

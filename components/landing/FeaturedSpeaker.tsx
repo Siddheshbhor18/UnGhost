@@ -1,10 +1,11 @@
 /**
  * FeaturedSpeaker — dark glass "speaker spotlight" panel.
  *
- * Mirrors the design mock supplied with the brief: a near-black glass card
- * with a soft gold accent system (border, vignette, headline accent, eyebrow
- * pill, accolade icons, workshop banner) and a portrait that emerges from the
- * right side of the panel via a soft mask + edge fade. The portrait JPG
+ * A near-black glass card on the platform's brand-blue accent system (border,
+ * vignette, headline accent, eyebrow pill, accolade icons, workshop banner),
+ * with the inner strips built as true glassmorphism (backdrop-blur frosting
+ * the blue light behind them). A portrait emerges from the right of the panel
+ * via a soft mask + edge fade. The portrait asset
  * lives in `/public/abhinav-ranka.jpg` and is rendered via next/image so
  * Next can serve responsive sizes + AVIF/WebP (sharp on hi-DPI screens).
  *
@@ -14,17 +15,13 @@
 
 import Image from "next/image";
 import { Award, Calendar, Star, Trophy } from "lucide-react";
+import { EnrollViaWhatsApp } from "./EnrollViaWhatsApp";
 
-const GOLD = "#D4B07A";
-const GOLD_LIGHT = "#E8C896";
-const PANEL_BG = "#0A0907";
+const BLUE = "#0191FC"; // brand-500 — canonical platform accent
+const BLUE_LIGHT = "#6DB6F9"; // brand-300 — legible on dark
+const PANEL_BG = "#080B12"; // cool near-black, tuned to the void section above
 
 
-// Real Poem Capital community invite. When admin approval is enabled the
-// click sends a join request the admin then approves — keep the host as
-// `chat.whatsapp.com`, that's the only URL form WhatsApp honours for the
-// "request to join" / "tap to join" deep-link flow.
-const WHATSAPP_URL = "https://chat.whatsapp.com/B5Xt5JvLskrCoJAaX1v95X?mode=gi_t";
 
 const ACCOLADES = [
   { icon: Trophy, title: "CA Business Leader", sub: "40 Under 40" },
@@ -43,7 +40,7 @@ export function FeaturedSpeaker() {
         aria-hidden
         className="pointer-events-none absolute inset-0 rounded-[28px]"
         style={{
-          background: `linear-gradient(140deg, ${GOLD}66 0%, transparent 35%, transparent 65%, ${GOLD}3D 100%)`,
+          background: `linear-gradient(140deg, ${BLUE}66 0%, transparent 35%, transparent 65%, ${BLUE}3D 100%)`,
           padding: "1px",
           WebkitMask:
             "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
@@ -52,13 +49,15 @@ export function FeaturedSpeaker() {
         }}
       />
 
-      {/* Warm vignette behind everything — sells the spotlight feel */}
+      {/* Brand-blue spotlight vignette — three wells of light so the frosted
+          inner cards have something to blur, left column included. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
-          background: `radial-gradient(95% 70% at 55% 0%, ${GOLD}1A, transparent 65%),
-                       radial-gradient(80% 60% at 100% 100%, ${GOLD}14, transparent 70%)`,
+          background: `radial-gradient(95% 70% at 55% 0%, ${BLUE}26, transparent 65%),
+                       radial-gradient(70% 55% at 12% 48%, ${BLUE}1A, transparent 68%),
+                       radial-gradient(80% 60% at 100% 100%, ${BLUE}1F, transparent 70%)`,
         }}
       />
 
@@ -68,25 +67,27 @@ export function FeaturedSpeaker() {
           <span
             className="inline-flex items-center self-start rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] mb-7"
             style={{
-              color: GOLD_LIGHT,
-              background: `${GOLD}1A`,
-              border: `1px solid ${GOLD}40`,
+              color: BLUE_LIGHT,
+              background: `${BLUE}1F`,
+              border: `1px solid ${BLUE}40`,
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
             }}
           >
             Featured Speaker
           </span>
 
           <h2 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl text-white tracking-tight leading-[1.04] mb-3">
-            <span style={{ color: GOLD_LIGHT }}>Abhinav</span>{" "}
+            <span style={{ color: BLUE_LIGHT }}>Abhinav</span>{" "}
             <span className="text-white">Jain Ranka</span>
           </h2>
-          <p className="text-lg sm:text-xl mb-5" style={{ color: GOLD_LIGHT }}>
+          <p className="text-lg sm:text-xl mb-5" style={{ color: BLUE_LIGHT }}>
             Founder, Poem Capital
           </p>
           <div
             aria-hidden
             className="h-px w-24 mb-7"
-            style={{ background: `linear-gradient(90deg, ${GOLD}, transparent)` }}
+            style={{ background: `linear-gradient(90deg, ${BLUE}, transparent)` }}
           />
 
           <div className="space-y-4 text-white/75 text-[15px] leading-relaxed max-w-2xl">
@@ -139,9 +140,12 @@ export function FeaturedSpeaker() {
           <div
             className="mt-9 rounded-2xl p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-3 gap-4"
             style={{
-              background: "rgba(255,255,255,0.025)",
-              border: `1px solid ${GOLD}26`,
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+              background: "rgba(255,255,255,0.05)",
+              border: `1px solid ${BLUE}33`,
+              backdropFilter: "blur(16px) saturate(150%)",
+              WebkitBackdropFilter: "blur(16px) saturate(150%)",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.25)",
             }}
           >
             {ACCOLADES.map(({ icon: Icon, title, sub }) => (
@@ -149,9 +153,9 @@ export function FeaturedSpeaker() {
                 <span
                   className="grid place-items-center w-9 h-9 rounded-lg shrink-0"
                   style={{
-                    color: GOLD_LIGHT,
-                    background: `${GOLD}14`,
-                    border: `1px solid ${GOLD}33`,
+                    color: BLUE_LIGHT,
+                    background: `${BLUE}14`,
+                    border: `1px solid ${BLUE}33`,
                   }}
                 >
                   <Icon size={16} />
@@ -172,18 +176,21 @@ export function FeaturedSpeaker() {
           <div
             className="mt-4 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-6"
             style={{
-              background: "rgba(255,255,255,0.025)",
-              border: `1px solid ${GOLD}26`,
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+              background: "rgba(255,255,255,0.05)",
+              border: `1px solid ${BLUE}33`,
+              backdropFilter: "blur(16px) saturate(150%)",
+              WebkitBackdropFilter: "blur(16px) saturate(150%)",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.25)",
             }}
           >
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <span
                 className="grid place-items-center w-9 h-9 rounded-lg shrink-0"
                 style={{
-                  color: GOLD_LIGHT,
-                  background: `${GOLD}14`,
-                  border: `1px solid ${GOLD}33`,
+                  color: BLUE_LIGHT,
+                  background: `${BLUE}14`,
+                  border: `1px solid ${BLUE}33`,
                 }}
               >
                 <Calendar size={16} />
@@ -191,7 +198,7 @@ export function FeaturedSpeaker() {
               <div className="min-w-0">
                 <p
                   className="text-[11px] font-bold uppercase tracking-[0.18em] leading-tight"
-                  style={{ color: GOLD_LIGHT }}
+                  style={{ color: BLUE_LIGHT }}
                 >
                   Free Online Workshop
                 </p>
@@ -201,27 +208,14 @@ export function FeaturedSpeaker() {
               </div>
             </div>
             <div className="flex items-center gap-2 text-[13px] text-white/80 md:border-l md:border-white/10 md:pl-6 shrink-0">
-              <Calendar size={13} style={{ color: GOLD_LIGHT }} />
+              <Calendar size={13} style={{ color: BLUE_LIGHT }} />
               <span>New sessions announced in the community</span>
             </div>
           </div>
 
-          {/* CTA — WhatsApp community join. Opens chat.whatsapp.com which
-              triggers WhatsApp's native "Join group" / "Request to join"
-              prompt. target=_blank so we don't lose the current page. */}
-          <a
-            href={WHATSAPP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-5 self-start inline-flex items-center gap-2.5 rounded-xl px-6 h-12 text-[15px] font-semibold text-neutral-950 shadow-[0_10px_28px_rgba(37,211,102,0.32),inset_0_1px_0_rgba(255,255,255,0.28)] hover:shadow-[0_12px_32px_rgba(37,211,102,0.40),inset_0_1px_0_rgba(255,255,255,0.28)] transition-shadow duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99]"
-            style={{ background: "#25D366" }}
-          >
-            <WhatsAppGlyph />
-            Request to join the WhatsApp community
-          </a>
-          <p className="mt-2 text-[12px] text-white/45 max-w-md">
-            Opens WhatsApp. An admin approves your request, then you&apos;re in.
-          </p>
+          {/* Enrollment controls — form → WhatsApp DM, plus a share link that
+              scrolls invitees back to this section. */}
+          <EnrollViaWhatsApp />
         </div>
 
         {/* ── Portrait column ────────────────────────────────────────── */}
@@ -253,7 +247,7 @@ export function FeaturedSpeaker() {
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                "linear-gradient(to right, rgba(10,9,7,0.92) 0%, rgba(10,9,7,0.30) 22%, transparent 34%)",
+                "linear-gradient(to right, rgba(8,11,18,0.94) 0%, rgba(8,11,18,0.32) 22%, transparent 34%)",
             }}
           />
           {/* Subtle bottom shadow */}
@@ -261,7 +255,7 @@ export function FeaturedSpeaker() {
             aria-hidden
             className="pointer-events-none absolute inset-x-0 bottom-0 h-24"
             style={{
-              background: "linear-gradient(to top, rgba(10,9,7,0.6), transparent)",
+              background: "linear-gradient(to top, rgba(8,11,18,0.6), transparent)",
             }}
           />
           {/* Faint gold rim catching the right edge */}
@@ -269,7 +263,7 @@ export function FeaturedSpeaker() {
             aria-hidden
             className="pointer-events-none absolute right-0 top-1/4 bottom-1/4 w-px opacity-30"
             style={{
-              background: `linear-gradient(to bottom, transparent, ${GOLD}, transparent)`,
+              background: `linear-gradient(to bottom, transparent, ${BLUE}, transparent)`,
             }}
           />
         </div>
@@ -278,23 +272,6 @@ export function FeaturedSpeaker() {
   );
 }
 
-/**
- * Official WhatsApp glyph — lucide-react doesn't ship one, so we inline the
- * canonical mark. Sized 18px to match a 12-height button.
- */
-function WhatsAppGlyph() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.768.966-.94 1.164-.174.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0 0 20.464 3.488" />
-    </svg>
-  );
-}
 
 /**
  * PharmEasy wordmark — inlined from public/pharmeasy-logo.svg with native

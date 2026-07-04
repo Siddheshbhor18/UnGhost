@@ -49,8 +49,8 @@
   --glass-light-border: rgba(255, 255, 255, 0.50);
   --glass-heavy-bg: rgba(255, 255, 255, 0.88);
   --glass-heavy-border: rgba(255, 255, 255, 0.50);
-  --glass-tint-bg: rgba(232, 244, 254, 0.65);
-  --glass-tint-border: rgba(1, 145, 252, 0.18);
+  --glass-tint-bg: rgba(157, 206, 251, 0.72);
+  --glass-tint-border: rgba(1, 145, 252, 0.38);
 
   /* ── Legacy aliases (do not use in new code) ── */
   --brand-primary: #0191fc;
@@ -242,6 +242,12 @@ html.lenis body {
 .font-display {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-feature-settings: "ss01" 1, "ss03" 1;
+}
+
+/* Editorial serif — reserved for rare display moments (the landing page's
+   "Then nothing." line). High-contrast light italic against the grotesque. */
+.font-editorial {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
 }
 
 /* Tabular numerals — apply on any dashboard stat, price, timer, count */

@@ -21,6 +21,52 @@ const cached: MongooseCache =
   globalThis.__NG_MONGOOSE__ ?? { conn: null, promise: null };
 globalThis.__NG_MONGOOSE__ = cached;
 
+/** DNS / network hiccups that warrant a quick retry rather than a hard failure.
+ *  Atlas `mongodb+srv://` re-resolves an SRV DNS record on connect, and flaky
+ *  resolvers intermittently return ETIMEOUT / ECONNREFUSED for that lookup. A
+ *  config error (bad URI, auth) is NOT in this set, so it still fails fast. */
+const TRANSIENT_CONN_CODES = new Set([
+  "ETIMEOUT",
+  "ETIMEDOUT",
+  "ECONNREFUSED",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+]);
+
+export function isTransientConnError(err: unknown): boolean {
+  const e = err as { code?: string; name?: string; message?: string };
+  if (e?.code && TRANSIENT_CONN_CODES.has(e.code)) return true;
+  if (e?.name === "MongooseServerSelectionError") return true;
+  return /querySrv|ETIMEOUT|ETIMEDOUT|ECONNREFUSED|ENOTFOUND|EAI_AGAIN/i.test(
+    e?.message ?? "",
+  );
+}
+
+/** Connect with a bounded retry on transient DNS/network failures. `connect`
+ *  is injectable so the retry policy can be unit-tested without a real server. */
+export async function connectWithRetry(
+  uri: string,
+  opts: Parameters<typeof mongoose.connect>[1],
+  connect: (
+    uri: string,
+    opts: Parameters<typeof mongoose.connect>[1],
+  ) => Promise<typeof mongoose> = mongoose.connect.bind(mongoose),
+  maxAttempts = 2,
+): Promise<typeof mongoose> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await connect(uri, opts);
+    } catch (err) {
+      lastErr = err;
+      if (attempt === maxAttempts || !isTransientConnError(err)) throw err;
+      // Short backoff, then re-resolve the SRV record and reconnect.
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+    }
+  }
+  throw lastErr;
+}
+
 export async function connectMongo(): Promise<typeof mongoose> {
   if (cached.conn) return cached.conn;
   if (!cached.promise) {
@@ -43,7 +89,7 @@ export async function connectMongo(): Promise<typeof mongoose> {
     //                             (server/db/migrations). Leaving it on would make
     //                             every prod cold start re-ensure schema indexes
     //                             (extra round-trips + connections); dev keeps it on.
-    cached.promise = mongoose.connect(getMongoUri(), {
+    cached.promise = connectWithRetry(getMongoUri(), {
       bufferCommands: false,
       maxPoolSize: 3,
       minPoolSize: 0,
@@ -52,6 +98,13 @@ export async function connectMongo(): Promise<typeof mongoose> {
       autoIndex: process.env.NODE_ENV !== "production",
     });
   }
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (err) {
+    // Never cache a rejected promise: a transient connect failure would then
+    // 500 every request until a restart. Null it so the next call re-attempts.
+    cached.promise = null;
+    throw err;
+  }
   return cached.conn;
 }

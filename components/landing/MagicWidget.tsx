@@ -140,7 +140,7 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
           <p className="font-display text-lg font-bold text-neutral-900 mb-1">
             Drop your resume
           </p>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-neutral-900">
             PDF or DOCX · up to 5 MB · auto-parsed in seconds
           </p>
           <input
@@ -166,7 +166,7 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
               {fileName}
             </p>
           </div>
-          <p className="relative text-xs text-neutral-500 mb-3">
+          <p className="relative text-xs text-neutral-900 mb-3">
             Reading skills, history, impact…
           </p>
           <div className="relative flex flex-wrap gap-1.5">
@@ -190,7 +190,7 @@ export function MagicWidget({ sticky = false }: { sticky?: boolean }) {
               Parsed — {chips.length} skills detected
             </p>
           </div>
-          <p className="text-xs text-neutral-500 mb-4">
+          <p className="text-xs text-neutral-900 mb-4">
             Create an account to see matched missions.
           </p>
           <button

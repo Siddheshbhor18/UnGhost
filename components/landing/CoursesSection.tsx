@@ -101,7 +101,7 @@ function CourseCard({
           <p className="font-display text-lg font-extrabold tracking-tight text-neutral-950 tnum">
             {COURSE_PRICE}
           </p>
-          <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-400">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-700">
             per course · 3 months
           </p>
         </div>
@@ -110,7 +110,7 @@ function CourseCard({
       <h3 className="mt-5 font-display text-lg font-bold text-neutral-900">
         {room.label}
       </h3>
-      <p className="mt-1.5 flex-1 text-sm leading-relaxed text-neutral-500">
+      <p className="mt-1.5 flex-1 text-base leading-relaxed text-neutral-900">
         {room.blurb}
       </p>
 
@@ -144,7 +144,7 @@ function EverythingBanner({
   onAddAll: () => void;
 }) {
   return (
-    <div className="relative mt-6 overflow-hidden rounded-2xl bg-brand-50/80 p-8 ring-1 ring-brand-100 shadow-elev-3 md:p-10">
+    <div className="relative mt-6 overflow-hidden rounded-2xl bg-brand-100/80 p-8 ring-1 ring-brand-300/60 shadow-elev-3 md:p-10">
       <div className="relative flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-600 ring-1 ring-brand-500/20">
@@ -153,7 +153,7 @@ function EverythingBanner({
           <h3 className="mt-4 font-display text-2xl font-extrabold tracking-tight text-neutral-950 md:text-3xl">
             All six courses. One price.
           </h3>
-          <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+          <p className="mt-2 text-base leading-relaxed text-neutral-900">
             Every room (AI, GTM, Marketing, Sales, Entrepreneurship &amp;
             Freelancing) unlocked for life.
           </p>
@@ -183,7 +183,7 @@ function EverythingBanner({
             <span className="font-display text-4xl font-extrabold tracking-tight text-neutral-950 tnum">
               {EVERYTHING_PRICE}
             </span>
-            <span className="text-base text-neutral-400 line-through tnum">
+            <span className="text-base text-neutral-700 line-through tnum">
               {EVERYTHING_LIST_PRICE}
             </span>
           </div>

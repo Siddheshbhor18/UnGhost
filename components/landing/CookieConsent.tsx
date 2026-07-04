@@ -110,7 +110,7 @@ export function CookieConsent() {
             type="button"
             onClick={() => setMode("pill")}
             aria-label="Collapse"
-            className="grid place-items-center w-8 h-8 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-900/5 transition"
+            className="grid place-items-center w-8 h-8 rounded-lg text-neutral-900 hover:text-neutral-900 hover:bg-neutral-900/5 transition"
           >
             <X size={14} />
           </button>

@@ -25,6 +25,7 @@ import { HeroCTAs } from "@/components/landing/HeroCTAs";
 import { JobMarquee } from "@/components/landing/JobMarquee";
 import { FeaturedSpeaker } from "@/components/landing/FeaturedSpeaker";
 import { HeroReveal } from "@/components/landing/HeroReveal";
+import { VoidReveal } from "@/components/landing/VoidReveal";
 import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import { StickyCTA } from "@/components/landing/StickyCTA";
 import dynamic from "next/dynamic";
@@ -129,7 +130,11 @@ const JOBS_TIERS = [
 ] as const;
 
 export default async function LandingPage() {
-  const session = await getServerSession(authOptions);
+  // Detect a signed-in visitor so we can route them to their app home. This is
+  // best-effort: if the lookup fails (transient auth/DB outage), degrade to the
+  // logged-out marketing view rather than cascading the failure into a 500 on a
+  // public page.
+  const session = await getServerSession(authOptions).catch(() => null);
   if (session?.user?.role === "student") redirect("/dashboard");
   if (session?.user?.role === "recruiter") redirect("/recruiter/command");
   if (session?.user?.role === "admin") redirect("/admin/today");
@@ -177,7 +182,7 @@ export default async function LandingPage() {
             </h1>
             <MotionSection
               as="p"
-              className="text-body-lg text-neutral-500 max-w-xl leading-relaxed"
+              className="text-body-lg text-neutral-900 max-w-xl leading-relaxed"
               delay={0.5}
               y={16}
               amount={0}
@@ -269,33 +274,103 @@ export default async function LandingPage() {
         <LiveSessionsTeaser />
       </MotionSection>
 
-      {/* ─────────── THE VOID — full-bleed dark beat, still ─────────── */}
-      <MotionSection id="void-section" className="bg-neutral-950 text-white relative rounded-t-[32px] md:rounded-t-[40px] shadow-[0_0_80px_rgba(0,0,0,0.18)]" amount={0.2} style={{ zIndex: 10 }}>
-        <div className="mx-auto max-w-content px-4 py-24 md:py-32 text-center">
-          <h2 className="font-display font-extrabold text-display-xl md:text-6xl text-white max-w-3xl mx-auto mb-5 tracking-tightest leading-[1.05]">
-            <RevealText
-              segments={[
-                "You apply. ",
-                <span className="text-white/40" key="void">
-                  Then nothing.
-                </span>,
-              ]}
-              stagger={0.06}
-              motionStyle="tween"
-              trigger="view"
-              amount={0.4}
-            />
-          </h2>
-          <p className="text-body-md text-white/70 max-w-2xl mx-auto leading-relaxed">
-            Job boards optimise for volume, not replies. Applications vanish
-            with no deadline, no accountability, and no one who owes you an
-            answer. So we changed who pays for the silence.
-          </p>
+      {/* ─────────── THE VOID — dark beat: black + single brand-blue key light (honest restraint), weight contrast ─────────── */}
+      <section
+        id="void-section"
+        className="relative rounded-t-[32px] text-white shadow-[0_0_120px_rgba(0,0,0,0.6)] md:rounded-t-[40px]"
+        style={{
+          background:
+            "radial-gradient(ellipse 110% 75% at 50% -15%, rgba(1,145,252,0.16) 0%, rgba(1,145,252,0.04) 32%, transparent 55%), #000000",
+          zIndex: 10,
+        }}
+      >
 
+        {/* The turn, scroll-scrubbed: the void holds on screen, the payoff
+            (thesuccess.png) crossfades over it, then the beat releases to the
+            role ticker and the sections that follow. */}
+        <VoidReveal
+          problem={
+            <>
+              <h2
+                className="font-display font-black text-balance text-5xl md:text-6xl lg:text-7xl text-white leading-[0.98]"
+                style={{ letterSpacing: "-0.03em" }}
+              >
+                <span className="block">
+                  <RevealText
+                    segments={["You apply."]}
+                    stagger={0.06}
+                    motionStyle="tween"
+                    trigger="view"
+                    amount={0.4}
+                  />
+                </span>
+                {/* Backlit blue — solid brand-blue with a light-emission glow,
+                    revealed to full uniform opacity (no dissolve / gradient). */}
+                <span
+                  className="block pb-1 font-display font-black not-italic leading-[0.98]"
+                  style={{
+                    color: "#4db5ff",
+                    textShadow:
+                      "0 0 28px rgba(1,145,252,0.55), 0 0 10px rgba(1,145,252,0.45)",
+                  }}
+                >
+                  <RevealText
+                    segments={["Then nothing."]}
+                    stagger={0.06}
+                    motionStyle="tween"
+                    trigger="view"
+                    amount={0.4}
+                    delay={0.35}
+                  />
+                </span>
+              </h2>
+            </>
+          }
+          payoff={
+            <>
+              {/* The turn — mirrors beat 1: a big display headline with the
+                  blue backlit accent on the word that changed. */}
+              <h2
+                className="font-display font-black text-balance text-5xl md:text-6xl lg:text-7xl text-white leading-[0.98]"
+                style={{ letterSpacing: "-0.03em" }}
+              >
+                So we changed{" "}
+                <span
+                  className="not-italic"
+                  style={{
+                    color: "#4db5ff",
+                    textShadow:
+                      "0 0 28px rgba(1,145,252,0.55), 0 0 10px rgba(1,145,252,0.45)",
+                  }}
+                >
+                  who pays
+                </span>{" "}
+                for the silence.
+              </h2>
+            </>
+          }
+        />
+
+        {/* Persistent CTA — centered between the turn and the role ticker.
+            Deliberately outside VoidReveal's scroll crossfade, so it is always
+            visible rather than fading in with the payoff beat. */}
+        <div className="relative z-[1] flex justify-center px-4 -mt-24 md:-mt-32">
+          <Link
+            href="/signup?next=/student/jobs"
+            className="group inline-flex items-center gap-2 rounded-xl bg-brand-500 px-7 py-3.5 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_30px_-8px_rgba(1,145,252,0.55)] transition-all duration-200 hover:bg-brand-600 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_14px_36px_-10px_rgba(1,145,252,0.7)] active:scale-[0.98]"
+          >
+            Browse jobs free
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+
+        {/* Slim full-bleed ticker of sample roles with reply windows. */}
+        <div className="relative mt-10 pb-12 md:mt-12 md:pb-14">
           <JobMarquee />
         </div>
-      </MotionSection>
+      </section>
       </div>
+
       {/* ─────────── TWO WAYS — asymmetric: header in left rail, unified cards on right ─────────── */}
       <MotionSection
         className="mx-auto max-w-content px-4 py-16 md:py-28"
@@ -311,7 +386,7 @@ export default async function LandingPage() {
             <h2 className="font-display font-extrabold text-display-lg text-neutral-950 tracking-tight leading-[1.05]">
               Pick the lane that fits today.
             </h2>
-            <p className="text-body-md text-neutral-500 mt-4 leading-relaxed max-w-md">
+            <p className="text-body-lg text-neutral-900 mt-4 leading-relaxed max-w-md">
               Apply with guaranteed response windows. Or build the skills
               first. Most students do both. Bootcamp badges strengthen every
               application you send.
@@ -358,7 +433,7 @@ export default async function LandingPage() {
 
             {/* Jobs — what the bootcamps prepare you for. The brand tint on
                 this side signals the destination (the primary product). */}
-            <div className="p-8 md:p-10 flex flex-col bg-brand-50/60 backdrop-blur-xl">
+            <div className="p-8 md:p-10 flex flex-col bg-gradient-to-br from-brand-100/85 to-brand-200/70 backdrop-blur-xl ring-1 ring-inset ring-brand-300/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
               <Badge tone="info" className="mb-5 self-start">
                 Jobs
               </Badge>
@@ -374,7 +449,7 @@ export default async function LandingPage() {
                   <li key={p} className="flex items-start gap-2.5">
                     <CheckCircle2
                       size={16}
-                      className="text-brand-500 mt-0.5 shrink-0"
+                      className="text-brand-600 mt-0.5 shrink-0"
                     />
                     {p}
                   </li>
@@ -396,7 +471,8 @@ export default async function LandingPage() {
 
       {/* ─────────── FEATURED SPEAKER — Abhinav Jain Ranka workshop ─────────── */}
       <MotionSection
-        className="mx-auto max-w-content px-4 py-16 md:py-24"
+        id="featured-speaker"
+        className="mx-auto max-w-content px-4 py-16 md:py-24 scroll-mt-24"
         amount={0.15}
       >
         <FeaturedSpeaker />
@@ -451,13 +527,13 @@ export default async function LandingPage() {
             </StaggerItem>
           ))}
         </StaggerGrid>
-        <p className="text-center text-body-xs text-neutral-500 mt-6">
+        <p className="text-center text-body-xs text-neutral-900 mt-6">
           Prices exclude 18% GST, added at checkout · Pay by UPI · Cancel anytime
         </p>
 
         {/* Courses callout — bootcamp pricing lives in the cart */}
         {/* Bootcamps cross-sell — pared down to a single line in the premium pass */}
-        <p className="mt-12 max-w-5xl mx-auto text-center text-body-sm text-neutral-500">
+        <p className="mt-12 max-w-5xl mx-auto text-center text-body-md text-neutral-900">
           Bootcamps sold separately:{" "}
           <span className="text-neutral-900 font-medium">
             {formatPaiseAsINR(COURSE_PRICE_PAISE)}
@@ -509,9 +585,9 @@ export default async function LandingPage() {
               />
             </h3>
             <p className="text-body-md text-white/60 max-w-xl mx-auto mb-10 leading-relaxed">
-              Free to start. No card. Recruiters who don&apos;t reply lose
-              visibility. Students who skip the gauntlet don&apos;t get
-              reviewed. Symmetry, built in.
+              Free to start. No card. Every application runs on a public
+              clock, and if the recruiter misses it, your slot comes back
+              automatically.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Link href="/signup?next=/student/jobs">
@@ -542,7 +618,7 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-content px-4 grid grid-cols-2 md:grid-cols-6 gap-8">
           <div className="col-span-2">
             <Logo size="sm" />
-            <p className="text-body-xs text-neutral-500 mt-3 max-w-xs leading-relaxed">
+            <p className="text-body-xs text-neutral-900 mt-3 max-w-xs leading-relaxed">
               India-first hiring platform with anti-ghosting SLAs and embedded
               skill bootcamps. Built in Pune. DPDP Act compliant.
             </p>
@@ -611,7 +687,7 @@ export default async function LandingPage() {
             ]}
           />
         </div>
-        <div className="mx-auto max-w-content px-4 mt-10 pt-6 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-3 text-body-xs text-neutral-500">
+        <div className="mx-auto max-w-content px-4 mt-10 pt-6 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-3 text-body-xs text-neutral-900">
           <p>
             © {new Date().getFullYear()} unGhost Technologies Pvt Ltd · Pune,
             India
@@ -652,7 +728,7 @@ function SectionHeader({
           />
         </h2>
         {subtitle && (
-          <p className="text-body-md text-neutral-500 mt-3 leading-relaxed max-w-prose">
+          <p className="text-body-lg text-neutral-900 mt-3 leading-relaxed max-w-prose">
             {subtitle}
           </p>
         )}
@@ -704,13 +780,13 @@ function JobsTierCard({
         <span className="font-display font-extrabold text-4xl text-neutral-950 tnum">
           {price}
         </span>
-        <span className="text-body-sm text-neutral-500">{cadence}</span>
+        <span className="text-body-sm text-neutral-900">{cadence}</span>
       </div>
       {/* Per-month line makes the annual plan's value legible; reserves a
           fixed-height row so all three cards keep their prices aligned. */}
       <div className="h-5 mb-1">
         {perMonth && (
-          <span className="text-body-sm font-medium text-neutral-500 tnum">
+          <span className="text-body-sm font-medium text-neutral-900 tnum">
             {perMonth}
           </span>
         )}
@@ -757,7 +833,7 @@ function FootCol({
           <li key={label}>
             <Link
               href={href}
-              className="text-body-xs text-neutral-500 hover:text-brand-500 transition"
+              className="text-body-xs text-neutral-900 hover:text-brand-500 transition"
             >
               {label}
             </Link>

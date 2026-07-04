@@ -126,7 +126,7 @@ export function FAQ() {
                   }
                   style={{ overflow: "hidden" }}
                 >
-                  <div className="px-5 pb-5 text-sm text-neutral-500 leading-relaxed">
+                  <div className="px-5 pb-5 text-base text-neutral-900 leading-relaxed">
                     {f.a}
                   </div>
                 </motion.div>

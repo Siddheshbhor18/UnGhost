@@ -7,12 +7,12 @@
  * Left  = narrative copy about bootcamps + stat chips + CTA.
  * Right = CardSwap with 6 premium course cards that cycle automatically.
  *
- * Each card features a gradient background matching the course accent,
- * the course icon, title, tagline, and week count. The CardSwap component
- * handles the 3D stacking + cycling animation via GSAP.
+ * Each card carries a gradient thumbnail matching the course accent, the
+ * course icon, title, tagline, and honest course facts (weeks, modules,
+ * verified badge). No invented instructors or fabricated bios — the
+ * product bans fake social proof, so the cards sell only what the course
+ * actually contains.
  */
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   Brain,
   Briefcase,
@@ -21,9 +21,7 @@ import {
   Rocket,
   Workflow,
   ArrowRight,
-  Play,
-  User,
-  X,
+  BadgeCheck,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -125,17 +123,32 @@ const COURSE_MODULES: Record<BootcampCategory, number> = {
   freelancing: 8,
 };
 
-export function BootcampCardStack() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+/** Small neutral fact chip used in the card metadata row. */
+function factChipStyle(): React.CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "3px 9px",
+    borderRadius: "999px",
+    background: "#F5F4F2",
+    border: "1px solid #E8E5DF",
+    color: "#6B6660",
+    fontSize: "11px",
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+  };
+}
 
+export function BootcampCardStack() {
   return (
-    <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+    <div className="grid items-center gap-12 grid-cols-1 lg:grid-cols-2 lg:gap-16">
       {/* ── Narrative ─────────────────────────────────────────────── */}
       <div>
         <h2 className="font-display text-display-lg font-extrabold tracking-tighter text-neutral-950">
           Learn the skill. Then land the role.
         </h2>
-        <p className="mt-4 max-w-prose text-body-md leading-relaxed text-neutral-500">
+        <p className="mt-4 max-w-prose text-body-md leading-relaxed text-neutral-900">
           Six focused bootcamps, built with operators, not academics. Each
           course ends with a Verified Skill badge that recruiters on unGhost
           actually see. No theory dumps. No passive video. Hands-on from day
@@ -156,14 +169,14 @@ export function BootcampCardStack() {
               <span className="font-display text-lg font-extrabold tracking-tight text-neutral-950 tnum">
                 {stat.value}
               </span>
-              <span className="text-body-sm text-neutral-500">
+              <span className="text-body-md text-neutral-900">
                 {stat.label}
               </span>
             </div>
           ))}
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-4">
+        <div className="mt-8">
           <Link href="#bootcamps">
             <Button
               variant="primary"
@@ -173,13 +186,6 @@ export function BootcampCardStack() {
               Explore all courses
             </Button>
           </Link>
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={() => setIsModalOpen(true)}
-          >
-            Our instructors
-          </Button>
         </div>
       </div>
 
@@ -210,23 +216,7 @@ export function BootcampCardStack() {
             const { Icon } = theme;
             const tagline = COURSE_TAGLINES[room.id];
             const weeks = COURSE_WEEKS[room.id];
-
-            // Instructor details for the placeholder
-            const instructorTitle = 
-              room.id === "ai" ? "Senior AI Researcher" :
-              room.id === "gtm" ? "VP of Revenue Ops" :
-              room.id === "marketing" ? "Growth Director" :
-              room.id === "sales" ? "Enterprise Sales Head" :
-              room.id === "entrepreneurship" ? "YC Alum Founder" :
-              "Top Solo Consultant";
-
-            const instructorName =
-              room.id === "ai" ? "Dr. Amit Sharma" :
-              room.id === "gtm" ? "Karan Malhotra" :
-              room.id === "marketing" ? "Rohan Sen" :
-              room.id === "sales" ? "Neha Gupta" :
-              room.id === "entrepreneurship" ? "Aditya Roy" :
-              "Vikram Singh";
+            const modules = COURSE_MODULES[room.id];
 
             return (
               <Card
@@ -240,7 +230,7 @@ export function BootcampCardStack() {
                   boxShadow: `0 15px 35px rgba(0,0,0,0.1), 0 3px 10px rgba(0,0,0,0.05)`,
                 }}
               >
-                {/* 1. YouTube-style Thumbnail part */}
+                {/* 1. Gradient thumbnail */}
                 <div
                   style={{
                     height: "180px",
@@ -265,8 +255,8 @@ export function BootcampCardStack() {
                       background: "rgba(255,255,255,0.06)",
                     }}
                   />
-                  
-                  {/* Large Course Icon in center of thumbnail */}
+
+                  {/* Large course icon in the center of the thumbnail */}
                   <div
                     style={{
                       width: "56px",
@@ -282,25 +272,7 @@ export function BootcampCardStack() {
                     <Icon size={28} color="#fff" strokeWidth={2.1} />
                   </div>
 
-                  {/* Play button overlay (YouTube hallmark) */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: "12px",
-                      left: "12px",
-                      width: "28px",
-                      height: "28px",
-                      borderRadius: "50%",
-                      background: "rgba(0,0,0,0.6)",
-                      display: "grid",
-                      placeItems: "center",
-                      backdropFilter: "blur(2px)",
-                    }}
-                  >
-                    <Play size={12} color="#fff" fill="#fff" style={{ marginLeft: "1.5px" }} />
-                  </div>
-
-                  {/* Duration Pill at bottom-right of image (YouTube Hallmark) */}
+                  {/* Duration pill at bottom-right */}
                   <div
                     style={{
                       position: "absolute",
@@ -316,83 +288,73 @@ export function BootcampCardStack() {
                       textTransform: "uppercase",
                     }}
                   >
-                    {weeks}:00
+                    {weeks} weeks
                   </div>
                 </div>
 
-                {/* 2. YouTube-style Metadata section */}
+                {/* 2. Metadata — honest course facts only */}
                 <div
                   style={{
                     padding: "16px",
                     display: "flex",
-                    gap: "12px",
-                    alignItems: "flex-start",
+                    flexDirection: "column",
+                    minWidth: 0,
                     flex: 1,
                   }}
                 >
-                  {/* Left: Instructor Avatar Placeholder */}
-                  <div
+                  <h4
                     style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "50%",
-                      background: "#F2F0EC",
-                      border: "1px solid #E8E5DF",
-                      display: "grid",
-                      placeItems: "center",
+                      margin: 0,
+                      fontSize: "15px",
+                      fontWeight: 700,
+                      color: "#1A1816",
+                      lineHeight: "20px",
+                      whiteSpace: "nowrap",
                       overflow: "hidden",
-                      flexShrink: 0,
+                      textOverflow: "ellipsis",
                     }}
                   >
-                    {/* Real Image Placeholder:
-                        <img src={`/instructors/${room.id}.jpg`} alt={instructorName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    */}
-                    <User size={18} className="text-neutral-500" />
-                  </div>
+                    {room.label} Bootcamp
+                  </h4>
 
-                  {/* Right: Title, Channel/Instructor info, View count (tagline) */}
-                  <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
-                    <h4
-                      style={{
-                        margin: 0,
-                        fontSize: "14px",
-                        fontWeight: 700,
-                        color: "#1A1816",
-                        lineHeight: "20px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {room.label} Bootcamp
-                    </h4>
-                    
+                  <p
+                    style={{
+                      margin: "4px 0 0 0",
+                      fontSize: "12.5px",
+                      color: "#6B6660",
+                      lineHeight: "17px",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {tagline}
+                  </p>
+
+                  <div
+                    style={{
+                      marginTop: "auto",
+                      paddingTop: "10px",
+                      display: "flex",
+                      gap: "6px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span style={factChipStyle()}>{modules} modules</span>
+                    <span style={factChipStyle()}>Hands-on projects</span>
                     <span
                       style={{
-                        fontSize: "12px",
-                        color: "#6B6660",
-                        marginTop: "2px",
-                        fontWeight: 500,
+                        ...factChipStyle(),
+                        color: theme.to,
+                        background: `rgba(${theme.glow},0.08)`,
+                        border: `1px solid rgba(${theme.glow},0.25)`,
                       }}
                     >
-                      {instructorName} • {instructorTitle}
+                      <BadgeCheck size={11} strokeWidth={2.4} />
+                      Verified badge
                     </span>
-
-                    <p
-                      style={{
-                        margin: "4px 0 0 0",
-                        fontSize: "12px",
-                        color: "#6B6660",
-                        lineHeight: "16px",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {tagline}
-                    </p>
                   </div>
                 </div>
               </Card>
@@ -400,122 +362,6 @@ export function BootcampCardStack() {
           })}
         </CardSwap>
       </div>
-
-      {/* ── Instructors Modal Overlays ────────────────────────────── */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-neutral-950/60 backdrop-blur-md"
-            />
-
-            {/* Modal Box */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: "spring", duration: 0.5 }}
-              className="relative w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-3xl bg-neutral-0 border border-neutral-200 p-6 md:p-8 shadow-elev-4 z-10"
-            >
-              {/* Header */}
-              <div className="flex items-start justify-between border-b border-neutral-100 pb-5">
-                <div>
-                  <h3 className="font-display text-2xl font-extrabold tracking-tight text-neutral-950">
-                    Our Instructors
-                  </h3>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    Learn from top operators who have built what they teach.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-neutral-200 bg-neutral-0 p-2 text-neutral-500 hover:text-neutral-900 shadow-elev-1 hover:bg-neutral-50 transition"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Grid list of instructors */}
-              <div className="grid md:grid-cols-2 gap-6 mt-6">
-                {ROOMS.map((room) => {
-                  const theme = COURSE_THEME[room.id];
-                  
-                  const instructorName =
-                    room.id === "ai" ? "Dr. Amit Sharma" :
-                    room.id === "gtm" ? "Karan Malhotra" :
-                    room.id === "marketing" ? "Rohan Sen" :
-                    room.id === "sales" ? "Neha Gupta" :
-                    room.id === "entrepreneurship" ? "Aditya Roy" :
-                    "Vikram Singh";
-
-                  const instructorTitle = 
-                    room.id === "ai" ? "Senior AI Researcher" :
-                    room.id === "gtm" ? "VP of Revenue Ops" :
-                    room.id === "marketing" ? "Growth Director" :
-                    room.id === "sales" ? "Enterprise Sales Head" :
-                    room.id === "entrepreneurship" ? "YC Alum Founder" :
-                    "Top Solo Consultant";
-
-                  const instructorBio =
-                    room.id === "ai" ? "Leading researcher in generative AI and agents. Formerly at Microsoft Research, building large language models." :
-                    room.id === "gtm" ? "Automating pipelines and revenue scale at leading SaaS firms. Expert in HubSpot, Salesforce, and custom CRM systems." :
-                    room.id === "marketing" ? "Scales user acquisition from zero to millions. Performance marketing, SEO, and viral growth loop practitioner." :
-                    room.id === "sales" ? "Closed $50M+ in ARR across enterprise software. Specializes in B2B discovery, negotiation, and high-value closing." :
-                    room.id === "entrepreneurship" ? "Built and exited 2 venture-backed startups. Active advisor to early-stage founders on MVPs and operations." :
-                    "Built a $250k/year consulting business. Expert in client acquisition, value-based pricing, and running lean solo operations.";
-
-                  return (
-                    <div
-                      key={room.id}
-                      className="flex gap-4 p-5 rounded-2xl border border-neutral-200 bg-neutral-0 shadow-elev-1 hover:shadow-elev-2 transition-all duration-300"
-                    >
-                      {/* Left: Avatar placeholder */}
-                      <div
-                        style={{
-                          width: "56px",
-                          height: "56px",
-                          borderRadius: "50%",
-                          background: `linear-gradient(135deg, ${theme.from}, ${theme.to})`,
-                          padding: "2px",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <div
-                          className="w-full h-full rounded-full bg-neutral-0 border border-neutral-200/50 flex items-center justify-center overflow-hidden"
-                        >
-                          {/* Real image placeholder:
-                              <img src={`/instructors/${room.id}.jpg`} alt={instructorName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          */}
-                          <User size={24} className="text-neutral-400" />
-                        </div>
-                      </div>
-
-                      {/* Right: Info */}
-                      <div>
-                        <h4 className="font-display font-bold text-[15px] text-neutral-950 leading-tight">
-                          {instructorName}
-                        </h4>
-                        <span className="inline-block mt-0.5 text-xs font-semibold text-brand-600">
-                          {instructorTitle} • {room.label}
-                        </span>
-                        <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-                          {instructorBio}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

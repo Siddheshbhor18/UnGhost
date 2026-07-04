@@ -18,7 +18,7 @@ export function ScrollPrompt() {
       style={reduce ? undefined : { opacity }}
       className="flex flex-col items-center gap-2 pt-10 pb-2"
     >
-      <span className="text-xs font-medium text-neutral-500">
+      <span className="text-xs font-medium text-neutral-900">
         See how it works
       </span>
       <motion.div
@@ -34,7 +34,7 @@ export function ScrollPrompt() {
             ? undefined
             : { duration: 1.8, repeat: Infinity, ease: "easeInOut" }
         }
-        className="grid place-items-center w-7 h-7 rounded-full border border-neutral-300 text-neutral-500"
+        className="grid place-items-center w-7 h-7 rounded-full border border-neutral-300 text-neutral-900"
       >
         <ChevronDown size={14} />
       </motion.div>
