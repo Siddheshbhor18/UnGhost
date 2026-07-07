@@ -40,6 +40,20 @@ if (dsn && !isDev) {
       // Benign browser noise with no user-visible impact.
       "ResizeObserver loop completed with undelivered notifications",
       "ResizeObserver loop limit exceeded",
+      // Crypto-wallet extension internals (see denyUrls) that surface as
+      // unhandled rejections on our pages — e.g. Sentry UNGHOST-8, 19 events
+      // of a wallet's inpage.js failing its own RPC dispatch on /bootcamps.
+      "func sseError not found",
+    ],
+    // Drop events whose stack originates in browser-extension code rather
+    // than our bundle. Extensions inject scripts (classically `inpage.js`)
+    // into every page; their crashes land on our global handlers but are
+    // not ours to fix. Frames from our own chunks are unaffected.
+    denyUrls: [
+      /^chrome-extension:\/\//i,
+      /^moz-extension:\/\//i,
+      /^safari-(web-)?extension:\/\//i,
+      /\/inpage\.js/i,
     ],
   });
 }

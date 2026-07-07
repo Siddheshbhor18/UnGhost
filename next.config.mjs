@@ -90,9 +90,13 @@ const nextConfig = {
   // Strip the powered-by header (minor security hygiene).
   poweredByHeader: false,
   // Set a build-time version that the logger + Sentry + health endpoint use.
+  // Vercel exposes the deploy commit as VERCEL_GIT_COMMIT_SHA (GITHUB_SHA is
+  // the Actions equivalent); without it prod events all tagged release "dev",
+  // making Sentry regression detection and deploy correlation impossible.
   env: {
     NEXT_PUBLIC_APP_VERSION:
       process.env.NEXT_PUBLIC_APP_VERSION ??
+      process.env.VERCEL_GIT_COMMIT_SHA ??
       process.env.GITHUB_SHA ??
       "dev",
   },
