@@ -31,8 +31,10 @@ import { NavCartButton } from "@/components/courses/NavCartButton";
 type NavItem = { href: string; label: string; exact?: boolean };
 
 const NAV_BY_ROLE: Record<string, NavItem[]> = {
+  // Anon: no self-referential home item (the logo is the way back to "/"),
+  // and the public jobs preview leads — it's the conversion surface.
   anon: [
-    { href: "/", label: "Who We Are", exact: true },
+    { href: "/jobs", label: "Jobs" },
     { href: "/bootcamps", label: "Bootcamps" },
     { href: "/recruiters", label: "For Recruiters" },
   ],
@@ -237,7 +239,7 @@ export function GlassNavbar() {
                     Get started
                   </GlassButton>
                 </Link>
-                <NavCartButton />
+                <NavCartButton hideWhenEmpty />
               </>
             )}
           </div>

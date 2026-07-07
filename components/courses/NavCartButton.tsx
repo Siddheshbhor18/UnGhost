@@ -8,6 +8,9 @@ import { useCourseCart } from "@/components/courses/cartStore";
 
 interface Props {
   className?: string;
+  /** Render nothing until the cart has items — keeps chrome out of nav
+   *  surfaces (e.g. anonymous marketing pages) where an empty cart is noise. */
+  hideWhenEmpty?: boolean;
 }
 
 /**
@@ -22,10 +25,12 @@ interface Props {
  * Anon visitors get redirected to `/login?next=/bootcamps/checkout` by the
  * cart page's server guard, so they land back on the cart after sign-in.
  */
-export function NavCartButton({ className }: Props) {
+export function NavCartButton({ className, hideWhenEmpty }: Props) {
   const count = useCourseCart((s) => s.items.length);
   const mounted = useHasMounted();
   const live = mounted ? count : 0;
+
+  if (hideWhenEmpty && live === 0) return null;
 
   return (
     <Link

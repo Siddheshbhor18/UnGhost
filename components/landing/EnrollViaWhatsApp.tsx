@@ -37,7 +37,9 @@ type FormState = Record<FieldName, string>;
 
 const EMPTY: FormState = { name: "", phone: "", email: "", profession: "" };
 
-export function EnrollViaWhatsApp() {
+/** `compact` stacks the controls for the landing's compact speaker card and
+ *  drops the helper caption (the dialog explains the flow itself). */
+export function EnrollViaWhatsApp({ compact = false }: { compact?: boolean }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [copied, setCopied] = useState(false);
@@ -113,12 +115,20 @@ export function EnrollViaWhatsApp() {
 
   return (
     <>
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div
+        className={
+          compact
+            ? "flex flex-col items-stretch gap-2.5"
+            : "mt-5 flex flex-wrap items-center gap-3"
+        }
+      >
+        {/* Brand fill, not WhatsApp green: the landing commits to one accent
+            (PRODUCT.md), and white on brand-700 clears WCAG AA. The glyph
+            still says "this opens WhatsApp". */}
         <button
           type="button"
           onClick={openForm}
-          className="inline-flex items-center gap-2.5 rounded-xl px-6 h-12 text-[15px] font-semibold text-neutral-950 shadow-[0_10px_28px_rgba(37,211,102,0.32),inset_0_1px_0_rgba(255,255,255,0.28)] hover:shadow-[0_12px_32px_rgba(37,211,102,0.40),inset_0_1px_0_rgba(255,255,255,0.28)] transition-shadow duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99]"
-          style={{ background: "#25D366" }}
+          className="inline-flex items-center justify-center gap-2.5 rounded-xl px-6 h-12 text-[15px] font-semibold text-white bg-brand-700 hover:bg-brand-800 shadow-[0_10px_28px_rgba(1,145,252,0.32),inset_0_1px_0_rgba(255,255,255,0.2)] transition-colors duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99]"
         >
           <WhatsAppGlyph />
           Enroll via WhatsApp
@@ -128,7 +138,7 @@ export function EnrollViaWhatsApp() {
           type="button"
           onClick={handleShare}
           aria-live="polite"
-          className="inline-flex items-center gap-2 rounded-xl px-5 h-12 text-[15px] font-semibold text-white ring-1 ring-white/15 bg-white/[0.06] hover:bg-white/[0.10] hover:ring-white/25 transition-colors duration-200 active:scale-[0.99]"
+          className="inline-flex items-center justify-center gap-2 rounded-xl px-5 h-12 text-[15px] font-semibold text-white ring-1 ring-white/15 bg-white/[0.06] hover:bg-white/[0.10] hover:ring-white/25 transition-colors duration-200 active:scale-[0.99]"
         >
           {copied ? (
             <>
@@ -144,10 +154,12 @@ export function EnrollViaWhatsApp() {
         </button>
       </div>
 
-      <p className="mt-2 text-[12px] text-white/45 max-w-md">
-        Add your details, then WhatsApp opens with your enrollment message ready
-        to send.
-      </p>
+      {!compact && (
+        <p className="mt-2 text-[12px] text-white/45 max-w-md">
+          Add your details, then WhatsApp opens with your enrollment message
+          ready to send.
+        </p>
+      )}
 
       <dialog
         ref={dialogRef}
@@ -203,8 +215,7 @@ export function EnrollViaWhatsApp() {
 
           <button
             type="submit"
-            className="mt-6 inline-flex w-full items-center justify-center gap-2.5 rounded-xl h-12 text-[15px] font-semibold text-neutral-950 shadow-[0_10px_28px_rgba(37,211,102,0.32),inset_0_1px_0_rgba(255,255,255,0.28)] hover:shadow-[0_12px_32px_rgba(37,211,102,0.40),inset_0_1px_0_rgba(255,255,255,0.28)] transition-shadow duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99]"
-            style={{ background: "#25D366" }}
+            className="mt-6 inline-flex w-full items-center justify-center gap-2.5 rounded-xl h-12 text-[15px] font-semibold text-white bg-brand-700 hover:bg-brand-800 shadow-[0_10px_28px_rgba(1,145,252,0.32),inset_0_1px_0_rgba(255,255,255,0.2)] transition-colors duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99]"
           >
             <WhatsAppGlyph />
             Enroll

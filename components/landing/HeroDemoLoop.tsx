@@ -38,7 +38,10 @@ import {
 } from "lucide-react";
 import { MagicWidget } from "@/components/landing/MagicWidget";
 
-const FRAME_MS = 2200;
+// 3.6s per frame: long enough to actually read a frame's payoff line.
+// At 2.2s the strongest proof on the page spent much of its life mid-
+// crossfade, reading as empty space in the hero's right column.
+const FRAME_MS = 3600;
 const TOTAL_FRAMES = 5;
 
 const SKILLS = ["React", "TypeScript", "Product", "Figma", "Node.js"];
@@ -287,7 +290,7 @@ function FrameMatch() {
             <p className="text-sm font-bold text-neutral-900 truncate">
               {j.co}
             </p>
-            <p className="text-[11px] text-neutral-900 truncate mb-1.5">
+            <p className="text-[12px] text-neutral-900 truncate mb-1.5">
               {j.role}
             </p>
             <div className="flex flex-wrap gap-1">
@@ -369,7 +372,7 @@ function FrameSLA() {
               damping: 12,
               stiffness: 220,
             }}
-            className="shrink-0 inline-flex items-center gap-1 rounded-full bg-error/10 border border-error/30 px-2.5 py-1 text-[11px] font-bold text-error"
+            className="shrink-0 inline-flex items-center gap-1 rounded-full bg-error/10 border border-error/30 px-2.5 py-1 text-[12px] font-bold text-error"
           >
             <Clock size={11} /> 24h SLA
           </motion.div>
@@ -378,7 +381,7 @@ function FrameSLA() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7, duration: 0.4 }}
-          className="text-[11px] text-brand-500 font-semibold mt-3 inline-flex items-center gap-1"
+          className="text-[12px] text-brand-700 font-semibold mt-3 inline-flex items-center gap-1"
         >
           <CheckCircle2 size={12} /> Reply in 24h or get refunded
         </motion.p>
@@ -419,7 +422,7 @@ function FrameReply() {
                 call Thursday?
               </p>
             </div>
-            <p className="text-[11px] text-neutral-900 mt-1.5 flex items-center gap-1">
+            <p className="text-[12px] text-neutral-900 mt-1.5 flex items-center gap-1">
               <CheckCircle2 size={10} className="text-success" /> SLA met · 21h
               early
             </p>
@@ -435,7 +438,7 @@ function FrameReply() {
           damping: 14,
           stiffness: 200,
         }}
-        className="inline-flex self-start items-center gap-1.5 rounded-full bg-success/10 border border-success/30 px-3 py-1 text-[11px] font-bold text-success ml-1"
+        className="inline-flex self-start items-center gap-1.5 rounded-full bg-success/10 border border-success/30 px-3 py-1 text-[12px] font-bold text-success ml-1"
       >
         <MessageCircle size={11} /> Recruiter replied
       </motion.div>

@@ -19,7 +19,7 @@ import {
 import { HeroDemoLoop } from "@/components/landing/HeroDemoLoop";
 import { BootcampCardStack } from "@/components/landing/BootcampCardStack";
 import { HeroCTAs } from "@/components/landing/HeroCTAs";
-import { JobMarquee } from "@/components/landing/JobMarquee";
+import { JobMarquee, type TickerRole } from "@/components/landing/JobMarquee";
 import { FeaturedSpeaker } from "@/components/landing/FeaturedSpeaker";
 import { HeroReveal } from "@/components/landing/HeroReveal";
 import { VoidReveal } from "@/components/landing/VoidReveal";
@@ -52,7 +52,35 @@ import {
   COURSE_PRICE_PAISE,
   EVERYTHING_BUNDLE_PAISE,
 } from "@/shared/lib/courses";
-import { PLAN_PRICING } from "@/shared/types";
+import { PLAN_PRICING, type CompanyProfile, type Job } from "@/shared/types";
+import { listCompanies, listJobs } from "@/server/store";
+
+/** Roles shown in the void-section ticker. */
+const TICKER_ROLE_COUNT = 8;
+
+const TICKER_REMOTE_LABEL: Record<Job["remote"], TickerRole["type"]> = {
+  remote: "Remote",
+  hybrid: "Hybrid",
+  onsite: "On-site",
+};
+
+/** Real board rows → ticker cards. Falls back to "" experience when the
+ *  recruiter left the band unspecified (0/0) so the card drops that row. */
+function toTickerRole(job: Job, companyName: string): TickerRole {
+  return {
+    co: companyName,
+    role: job.title,
+    location: job.location,
+    salary: `${job.salaryMin}-${job.salaryMax} LPA`,
+    window: `${job.slaHours}h`,
+    type: TICKER_REMOTE_LABEL[job.remote],
+    experience:
+      job.experienceMax > 0
+        ? `${job.experienceMin}-${job.experienceMax} yrs`
+        : "",
+    skills: job.skills.slice(0, 3),
+  };
+}
 
 // Jobs pricing tiers shown on the landing. Prices flow from PLAN_PRICING and
 // features mirror PLAN_LIMITS (applications · AI Coach · Q&A). Premium is
@@ -92,6 +120,9 @@ const JOBS_TIERS = [
     cta: "Start free",
     href: "/signup?next=/student/jobs",
     highlight: false,
+    // The page's promise is "free to start" — the activation CTA gets the
+    // filled button even though the card itself isn't the highlighted tier.
+    ctaVariant: "primary",
   },
   {
     name: "Standard",
@@ -137,6 +168,21 @@ export default async function LandingPage() {
   if (session?.user?.role === "recruiter") redirect("/recruiter/command");
   if (session?.user?.role === "admin") redirect("/admin/today");
   if (session?.user?.role === "instructor") redirect("/instructor/today");
+
+  // Real roles for the void-section ticker (both reads Redis-cached 60s).
+  // On any failure the ticker falls back to its labeled sample list.
+  const [tickerJobs, tickerCompanies] = await Promise.all([
+    listJobs().catch((): Job[] => []),
+    listCompanies().catch((): CompanyProfile[] => []),
+  ]);
+  const companyNameById = new Map(tickerCompanies.map((c) => [c.id, c.name]));
+  const tickerRoles = tickerJobs
+    .filter((j) => j.active)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, TICKER_ROLE_COUNT)
+    .map((j) =>
+      toTickerRole(j, companyNameById.get(j.companyId) ?? "Confidential"),
+    );
 
   return (
     <main className="relative min-h-[100dvh]" style={{ overflowX: "clip" }}>
@@ -354,17 +400,17 @@ export default async function LandingPage() {
             visible rather than fading in with the payoff beat. */}
         <div className="relative z-[1] flex justify-center px-4 -mt-24 md:-mt-32">
           <Link
-            href="/signup?next=/student/jobs"
-            className="group inline-flex items-center gap-2 rounded-xl bg-brand-500 px-7 py-3.5 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_30px_-8px_rgba(1,145,252,0.55)] transition-all duration-200 hover:bg-brand-600 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_14px_36px_-10px_rgba(1,145,252,0.7)] active:scale-[0.98]"
+            href="/jobs"
+            className="group inline-flex items-center gap-2 rounded-xl bg-brand-700 px-7 py-3.5 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_30px_-8px_rgba(1,145,252,0.55)] transition-all duration-200 hover:bg-brand-800 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_14px_36px_-10px_rgba(1,145,252,0.7)] active:scale-[0.98]"
           >
-            Browse jobs free
+            Browse live jobs
             <ArrowRight size={16} />
           </Link>
         </div>
 
-        {/* Slim full-bleed ticker of sample roles with reply windows. */}
+        {/* Slim full-bleed ticker of live roles with reply windows. */}
         <div className="relative mt-10 pb-12 md:mt-12 md:pb-14">
-          <JobMarquee />
+          <JobMarquee roles={tickerRoles} />
         </div>
       </section>
       </div>
@@ -378,7 +424,7 @@ export default async function LandingPage() {
           {/* Eyebrow header — sits in the left rail, breaking the centered-
               header monotony three sections in a row. */}
           <div className="lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
-            <p className="text-body-sm uppercase tracking-wider font-semibold text-brand-500 mb-3">
+            <p className="text-body-sm uppercase tracking-wider font-semibold text-brand-700 mb-3">
               Two lanes, one platform
             </p>
             <h2 className="font-display font-extrabold text-display-lg text-neutral-950 tracking-tight leading-[1.05]">
@@ -453,13 +499,13 @@ export default async function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/signup?next=/student/jobs" className="self-start">
+              <Link href="/jobs" className="self-start">
                 <Button
                   variant="primary"
                   size="md"
                   trailingIcon={<ArrowRight size={14} />}
                 >
-                  Browse jobs
+                  Browse live jobs
                 </Button>
               </Link>
             </div>
@@ -473,7 +519,7 @@ export default async function LandingPage() {
         className="mx-auto max-w-content px-4 py-16 md:py-24 scroll-mt-24"
         amount={0.15}
       >
-        <FeaturedSpeaker />
+        <FeaturedSpeaker variant="compact" />
       </MotionSection>
 
       {/* ─────────── BOOTCAMP CARD STACK — animated showcase of the 6 courses, leads into storefront ─────────── */}
@@ -591,7 +637,7 @@ export default async function LandingPage() {
               <Link href="/signup?next=/student/jobs">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white font-semibold text-base px-7 h-12 shadow-[0_8px_24px_rgba(1,145,252,0.32),inset_0_1px_0_rgba(255,255,255,0.18)] hover:bg-brand-600 transition-colors active:scale-[0.99]"
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand-700 text-white font-semibold text-base px-7 h-12 shadow-[0_8px_24px_rgba(1,145,252,0.32),inset_0_1px_0_rgba(255,255,255,0.18)] hover:bg-brand-800 transition-colors active:scale-[0.99]"
                 >
                   Start applying for free
                   <ArrowRight size={16} />
@@ -668,6 +714,7 @@ function JobsTierCard({
   cta,
   href,
   highlight,
+  ctaVariant,
 }: {
   name: string;
   price: string;
@@ -679,6 +726,8 @@ function JobsTierCard({
   cta: string;
   href: string;
   highlight: boolean;
+  /** Overrides the highlight-driven button style (e.g. Free tier primary). */
+  ctaVariant?: "primary" | "secondary";
 }) {
   return (
     <Card
@@ -728,7 +777,11 @@ function JobsTierCard({
       </ul>
       {/* mt-auto pins the CTA to the card bottom across uneven feature lists. */}
       <Link href={href} className="mt-auto block">
-        <Button variant={highlight ? "primary" : "secondary"} size="md" fullWidth>
+        <Button
+          variant={ctaVariant ?? (highlight ? "primary" : "secondary")}
+          size="md"
+          fullWidth
+        >
           {cta}
         </Button>
       </Link>

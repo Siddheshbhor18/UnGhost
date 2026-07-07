@@ -31,7 +31,13 @@ export function CookieConsent() {
   const [mode, setMode] = useState<Mode>("strip");
 
   useEffect(() => {
-    if (!localStorage.getItem(KEY)) setShow(true);
+    if (localStorage.getItem(KEY)) return;
+    // Phones: start collapsed. The full strip covered the hero's proof line
+    // on first paint (the fold's densest moment); the pill keeps the DPDP
+    // consent affordance one tap away without stealing the first impression.
+    // Desktop has the room, so it keeps the explicit strip.
+    if (window.matchMedia("(max-width: 639px)").matches) setMode("pill");
+    setShow(true);
   }, []);
 
   useEffect(() => {

@@ -1,35 +1,39 @@
 "use client";
 
+import Link from "next/link";
 import { useReducedMotion } from "framer-motion";
-import { Briefcase, MapPin, Timer } from "lucide-react";
+import { ArrowRight, Briefcase, MapPin, Timer } from "lucide-react";
 
-/** Per-company accent — the single splash of colour on an otherwise crisp white
- *  card. `glow` is an RGB triple used for the avatar's soft halo. */
+/** Per-company accent — shades of the single committed brand blue (PRODUCT.md:
+ *  one accent, no rainbow). Gradients start at brand-500 or darker so the
+ *  white 24px avatar letter stays above the 3:1 large-text AA floor. */
 const PALETTE = [
-  { from: "#0191FC", to: "#0166C8", glow: "1,145,252" }, // blue
-  { from: "#8B5CF6", to: "#6D28D9", glow: "139,92,246" }, // violet
-  { from: "#10B981", to: "#059669", glow: "16,185,129" }, // emerald
-  { from: "#F59E0B", to: "#D97706", glow: "245,158,11" }, // amber
-  { from: "#F43F5E", to: "#E11D48", glow: "244,63,94" }, // rose
-  { from: "#06B6D4", to: "#0891B2", glow: "6,182,212" }, // cyan
+  { from: "#0191FC", to: "#0168BD" }, // 500 → 700
+  { from: "#017FE0", to: "#004F95" }, // 600 → 800
+  { from: "#0168BD", to: "#003D75" }, // 700 → 900
 ] as const;
+const GLOW = "1,145,252";
 
-interface Job {
+/** The shape a ticker card renders — mapped from real jobs by the landing
+ *  page, or from the illustrative fallback list below. */
+export interface TickerRole {
   co: string;
   role: string;
   location: string;
   salary: string;
   /** Public SLA the recruiter committed to — the card's differentiator. */
-  window: "24h" | "48h" | "72h";
+  window: string;
   /** Work arrangement badge. */
   type: "Remote" | "Hybrid" | "On-site";
-  /** Experience band for the role. */
+  /** Experience band for the role, e.g. "3-6 yrs". Empty = unspecified. */
   experience: string;
   /** Two or three headline skills for the role. */
   skills: string[];
 }
 
-const JOBS: Job[] = [
+/** Illustrative placeholders — clearly labeled in the caption when shown.
+ *  Used only when the live board has too few roles to fill the strip. */
+const SAMPLE_ROLES: TickerRole[] = [
   { co: "Northwind", role: "Senior Product Engineer", location: "Bangalore", salary: "35-60 LPA", window: "48h", type: "Hybrid", experience: "5-8 yrs", skills: ["React", "Node", "AWS"] },
   { co: "Lumen Labs", role: "Frontend Lead", location: "Remote", salary: "30-50 LPA", window: "24h", type: "Remote", experience: "6-9 yrs", skills: ["React", "TypeScript", "Next.js"] },
   { co: "Vector", role: "Staff PM", location: "Mumbai", salary: "40-70 LPA", window: "72h", type: "On-site", experience: "8-12 yrs", skills: ["Strategy", "Analytics", "Roadmap"] },
@@ -40,16 +44,24 @@ const JOBS: Job[] = [
   { co: "Atlas", role: "Platform Engineer", location: "Bangalore", salary: "38-65 LPA", window: "48h", type: "On-site", experience: "5-9 yrs", skills: ["K8s", "Terraform", "Go"] },
 ];
 
-function JobCard({ job, index }: { job: Job; index: number }) {
+/** Below this many live roles the strip pads with the labeled sample list —
+ *  a 2-card marquee reads as emptier than an honest "sample" caption. */
+const MIN_LIVE_ROLES = 4;
+
+function JobCard({ job, index }: { job: TickerRole; index: number }): React.ReactElement {
   const c = PALETTE[index % PALETTE.length];
   return (
-    <div className="group mr-5 inline-flex w-[380px] items-start gap-4 rounded-2xl bg-white px-6 py-5 ring-1 ring-black/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.05),0_20px_45px_-18px_rgba(0,0,0,0.55)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.05),0_28px_60px_-20px_rgba(0,0,0,0.7)]">
+    <Link
+      href="/jobs"
+      tabIndex={-1}
+      className="group mr-5 inline-flex w-[380px] items-start gap-4 rounded-2xl bg-white px-6 py-5 ring-1 ring-black/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.05),0_20px_45px_-18px_rgba(0,0,0,0.55)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.05),0_28px_60px_-20px_rgba(0,0,0,0.7)]"
+    >
       <div className="relative shrink-0">
         <div
           className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl font-bold text-white"
           style={{
             backgroundImage: `linear-gradient(135deg, ${c.from}, ${c.to})`,
-            boxShadow: `0 6px 16px rgba(${c.glow},0.4), inset 0 1px 0 rgba(255,255,255,0.35)`,
+            boxShadow: `0 6px 16px rgba(${GLOW},0.4), inset 0 1px 0 rgba(255,255,255,0.35)`,
           }}
         >
           {job.co[0]}
@@ -83,11 +95,15 @@ function JobCard({ job, index }: { job: Job; index: number }) {
             <MapPin size={13} className="shrink-0 text-neutral-400" />
             {job.location}
           </span>
-          <span className="h-1 w-1 shrink-0 rounded-full bg-neutral-300" />
-          <span className="flex items-center gap-1">
-            <Briefcase size={13} className="shrink-0 text-neutral-400" />
-            {job.experience}
-          </span>
+          {job.experience && (
+            <>
+              <span className="h-1 w-1 shrink-0 rounded-full bg-neutral-300" />
+              <span className="flex items-center gap-1">
+                <Briefcase size={13} className="shrink-0 text-neutral-400" />
+                {job.experience}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Skill chips */}
@@ -102,18 +118,19 @@ function JobCard({ job, index }: { job: Job; index: number }) {
           ))}
         </div>
 
-        {/* Salary + committed reply window — the differentiator only unGhost shows. */}
+        {/* Salary + committed reply window — the differentiator only unGhost shows.
+            brand-700/800 text keeps both legible on white (AA). */}
         <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-black/[0.06] pt-3">
-          <span className="text-[16px] font-bold tnum" style={{ color: c.to }}>
+          <span className="text-[16px] font-bold tnum text-brand-700">
             {job.salary}
           </span>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-[11.5px] font-semibold text-brand-600 ring-1 ring-brand-500/15">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-[11.5px] font-semibold text-brand-800 ring-1 ring-brand-500/15">
             <Timer size={11} className="shrink-0" />
             {job.window} reply
           </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -122,10 +139,10 @@ function Row({
   reverse,
   durationS,
 }: {
-  jobs: Job[];
+  jobs: TickerRole[];
   reverse?: boolean;
   durationS: number;
-}) {
+}): React.ReactElement {
   // Two copies → the -50% keyframe loops seamlessly.
   const doubled = [...jobs, ...jobs];
   return (
@@ -143,12 +160,18 @@ function Row({
 }
 
 /**
- * Single-row ticker of sample roles. The void section's CTA lives in its
- * narrative column, so this strip only carries proof: real-shaped roles with
- * salary, skills and the committed reply window each recruiter owns.
+ * Single-row ticker of roles with their committed reply windows.
+ *
+ * `roles` comes from the live board (landing page maps real jobs into
+ * TickerRole); when the board is too thin the strip pads with the sample
+ * list and says so in the caption — PRODUCT.md bans unlabeled fake proof.
+ * The moving strip is decorative (aria-hidden, cards tabIndex -1); the
+ * accessible path to the board is the caption link below it.
  */
-export function JobMarquee() {
+export function JobMarquee({ roles = [] }: { roles?: TickerRole[] }): React.ReactElement {
   const reduce = useReducedMotion();
+  const live = roles.length >= MIN_LIVE_ROLES;
+  const shown = live ? roles : SAMPLE_ROLES;
 
   return (
     <div className="relative">
@@ -164,7 +187,7 @@ export function JobMarquee() {
 
       {reduce ? (
         <div className="flex flex-wrap justify-center gap-4 px-4">
-          {JOBS.slice(0, 4).map((job, i) => (
+          {shown.slice(0, 4).map((job, i) => (
             <JobCard key={`${job.co}-${i}`} job={job} index={i} />
           ))}
         </div>
@@ -178,9 +201,28 @@ export function JobMarquee() {
               "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
           }}
         >
-          <Row jobs={JOBS} durationS={110} />
+          <Row jobs={shown} durationS={110} />
         </div>
       )}
+
+      {/* Honest caption + the accessible route into the board. */}
+      <p className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 text-center text-body-sm text-white/60">
+        {live ? (
+          <span>
+            <span className="font-semibold text-white/80 tnum">{roles.length}</span>{" "}
+            live {roles.length === 1 ? "role" : "roles"} on the board right now.
+          </span>
+        ) : (
+          <span>Illustrative sample roles — the live board has the real thing.</span>
+        )}
+        <Link
+          href="/jobs"
+          className="inline-flex items-center gap-1 font-semibold text-brand-300 transition-colors hover:text-brand-200"
+        >
+          Browse the live board
+          <ArrowRight size={13} />
+        </Link>
+      </p>
     </div>
   );
 }

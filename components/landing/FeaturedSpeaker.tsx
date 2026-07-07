@@ -29,7 +29,18 @@ const ACCOLADES = [
   { icon: Star, title: "CFO100", sub: "Recognized Leader" },
 ] as const;
 
-export function FeaturedSpeaker() {
+/**
+ * `compact` — the landing-page form: one horizontal card, three lines of
+ * copy, no nested glass strips. The full spotlight (bio paragraphs, accolade
+ * grid, workshop banner, masked portrait column) interrupted the landing's
+ * jobs → bootcamps → pricing spine for four viewports; /instructors keeps it.
+ */
+export function FeaturedSpeaker({
+  variant = "full",
+}: {
+  variant?: "full" | "compact";
+}) {
+  if (variant === "compact") return <FeaturedSpeakerCompact />;
   return (
     <div
       className="relative isolate overflow-hidden rounded-[28px] shadow-[0_24px_80px_-24px_rgba(0,0,0,0.55)]"
@@ -271,6 +282,59 @@ export function FeaturedSpeaker() {
     </div>
   );
 }
+
+function FeaturedSpeakerCompact() {
+  return (
+    <div
+      className="relative isolate overflow-hidden rounded-[24px]"
+      style={{ background: PANEL_BG }}
+    >
+      {/* Single blue key light, matching the void section's restraint. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background: `radial-gradient(90% 120% at 18% 0%, ${BLUE}22, transparent 60%)`,
+        }}
+      />
+
+      <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:gap-7 sm:p-8">
+        {/* Portrait thumb */}
+        <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/15 sm:h-32 sm:w-32">
+          <Image
+            src="/abhinav.png"
+            alt="Abhinav Jain Ranka, Founder of Poem Capital"
+            fill
+            sizes="128px"
+            className="object-cover object-[55%_18%]"
+          />
+        </div>
+
+        {/* Three lines: who, why he's credible, what you get. */}
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+            Guest session:{" "}
+            <span style={{ color: BLUE_LIGHT }}>Abhinav Jain Ranka</span>
+          </p>
+          <p className="mt-1 text-body-sm leading-snug text-white/70">
+            Founder, Poem Capital · CA &amp; CS · led finance at PharmEasy and
+            CoinDCX on their way to unicorn status.
+          </p>
+          <p className="mt-2 text-body-sm leading-snug text-white/70">
+            Free online workshop on business, fundraising, and the financial
+            mindset to scale — sessions announced in the community.
+          </p>
+        </div>
+
+        {/* Enrollment controls (form → WhatsApp DM + share link). */}
+        <div className="shrink-0 sm:pl-2">
+          <EnrollViaWhatsApp compact />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 
 /**
