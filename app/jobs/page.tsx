@@ -127,6 +127,18 @@ export default async function PublicJobsPage(): Promise<React.ReactElement> {
             />
           </div>
 
+          {/* Above-the-fold action — same glowing treatment as the void
+              section's CTA. Deep-links back to the board after signup. */}
+          <div className="mt-8">
+            <Link
+              href="/signup?next=/student/jobs"
+              className="group inline-flex items-center gap-2 rounded-xl bg-brand-700 px-7 py-3.5 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_30px_-8px_rgba(1,145,252,0.55)] transition-all duration-200 hover:bg-brand-800 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_14px_36px_-10px_rgba(1,145,252,0.7)] active:scale-[0.98]"
+            >
+              Start applying free
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+
           {/* Live-board tally: real counts, straight from the data. */}
           {openJobs.length > 0 && (
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-white/10 pt-7">
