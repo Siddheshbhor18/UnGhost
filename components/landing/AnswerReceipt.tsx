@@ -33,8 +33,8 @@ interface Step {
 }
 
 const STEPS: Step[] = [
-  { Icon: Send, label: "Application sent", day: "Day 0", bright: 0.62 },
-  { Icon: Timer, label: "Reply window locked · 48h", day: "Day 0", bright: 0.82 },
+  { Icon: Send, label: "Application sent", day: "Day 0", bright: 0.7 },
+  { Icon: Timer, label: "Reply window locked · 48h", day: "Day 0", bright: 0.85 },
   { Icon: MessageCircle, label: "Recruiter replied", day: "Day 1", bright: 1, accent: true },
 ];
 
@@ -45,7 +45,7 @@ export function AnswerReceipt() {
 
   return (
     <div className="mx-auto w-full max-w-sm">
-      <div className="rounded-2xl bg-white/[0.06] p-6 text-left ring-1 ring-white/[0.12] backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_24px_60px_-20px_rgba(0,0,0,0.65),0_10px_36px_-10px_rgba(1,145,252,0.22)]">
+      <div className="rounded-2xl bg-[#070B12]/75 p-6 text-left ring-1 ring-white/[0.14] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_60px_-20px_rgba(0,0,0,0.65),0_10px_36px_-10px_rgba(1,145,252,0.22)]">
         <div className="flex items-baseline justify-between gap-3 border-b border-white/10 pb-4">
           <p className="text-[15px] font-semibold text-white/90">
             Frontend Engineer
@@ -128,7 +128,7 @@ export function AnswerReceipt() {
         </motion.ul>
       </div>
 
-      <p className="mt-4 text-center text-[12.5px] text-white/45">
+      <p className="mt-4 text-center text-[12.5px] text-white/60 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
         And if they had stayed silent? The credit comes back to you.
       </p>
     </div>

@@ -26,10 +26,13 @@ interface Step {
   dim: number;
 }
 
+/** Resting opacities decay toward the void but stay above the legibility
+ *  floor for text on dark glass over photography (~0.5). The story is the
+ *  decay, not the disappearance. */
 const STEPS: Step[] = [
   { Icon: Send, label: "Application sent", day: "Day 0", dim: 1 },
-  { Icon: Eye, label: "Viewed by employer", day: "Day 2", dim: 0.6 },
-  { Icon: MessageCircle, label: "You follow up", day: "Day 9", dim: 0.34 },
+  { Icon: Eye, label: "Viewed by employer", day: "Day 2", dim: 0.72 },
+  { Icon: MessageCircle, label: "You follow up", day: "Day 9", dim: 0.52 },
 ];
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -40,7 +43,7 @@ export function GhostReceipt() {
   return (
     <div className="mx-auto w-full max-w-sm">
       <motion.div
-        className="rounded-2xl bg-white/[0.05] p-6 text-left ring-1 ring-white/[0.08] backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_24px_60px_-20px_rgba(0,0,0,0.65),0_10px_30px_-10px_rgba(1,145,252,0.14)]"
+        className="rounded-2xl bg-[#070B12]/75 p-6 text-left ring-1 ring-white/[0.12] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_60px_-20px_rgba(0,0,0,0.65),0_10px_30px_-10px_rgba(1,145,252,0.14)]"
         initial={reduce ? false : { opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.5 }}
@@ -95,14 +98,14 @@ export function GhostReceipt() {
               icon should be. Dimmest of all; the silence is the point. */}
           <motion.li
             className="flex items-center gap-3"
-            style={reduce ? { opacity: 0.35 } : undefined}
+            style={reduce ? { opacity: 0.5 } : undefined}
             variants={
               reduce
                 ? undefined
                 : {
                     hidden: { opacity: 0, y: 10 },
                     visible: {
-                      opacity: 0.35,
+                      opacity: 0.5,
                       y: 0,
                       transition: { duration: 0.5, ease: EASE },
                     },
@@ -122,7 +125,7 @@ export function GhostReceipt() {
         </motion.ul>
       </motion.div>
 
-      <p className="mt-4 text-center text-[12.5px] text-white/40">
+      <p className="mt-4 text-center text-[12.5px] text-white/60 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
         Most applications end like this. Nobody owes you an answer.
       </p>
     </div>
