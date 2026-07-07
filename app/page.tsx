@@ -23,6 +23,7 @@ import { JobMarquee, type TickerRole } from "@/components/landing/JobMarquee";
 import { FeaturedSpeaker } from "@/components/landing/FeaturedSpeaker";
 import { HeroReveal } from "@/components/landing/HeroReveal";
 import { VoidReveal } from "@/components/landing/VoidReveal";
+import { GhostText } from "@/components/landing/GhostText";
 import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import { StickyCTA } from "@/components/landing/StickyCTA";
 import { SiteFooter } from "@/components/landing/SiteFooter";
@@ -348,8 +349,9 @@ export default async function LandingPage() {
                     amount={0.4}
                   />
                 </span>
-                {/* Backlit blue — solid brand-blue with a light-emission glow,
-                    revealed to full uniform opacity (no dissolve / gradient). */}
+                {/* Backlit blue, then gone: GhostText reveals the line and
+                    lets it dissolve letter by letter — the sentence itself
+                    gets ghosted. Floor keeps the tail faintly legible. */}
                 <span
                   className="block pb-1 font-display font-black not-italic leading-[0.98]"
                   style={{
@@ -358,14 +360,7 @@ export default async function LandingPage() {
                       "0 0 28px rgba(1,145,252,0.55), 0 0 10px rgba(1,145,252,0.45)",
                   }}
                 >
-                  <RevealText
-                    segments={["Then nothing."]}
-                    stagger={0.06}
-                    motionStyle="tween"
-                    trigger="view"
-                    amount={0.4}
-                    delay={0.35}
-                  />
+                  <GhostText text="Then nothing." delay={0.45} floor={0.22} />
                 </span>
               </h2>
             </>

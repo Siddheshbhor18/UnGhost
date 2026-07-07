@@ -1,26 +1,31 @@
 "use client";
 
 /**
- * VoidReveal — the void section's scroll-scrubbed turn. As the beat is pinned
- * to the viewport, `thesuccess.png` is wiped in over `thevoid.png` bottom-up
- * like a rising horizon of light (a "dawn wipe"): the dark "Application
- * Submitted, then silence" night resolves into the sunrise payoff. The
- * two narrative beats (`problem`, `payoff`) are passed in so page.tsx keeps
- * ownership of the copy; this component orchestrates their scroll-linked
- * crossfade in lockstep with the wipe, and owns the pinned stage + imagery.
+ * VoidReveal — the void section's scroll-scrubbed turn, staged full-bleed.
  *
- * Desktop (lg+): a tall scroll-track pins a `sticky` stage, giving the wipe
- * dedicated scroll room before the ticker / next section arrive. Progress is
+ * The imagery IS the stage: thevoid.png fills the pinned viewport, and the
+ * payoff (thesuccess.png) wipes over it bottom-up like a rising dawn, a warm
+ * horizon line riding the reveal edge across the full width of the screen.
+ * The narrative beats (left) and the receipt artifacts (right) crossfade in
+ * lockstep with the wipe:
+ *
+ *   problem  — "You apply. / Then nothing."  + <GhostReceipt />  (the
+ *              application that fades into silence)
+ *   payoff   — "So we changed who pays…"     + <AnswerReceipt /> (the same
+ *              application, answered inside a locked reply window)
+ *
+ * Same shape, opposite endings — the mechanic shown as evidence twice.
+ *
+ * Desktop (lg+): a tall scroll-track pins a `sticky` stage; progress is
  * measured across the pin ("start start" → "end end").
- * Mobile: no pin (a pinned stage taller than the viewport would clip), so the
- * wipe scrubs as the block passes THROUGH the viewport ("start end" →
+ * Mobile: no pin (a pinned stage taller than the viewport would clip), so
+ * the wipe scrubs as the block passes THROUGH the viewport ("start end" →
  * "end start"). The two modes need different offsets: the pinned offsets are
- * degenerate when the track is shorter than the viewport (the "end end"
- * waypoint precedes "start start"), which ran the whole story BACKWARDS on
- * phones — payoff first, dissolving back into the void. The mode is detected
- * with a matchMedia listener and the scrub subtree is keyed on it so
- * useScroll re-initialises with the right offsets.
- * Reduced motion: static two-column — void image + both text beats, no scrub.
+ * degenerate when the track is shorter than the viewport, which would run
+ * the story backwards on phones. The mode is detected with a matchMedia
+ * listener and the scrub subtree is keyed on it so useScroll re-initialises.
+ * Reduced motion: static full-bleed void + both text beats + the ghost
+ * receipt in its finished state, no scrub.
  */
 
 import Image from "next/image";
@@ -34,8 +39,8 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-
-const IMAGE_SIZES = "(min-width: 1024px) 42vw, 100vw";
+import { GhostReceipt } from "@/components/landing/GhostReceipt";
+import { AnswerReceipt } from "@/components/landing/AnswerReceipt";
 
 // SSR renders neither mode's scroll values (no window), so the layout effect
 // only matters client-side; the fallback keeps React from warning during SSR.
@@ -43,13 +48,12 @@ const useIsomorphicLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** Scroll waypoints for each beat, per mode. Pinned values are tuned for the
- *  240vh pin; flow values for a ~1.6-viewport passage (stops sit later so the
+ *  260vh pin; flow values for a ~1.6-viewport passage (stops sit later so the
  *  turn happens while the section is centred on screen, not while entering). */
 const STOPS = {
   pinned: {
     wipe: [0.18, 0.72] as [number, number],
     scale: [0.18, 0.78] as [number, number],
-    blur: [0.18, 0.64] as [number, number],
     line: [0.16, 0.24, 0.68, 0.76] as [number, number, number, number],
     cool: [0.32, 0.66] as [number, number],
     warm: [0.26, 0.68] as [number, number],
@@ -61,7 +65,6 @@ const STOPS = {
   flow: {
     wipe: [0.35, 0.78] as [number, number],
     scale: [0.35, 0.82] as [number, number],
-    blur: [0.35, 0.72] as [number, number],
     line: [0.33, 0.41, 0.74, 0.81] as [number, number, number, number],
     cool: [0.45, 0.72] as [number, number],
     warm: [0.4, 0.74] as [number, number],
@@ -71,6 +74,18 @@ const STOPS = {
     payoffGate: 0.58,
   },
 };
+
+const VOID_ALT =
+  "A job-seeker alone at night, staring at an 'Application Submitted' screen — and the silence that follows.";
+const SUCCESS_ALT =
+  "The same person at a corner-office desk at sunrise, coffee in hand, the city skyline glowing — the payoff after the silence.";
+
+/** Left-side legibility scrim — display type sits on photography. */
+const TEXT_SCRIM =
+  "linear-gradient(to right, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0.6) 34%, rgba(0,0,0,0.22) 58%, rgba(0,0,0,0.05) 78%, transparent 100%)";
+/** Grounds the stage into the black section (ticker follows below). */
+const EDGE_SCRIM =
+  "linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 18%), linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 14%)";
 
 export function VoidReveal({
   problem,
@@ -94,27 +109,25 @@ export function VoidReveal({
 
   if (reduce) {
     return (
-      <div className="relative mx-auto max-w-content px-4 pt-16 md:pt-24 pb-4 md:pb-8">
-        <KeyLight coolGlow={null} />
-        <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-12 lg:gap-10">
-          <div className="lg:col-span-6">
-            <div className="space-y-8">
-              {problem}
-              {payoff}
-            </div>
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0">
+          <Image
+            src="/thevoid.png"
+            alt={VOID_ALT}
+            fill
+            sizes="100vw"
+            className="object-cover"
+          />
+          <div aria-hidden className="absolute inset-0" style={{ background: TEXT_SCRIM }} />
+          <div aria-hidden className="absolute inset-0" style={{ background: EDGE_SCRIM }} />
+        </div>
+        <div className="relative mx-auto grid max-w-content grid-cols-1 items-center gap-12 px-4 py-20 md:py-28 lg:grid-cols-12 lg:gap-10">
+          <div className="space-y-10 lg:col-span-6">
+            {problem}
+            {payoff}
           </div>
-          <div className="lg:col-span-6">
-            <div className="relative">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-2xl ring-1 ring-white/10 shadow-[0_30px_90px_-24px_rgba(0,0,0,0.85)]">
-                <Image
-                  src="/thevoid.png"
-                  alt="A job-seeker alone at night, staring at an 'Application Submitted' screen — and the silence that follows."
-                  fill
-                  sizes={IMAGE_SIZES}
-                  className="object-cover"
-                />
-              </div>
-            </div>
+          <div className="lg:col-span-5 lg:col-start-8">
+            <GhostReceipt />
           </div>
         </div>
       </div>
@@ -151,27 +164,25 @@ function VoidRevealScrub({
   });
 
   // Gentle, near-symmetric ease with soft ends. A punchy curve would bunch the
-  // travel into the middle (fast = the "too quick" feel); since the user's
-  // scroll already drives the rate, a soft curve keeps the wipe steady and
-  // readable the whole way up.
+  // travel into the middle; the user's scroll already drives the rate, so a
+  // soft curve keeps the wipe steady and readable the whole way up.
   const wipeEase = cubicBezier(0.42, 0, 0.58, 1);
 
   // Dawn wipe: the payoff is revealed bottom-up like a rising horizon of
-  // light. `inset(top …)` shrinks from 100% → 0%, so the visible band of
-  // thesuccess.png grows upward from the base. The void underneath simply
-  // gets uncovered — no crossfade, so there is never a muddy double-image.
+  // light across the WHOLE viewport. `inset(top …)` shrinks from 100% → 0%,
+  // so the visible band of thesuccess.png grows upward from the base. The
+  // void underneath simply gets uncovered — never a muddy double-image.
   const wipeTop = useTransform(scrollYProgress, S.wipe, [100, 0], {
     ease: wipeEase,
   });
   const successClip = useMotionTemplate`inset(${wipeTop}% 0 0 0)`;
   const lineTop = useMotionTemplate`${wipeTop}%`;
 
-  // Slight scale-settle + a focus-pull that resolves as the light arrives.
-  const successScale = useTransform(scrollYProgress, S.scale, [1.04, 1], {
+  // Slight scale-settle as the light arrives. (No blur here: a focus-pull
+  // filter on a viewport-sized layer is a GPU tax the effect doesn't need.)
+  const successScale = useTransform(scrollYProgress, S.scale, [1.05, 1], {
     ease: wipeEase,
   });
-  const successBlurPx = useTransform(scrollYProgress, S.blur, [6, 0]);
-  const successFilter = useMotionTemplate`blur(${successBlurPx}px)`;
 
   // The horizon line — a bright warm sweep riding the reveal edge, present
   // only while the wipe is travelling.
@@ -181,10 +192,8 @@ function VoidRevealScrub({
   const coolGlow = useTransform(scrollYProgress, S.cool, [1, 0.15]);
   const warmGlow = useTransform(scrollYProgress, S.warm, [0, 1]);
 
-  // Narrative beats crossfade in lockstep with the wipe: the "problem" copy
-  // (shown on arrival) slides up and out as the light rises, and the "payoff"
-  // copy slides in as the success frame lands. pointer-events gate so the
-  // hidden beat never swallows clicks (e.g. the payoff CTA).
+  // Narrative + artifact beats crossfade in lockstep with the wipe. The
+  // pointer-events gates keep the hidden beat from swallowing clicks.
   const problemOpacity = useTransform(scrollYProgress, S.problem, [1, 0]);
   const problemY = useTransform(scrollYProgress, S.problem, [0, -24]);
   const problemPE = useTransform(scrollYProgress, (p): "auto" | "none" =>
@@ -196,103 +205,97 @@ function VoidRevealScrub({
     p > S.payoffGate ? "auto" : "none",
   );
 
-  const frame = (
-    <div className="relative">
-      {/* Night-blue key light — recedes as success blooms. */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute -inset-6 -z-10 blur-3xl"
-        style={{
-          opacity: coolGlow,
-          background:
-            "radial-gradient(ellipse at 60% 40%, rgba(1,145,252,0.20), transparent 70%)",
-        }}
-      />
-      {/* Sunrise-amber bloom — fades in behind the success frame. */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute -inset-8 -z-10 blur-3xl"
-        style={{
-          opacity: warmGlow,
-          background:
-            "radial-gradient(ellipse at 62% 46%, rgba(255,168,74,0.28), transparent 68%)",
-        }}
-      />
-
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl ring-1 ring-white/10 shadow-[0_30px_90px_-24px_rgba(0,0,0,0.85)]">
-        {/* Base — the void. Stays put; the wipe simply uncovers the payoff. */}
-        <div className="absolute inset-0">
+  return (
+    <div ref={trackRef} className="relative lg:h-[260vh]">
+      <div className="relative flex min-h-[100svh] items-center overflow-hidden lg:sticky lg:top-0">
+        {/* ── Full-bleed backdrop: the world that turns ── */}
+        <div className="absolute inset-0" aria-hidden={false}>
+          {/* Base — the void. Stays put; the wipe simply uncovers the payoff. */}
           <Image
             src="/thevoid.png"
-            alt="A job-seeker alone at night, staring at an 'Application Submitted' screen — and the silence that follows."
+            alt={VOID_ALT}
             fill
-            sizes={IMAGE_SIZES}
+            sizes="100vw"
             className="object-cover"
           />
+
+          {/* The payoff, wiped in bottom-up across the whole stage. */}
+          <motion.div
+            className="absolute inset-0"
+            style={{
+              clipPath: successClip,
+              WebkitClipPath: successClip,
+              scale: successScale,
+              willChange: "clip-path, transform",
+            }}
+          >
+            <Image
+              src="/thesuccess.png"
+              alt={SUCCESS_ALT}
+              fill
+              sizes="100vw"
+              className="object-cover"
+            />
+          </motion.div>
+
+          {/* Rising horizon of light — full-width, tracking the reveal edge. */}
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 h-28 -translate-y-1/2"
+            style={{
+              top: lineTop,
+              opacity: lineOpacity,
+              background:
+                "linear-gradient(to top, transparent, rgba(255,176,102,0.32) 42%, rgba(255,231,199,0.9) 50%, rgba(255,176,102,0.32) 58%, transparent)",
+              filter: "blur(7px)",
+              mixBlendMode: "screen",
+              willChange: "top, opacity",
+            }}
+          />
+
+          {/* Night-blue ambience — recedes as the dawn lands. */}
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              opacity: coolGlow,
+              background:
+                "radial-gradient(ellipse 90% 70% at 70% 30%, rgba(1,145,252,0.14), transparent 65%)",
+            }}
+          />
+          {/* Sunrise-amber ambience — blooms in with the payoff. */}
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              opacity: warmGlow,
+              background:
+                "radial-gradient(ellipse 85% 65% at 68% 55%, rgba(255,168,74,0.16), transparent 62%)",
+            }}
+          />
+
+          {/* Legibility + section grounding. */}
+          <div aria-hidden className="absolute inset-0" style={{ background: TEXT_SCRIM }} />
+          <div aria-hidden className="absolute inset-0" style={{ background: EDGE_SCRIM }} />
         </div>
 
-        <motion.div
-          className="absolute inset-0"
-          style={{
-            clipPath: successClip,
-            WebkitClipPath: successClip,
-            scale: successScale,
-            filter: successFilter,
-            willChange: "clip-path, transform, filter",
-          }}
-        >
-          <Image
-            src="/thesuccess.png"
-            alt="The same person at a corner-office desk at sunrise, coffee in hand, the city skyline glowing — the payoff after the silence."
-            fill
-            sizes={IMAGE_SIZES}
-            className="object-cover"
-          />
-        </motion.div>
-
-        {/* Rising horizon of light — a warm sweep tracking the reveal edge. */}
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 h-24 -translate-y-1/2"
-          style={{
-            top: lineTop,
-            opacity: lineOpacity,
-            background:
-              "linear-gradient(to top, transparent, rgba(255,176,102,0.35) 42%, rgba(255,231,199,0.95) 50%, rgba(255,176,102,0.35) 58%, transparent)",
-            filter: "blur(6px)",
-            mixBlendMode: "screen",
-            willChange: "top, opacity",
-          }}
-        />
-      </div>
-    </div>
-  );
-
-  const narrative = (
-    <div className="grid items-center">
-      <motion.div
-        className="[grid-area:1/1]"
-        style={{ opacity: problemOpacity, y: problemY, pointerEvents: problemPE }}
-      >
-        {problem}
-      </motion.div>
-      <motion.div
-        className="[grid-area:1/1]"
-        style={{ opacity: payoffOpacity, y: payoffY, pointerEvents: payoffPE }}
-      >
-        {payoff}
-      </motion.div>
-    </div>
-  );
-
-  return (
-    <div ref={trackRef} className="relative lg:h-[240vh]">
-      <div className="flex min-h-[70vh] items-center lg:sticky lg:top-0 lg:min-h-screen">
-        <div className="relative mx-auto w-full max-w-content px-4 py-14 md:py-16">
-          <KeyLight coolGlow={coolGlow} />
-          <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-12 lg:gap-10">
-            <div className="lg:col-span-6">{narrative}</div>
-            <div className="lg:col-span-6">{frame}</div>
+        {/* ── Content: narrative left, artifact right ── */}
+        <div className="relative mx-auto grid w-full max-w-content grid-cols-1 items-center gap-y-12 px-4 py-16 md:py-20 lg:grid-cols-12 lg:gap-10">
+          <div className="lg:col-span-6">
+            <CrossfadeStack
+              problem={problem}
+              payoff={payoff}
+              problemStyle={{ opacity: problemOpacity, y: problemY, pointerEvents: problemPE }}
+              payoffStyle={{ opacity: payoffOpacity, y: payoffY, pointerEvents: payoffPE }}
+            />
+          </div>
+          <div className="lg:col-span-5 lg:col-start-8">
+            <CrossfadeStack
+              problem={<GhostReceipt />}
+              payoff={<AnswerReceipt />}
+              problemStyle={{ opacity: problemOpacity, y: problemY, pointerEvents: problemPE }}
+              payoffStyle={{ opacity: payoffOpacity, y: payoffY, pointerEvents: payoffPE }}
+            />
           </div>
         </div>
       </div>
@@ -300,23 +303,34 @@ function VoidRevealScrub({
   );
 }
 
-/** Electric-blue key light behind the headline column — pinned with the stage
- *  (so it never slides), and dimmed as the scene warms into the payoff.
- *  `coolGlow` is null in the static reduced-motion branch (full opacity). */
-function KeyLight({
-  coolGlow,
+/** Two beats sharing one grid cell, crossfaded by the scrub's motion values. */
+function CrossfadeStack({
+  problem,
+  payoff,
+  problemStyle,
+  payoffStyle,
 }: {
-  coolGlow: MotionValue<number> | null;
+  problem: React.ReactNode;
+  payoff: React.ReactNode;
+  problemStyle: {
+    opacity: MotionValue<number>;
+    y: MotionValue<number>;
+    pointerEvents: MotionValue<"auto" | "none">;
+  };
+  payoffStyle: {
+    opacity: MotionValue<number>;
+    y: MotionValue<number>;
+    pointerEvents: MotionValue<"auto" | "none">;
+  };
 }) {
   return (
-    <motion.div
-      aria-hidden
-      className="pointer-events-none absolute left-[24%] top-1/2 h-[520px] w-[860px] -translate-x-1/2 -translate-y-1/2 blur-[90px]"
-      style={{
-        opacity: coolGlow ?? 1,
-        background:
-          "radial-gradient(ellipse, rgba(1,145,252,0.20), transparent 62%)",
-      }}
-    />
+    <div className="grid items-center">
+      <motion.div className="[grid-area:1/1]" style={problemStyle}>
+        {problem}
+      </motion.div>
+      <motion.div className="[grid-area:1/1]" style={payoffStyle}>
+        {payoff}
+      </motion.div>
+    </div>
   );
 }
