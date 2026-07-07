@@ -4,24 +4,22 @@ This folder contains the full production-readiness plan for unGhost.com. Read th
 
 ## Audience
 
-- **Founders / product** — read [01](./01-current-state-and-gaps.md) and [07](./07-roadmap.md).
-- **New engineers** — read [02](./02-architecture-and-code-structure.md) and [03](./03-design-system.md) first.
-- **DevOps / SRE** — read [04](./04-cloudflare-deployment.md), [05](./05-cicd-pipeline.md), [06](./06-operations-monitoring.md).
-- **Investors / due-diligence** — read [01](./01-current-state-and-gaps.md) and [07](./07-roadmap.md).
+- **New engineers** — read [02 — Architecture and code structure](./02-architecture-and-code-structure.md) first, then the root [README](../README.md).
+- **DevOps / SRE** — read [08 — Cloudflare bootstrap](./08-cloudflare-bootstrap.md), [10 — Launch readiness](./10-launch-readiness.md), and the [runbooks](./09-runbooks).
+- **Security / due-diligence** — read [11 — Security review](./11-security-review-report.md) and [12 — Test coverage](./12-test-coverage-report.md).
 
 ## Table of contents
 
 | # | Document | Purpose |
 |---|---|---|
-| 01 | [Current state and gaps](./01-current-state-and-gaps.md) | Honest assessment: what is built, what is missing, prototype vs production scorecard |
-| 02 | [Architecture and code structure](./02-architecture-and-code-structure.md) | Monolith decision, target folder layout, naming, ESLint boundaries, contribution guide |
-| 03 | [Design system](./03-design-system.md) | How design tokens work, how to swap to a new design guide, accessibility standards |
-| 04 | [Cloudflare deployment](./04-cloudflare-deployment.md) | Cloudflare Containers setup, supporting services (Atlas, Redis, R2, Sentry), DNS, secrets |
-| 05 | [CI/CD pipeline](./05-cicd-pipeline.md) | GitHub Actions, environments, PR previews, migrations, rollback |
-| 06 | [Operations and monitoring](./06-operations-monitoring.md) | Logging, alerts, on-call, runbooks, incident response, SLAs |
-| 07 | [8-week hardening roadmap](./07-roadmap.md) | Week-by-week plan to take the app from prototype to production-ready |
+| 02 | [Architecture and code structure](./02-architecture-and-code-structure.md) | Codebase reference: layering, folder map, API conventions, data/auth/payments, testing, deploy |
+| 08 | [Cloudflare bootstrap](./08-cloudflare-bootstrap.md) | R2 / Stream account setup and secrets |
+| 09 | [Runbooks](./09-runbooks) | Operational procedures for on-call |
+| 10 | [Launch readiness](./10-launch-readiness.md) | Pre-launch checklist and sign-off |
 | 11 | [Security audit and vulnerability review](./11-security-review-report.md) | In-depth security analysis, DPDP compliance review, and identified risks |
 | 12 | [Testing and coverage report](./12-test-coverage-report.md) | Testing architecture overview, current coverage, and coverage expansion roadmap |
+
+Numbers 01, 03–07 (current-state assessment, design system, deployment, CI/CD pipeline, operations, roadmap) are reserved but not yet written; until then their subjects are covered in brief inside doc 02 and the root README.
 
 ## How to keep this updated
 
