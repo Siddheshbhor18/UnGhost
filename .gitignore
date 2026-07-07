@@ -20,8 +20,10 @@ skills-lock.json
 # Uploads
 .uploads/
 
-# Test coverage
+# Test artifacts
 coverage/
+playwright-report/
+test-results/
 
 
 # DB backups (PII/hashes — never commit)
