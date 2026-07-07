@@ -196,7 +196,7 @@ export default async function PublicJobsPage(): Promise<React.ReactElement> {
               </p>
             </div>
 
-            <ul className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-[0_1px_2px_rgba(10,10,10,0.03)]">
+            <ul className="flex flex-col gap-2.5">
               {previewJobs.map((job) => (
                 <JobRow
                   key={job.id}
@@ -212,7 +212,7 @@ export default async function PublicJobsPage(): Promise<React.ReactElement> {
                 <span className="font-semibold text-neutral-900 tnum">
                   {previewJobs.length}
                 </span>{" "}
-                newest roles — all{" "}
+                newest roles; all{" "}
                 <span className="font-semibold text-neutral-900 tnum">
                   {openJobs.length}
                 </span>{" "}
@@ -287,8 +287,12 @@ function StepArrow(): React.ReactElement {
 
 /**
  * One role, one row — the honest shape of a job board. The whole row is the
- * gated Apply link; the affordance stays quiet ("Apply free →") until hover
+ * gated Apply link; the affordance stays quiet (an arrow that answers hover)
  * so thirty rows don't become thirty shouting buttons.
+ *
+ * Desktop rows share fixed salary/window grid columns so the board scans
+ * like a table; the reply window sits last before the arrow, landing the
+ * promise right where the eye reaches the action. Phones fold to two lines.
  */
 function JobRow({
   job,
@@ -308,10 +312,10 @@ function JobRow({
   );
 
   return (
-    <li className="border-b border-neutral-100 last:border-b-0">
+    <li>
       <Link
         href="/signup?next=/student/jobs"
-        className="group grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-3 px-4 py-4 transition-colors hover:bg-brand-50/50 sm:px-6 md:grid-cols-[auto_minmax(0,1fr)_auto]"
+        className="group grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 rounded-xl bg-white px-4 py-4 ring-1 ring-neutral-200/80 transition-all duration-200 hover:-translate-y-px hover:ring-brand-300 hover:shadow-[0_12px_32px_-14px_rgba(1,145,252,0.35)] motion-reduce:hover:translate-y-0 sm:px-5 lg:grid-cols-[auto_minmax(0,1fr)_120px_150px_24px]"
       >
         <CompanyLogo
           name={companyName}
@@ -326,7 +330,7 @@ function JobRow({
             <p className="truncate font-display text-[16px] font-bold leading-snug text-neutral-950">
               {job.title}
             </p>
-            <span className="inline-flex items-center gap-1 text-body-sm text-neutral-600">
+            <span className="inline-flex items-center gap-1 text-body-sm text-neutral-500">
               {companyName}
               {company?.verified && (
                 <BadgeCheck
@@ -337,7 +341,7 @@ function JobRow({
               )}
             </span>
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-neutral-600">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-neutral-600">
             <span className="inline-flex items-center gap-1">
               <MapPin size={12} className="shrink-0 text-neutral-400" />
               {location}
@@ -357,7 +361,7 @@ function JobRow({
               {job.skills.slice(0, MAX_SKILL_CHIPS).map((skill) => (
                 <span
                   key={skill}
-                  className="rounded bg-neutral-100 px-1.5 py-0.5 text-[11.5px] font-medium text-neutral-600"
+                  className="rounded-md bg-neutral-50 px-1.5 py-0.5 text-[11.5px] font-medium text-neutral-600 ring-1 ring-neutral-200/70"
                 >
                   {skill}
                 </span>
@@ -371,29 +375,29 @@ function JobRow({
           </div>
         </div>
 
-        {/* Salary + window + the quiet affordance. Second row on phones. */}
-        <div className="col-span-2 flex items-center justify-between gap-3 md:col-span-1 md:justify-end md:gap-5">
-          <span className="font-display text-[15px] font-bold text-neutral-950 tnum">
+        {/* Salary | reply window | arrow. One flex line on phones; at lg the
+            wrapper dissolves (`lg:contents`) and each child takes its own
+            fixed grid column so values align down the whole board. */}
+        <div className="col-span-2 flex items-center justify-between gap-3 lg:col-span-3 lg:contents">
+          <span className="font-display text-[15px] font-bold text-neutral-950 tnum lg:justify-self-end">
             {job.salaryMin}–{job.salaryMax} LPA
           </span>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-[11.5px] font-semibold text-brand-800 ring-1 ring-brand-500/15">
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-50 py-1 pl-2.5 pr-3 text-[11.5px] font-semibold text-brand-800 ring-1 ring-brand-500/15 lg:justify-self-center">
             <span className="relative flex h-1.5 w-1.5" aria-hidden>
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
             Replies in {job.slaHours}h
           </span>
-          <span className="hidden shrink-0 items-center gap-1 text-body-sm font-semibold text-brand-700 transition-transform duration-200 group-hover:translate-x-0.5 sm:inline-flex">
-            Apply free
-            <ArrowRight size={14} />
-          </span>
-          {/* Phones drop the label; a chevron keeps the row's tap affordance. */}
-          <ArrowRight
+          <span
             aria-hidden
-            size={15}
-            className="shrink-0 text-brand-700 sm:hidden"
-          />
+            className="shrink-0 text-brand-700 transition-transform duration-200 group-hover:translate-x-0.5"
+          >
+            <ArrowRight size={16} />
+          </span>
         </div>
+        {/* Names the gated action for screen readers and the e2e contract. */}
+        <span className="sr-only">Apply free</span>
       </Link>
     </li>
   );

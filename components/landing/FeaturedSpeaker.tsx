@@ -286,49 +286,130 @@ export function FeaturedSpeaker({
 function FeaturedSpeakerCompact() {
   return (
     <div
-      className="relative isolate overflow-hidden rounded-[24px]"
+      className="relative isolate overflow-hidden rounded-[28px] shadow-[0_24px_80px_-24px_rgba(0,0,0,0.55)]"
       style={{ background: PANEL_BG }}
     >
-      {/* Single blue key light, matching the void section's restraint. */}
+      {/* Hairline gradient border — same chrome as the full spotlight. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-[28px]"
+        style={{
+          background: `linear-gradient(140deg, ${BLUE}66 0%, transparent 35%, transparent 65%, ${BLUE}3D 100%)`,
+          padding: "1px",
+          WebkitMask:
+            "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          WebkitMaskComposite: "xor",
+          maskComposite: "exclude",
+        }}
+      />
+      {/* Two wells of blue light so the panel glows instead of sitting flat. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
-          background: `radial-gradient(90% 120% at 18% 0%, ${BLUE}22, transparent 60%)`,
+          background: `radial-gradient(80% 130% at 12% 0%, ${BLUE}2E, transparent 58%),
+                       radial-gradient(70% 110% at 100% 100%, ${BLUE}1C, transparent 65%)`,
         }}
       />
 
-      <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:gap-7 sm:p-8">
-        {/* Portrait thumb */}
-        <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/15 sm:h-32 sm:w-32">
+      <div className="grid items-center md:grid-cols-12">
+        {/* ── Copy column ── */}
+        <div className="relative z-10 p-6 sm:p-8 md:col-span-8 lg:p-10">
+          <span
+            className="inline-flex items-center gap-2 self-start rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em]"
+            style={{
+              color: BLUE_LIGHT,
+              background: `${BLUE}1F`,
+              border: `1px solid ${BLUE}40`,
+            }}
+          >
+            {/* Live dot: sessions are running, not archival content. */}
+            <span className="relative flex h-1.5 w-1.5" aria-hidden>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+            Guest session · free workshop
+          </span>
+
+          <div className="mt-5 flex items-center gap-4">
+            {/* Mobile portrait — the masked column below is md+ only. */}
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/15 md:hidden">
+              <Image
+                src="/abhinav.png"
+                alt=""
+                fill
+                sizes="64px"
+                className="object-cover object-[55%_18%]"
+              />
+            </div>
+            <h3
+              className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              <span
+                style={{
+                  color: BLUE_LIGHT,
+                  textShadow:
+                    "0 0 24px rgba(1,145,252,0.5), 0 0 8px rgba(1,145,252,0.35)",
+                }}
+              >
+                Abhinav
+              </span>{" "}
+              Jain Ranka
+            </h3>
+          </div>
+
+          <p className="mt-3 max-w-xl text-body-md leading-relaxed text-white/70">
+            Founder of Poem Capital, CA &amp; CS. Runs a free online workshop
+            on business, fundraising, and the financial mindset to scale;
+            sessions are announced in the community.
+          </p>
+
+          {/* Unicorn pedigree — the credibility does the catching. */}
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+              Led finance at
+            </span>
+            <span className="flex items-center gap-5 text-white/85">
+              <PharmEasyLogo className="h-6 w-auto" />
+              <span
+                aria-hidden
+                className="h-4 w-px"
+                style={{ background: "rgba(255,255,255,0.15)" }}
+              />
+              <CoinDCXLogo className="h-3 w-auto" />
+            </span>
+          </div>
+
+          <div className="mt-7">
+            <EnrollViaWhatsApp compact />
+          </div>
+        </div>
+
+        {/* ── Portrait column (md+) — emerges from the panel edge. ── */}
+        <div
+          aria-hidden
+          className="relative hidden min-h-[320px] self-stretch md:col-span-4 md:block"
+        >
           <Image
             src="/abhinav.png"
-            alt="Abhinav Jain Ranka, Founder of Poem Capital"
+            alt=""
             fill
-            sizes="128px"
-            className="object-cover object-[55%_18%]"
+            sizes="(min-width: 768px) 33vw, 0px"
+            className="object-cover object-[60%_20%]"
+            style={{
+              WebkitMaskImage:
+                "radial-gradient(ellipse 140% 100% at 75% 45%, #000 40%, transparent 85%)",
+              maskImage:
+                "radial-gradient(ellipse 140% 100% at 75% 45%, #000 40%, transparent 85%)",
+            }}
           />
-        </div>
-
-        {/* Three lines: who, why he's credible, what you get. */}
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-xl font-extrabold tracking-tight text-white sm:text-2xl">
-            Guest session:{" "}
-            <span style={{ color: BLUE_LIGHT }}>Abhinav Jain Ranka</span>
-          </p>
-          <p className="mt-1 text-body-sm leading-snug text-white/70">
-            Founder, Poem Capital · CA &amp; CS · led finance at PharmEasy and
-            CoinDCX on their way to unicorn status.
-          </p>
-          <p className="mt-2 text-body-sm leading-snug text-white/70">
-            Free online workshop on business, fundraising, and the financial
-            mindset to scale — sessions announced in the community.
-          </p>
-        </div>
-
-        {/* Enrollment controls (form → WhatsApp DM + share link). */}
-        <div className="shrink-0 sm:pl-2">
-          <EnrollViaWhatsApp compact />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: `linear-gradient(to right, ${PANEL_BG} 0%, rgba(8,11,18,0.25) 28%, transparent 45%), linear-gradient(to left, rgba(8,11,18,0.85) 0%, rgba(8,11,18,0.2) 10%, transparent 22%), linear-gradient(to top, rgba(8,11,18,0.7) 0%, transparent 30%)`,
+            }}
+          />
         </div>
       </div>
     </div>

@@ -118,7 +118,7 @@ export function EnrollViaWhatsApp({ compact = false }: { compact?: boolean }) {
       <div
         className={
           compact
-            ? "flex flex-col items-stretch gap-2.5"
+            ? "flex flex-wrap items-center gap-2.5"
             : "mt-5 flex flex-wrap items-center gap-3"
         }
       >
