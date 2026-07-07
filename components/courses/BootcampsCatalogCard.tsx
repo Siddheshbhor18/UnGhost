@@ -12,6 +12,8 @@ import { COURSE_PRICE_PAISE, FREE_WITH } from "@/shared/lib/courses";
 import { formatPaiseAsINR } from "@/shared/lib/pricing";
 import { COURSE_CONTENT } from "@/shared/course-content";
 import { safeImageUrl } from "@/shared/lib/safe-image-url";
+import Image from "next/image";
+import { COURSE_THUMBNAIL } from "@/shared/course-thumbnails";
 
 interface Props {
   id: BootcampCategory;
@@ -211,6 +213,26 @@ function Thumbnail({
           src={safeThumb}
           alt={`${label} thumbnail`}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/0"
+        />
+        <CohortBadge live={live} cohortCount={cohortCount} overlay />
+      </div>
+    );
+  }
+  // No recruiter upload, but this room ships a stock category thumbnail.
+  const categoryThumb = COURSE_THUMBNAIL[id];
+  if (categoryThumb) {
+    return (
+      <div className="relative h-44 w-full overflow-hidden">
+        <Image
+          src={categoryThumb}
+          alt={`${label} bootcamp`}
+          fill
+          sizes="(max-width: 768px) 100vw, 400px"
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
         />
         <div
           aria-hidden

@@ -21,6 +21,7 @@ import {
   Rocket,
   Workflow,
   ArrowRight,
+  Users,
   BadgeCheck,
   type LucideIcon,
 } from "lucide-react";
@@ -28,6 +29,8 @@ import Link from "next/link";
 import { ROOMS, type BootcampCategory } from "@/shared/rooms";
 import { Button } from "@/components/ui";
 import CardSwap, { Card } from "@/components/landing/CardSwap";
+import Image from "next/image";
+import { COURSE_THUMBNAIL } from "@/shared/course-thumbnails";
 
 /* ─── Course visual theme ─────────────────────────────────────────────── */
 
@@ -176,7 +179,7 @@ export function BootcampCardStack() {
           ))}
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 flex flex-wrap items-center gap-3">
           <Link href="#bootcamps">
             <Button
               variant="primary"
@@ -186,11 +189,22 @@ export function BootcampCardStack() {
               Explore all courses
             </Button>
           </Link>
+          <Link href="/instructors">
+            <Button
+              variant="secondary"
+              size="md"
+              leadingIcon={<Users size={15} />}
+            >
+              Our instructors
+            </Button>
+          </Link>
         </div>
       </div>
 
       {/* ── Card swap animation ──────────────────────────────────── */}
-      <div className="relative" style={{ minHeight: "420px", height: "500px" }}>
+      {/* Height tracks CardSwap.css's mobile scale steps (0.55 / 0.75 / 1)
+          so phones don't reserve 500px for a deck that renders ~275px. */}
+      <div className="relative h-[300px] sm:h-[400px] lg:h-[500px]">
         {/* Soft glow behind the stack */}
         <div
           aria-hidden
@@ -217,6 +231,7 @@ export function BootcampCardStack() {
             const tagline = COURSE_TAGLINES[room.id];
             const weeks = COURSE_WEEKS[room.id];
             const modules = COURSE_MODULES[room.id];
+            const thumb = COURSE_THUMBNAIL[room.id];
 
             return (
               <Card
@@ -240,37 +255,61 @@ export function BootcampCardStack() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    overflow: "hidden",
                   }}
                 >
-                  {/* Decorative background shapes */}
-                  <div
-                    aria-hidden
-                    style={{
-                      position: "absolute",
-                      top: "-20%",
-                      right: "-10%",
-                      width: "150px",
-                      height: "150px",
-                      borderRadius: "50%",
-                      background: "rgba(255,255,255,0.06)",
-                    }}
-                  />
-
-                  {/* Large course icon in the center of the thumbnail */}
-                  <div
-                    style={{
-                      width: "56px",
-                      height: "56px",
-                      borderRadius: "50%",
-                      background: "rgba(255,255,255,0.15)",
-                      display: "grid",
-                      placeItems: "center",
-                      backdropFilter: "blur(4px)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                    }}
-                  >
-                    <Icon size={28} color="#fff" strokeWidth={2.1} />
-                  </div>
+                  {thumb ? (
+                    <>
+                      <Image
+                        src={thumb}
+                        alt={`${room.label} bootcamp`}
+                        fill
+                        sizes="400px"
+                        style={{ objectFit: "cover" }}
+                      />
+                      {/* Scrim keeps the duration pill legible over any photo */}
+                      <div
+                        aria-hidden
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(to top, rgba(0,0,0,0.35), transparent 45%)",
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      {/* Decorative background shapes */}
+                      <div
+                        aria-hidden
+                        style={{
+                          position: "absolute",
+                          top: "-20%",
+                          right: "-10%",
+                          width: "150px",
+                          height: "150px",
+                          borderRadius: "50%",
+                          background: "rgba(255,255,255,0.06)",
+                        }}
+                      />
+                      {/* Large course icon in the center of the thumbnail */}
+                      <div
+                        style={{
+                          width: "56px",
+                          height: "56px",
+                          borderRadius: "50%",
+                          background: "rgba(255,255,255,0.15)",
+                          display: "grid",
+                          placeItems: "center",
+                          backdropFilter: "blur(4px)",
+                          boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+                        }}
+                      >
+                        <Icon size={28} color="#fff" strokeWidth={2.1} />
+                      </div>
+                    </>
+                  )}
 
                   {/* Duration pill at bottom-right */}
                   <div
@@ -286,6 +325,7 @@ export function BootcampCardStack() {
                       fontWeight: 700,
                       letterSpacing: "0.04em",
                       textTransform: "uppercase",
+                      zIndex: 1,
                     }}
                   >
                     {weeks} weeks

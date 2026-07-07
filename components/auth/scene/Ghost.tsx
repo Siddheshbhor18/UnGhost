@@ -179,24 +179,34 @@ export function Ghost({ phase = "idle", size = 120, className }: Props) {
           </>
         )}
 
-        {/* Eyes — height animates with blink + phase */}
-        <motion.ellipse
+        {/* Eyes — blink/squint via a plain CSS scaleY transition. Framer-
+            motion is deliberately NOT used on the eye/mouth parts: animating
+            the raw `ry`/`d` attributes writes literal "undefined" frames
+            (the sign-in glitch), and its SVG SSR drops passthrough props,
+            causing hydration mismatches. Plain elements have neither problem. */}
+        <ellipse
           cx="48"
           cy="52"
           rx="2.5"
-          ry={eyeHeight}
+          ry="5"
           fill={isError ? "#7F1D1D" : "#0A0A0A"}
-          animate={{ ry: eyeHeight }}
-          transition={{ duration: 0.12 }}
+          data-ghost-transform
+          style={{
+            transform: `scaleY(${eyeHeight / 5})`,
+            transition: "transform 0.12s ease",
+          }}
         />
-        <motion.ellipse
+        <ellipse
           cx="72"
           cy="52"
           rx="2.5"
-          ry={eyeHeight}
+          ry="5"
           fill={isError ? "#7F1D1D" : "#0A0A0A"}
-          animate={{ ry: eyeHeight }}
-          transition={{ duration: 0.12 }}
+          data-ghost-transform
+          style={{
+            transform: `scaleY(${eyeHeight / 5})`,
+            transition: "transform 0.12s ease",
+          }}
         />
 
         {/* Eye sparkles during success */}
@@ -223,15 +233,17 @@ export function Ghost({ phase = "idle", size = 120, className }: Props) {
           </>
         )}
 
-        {/* Mouth — different shapes per phase */}
-        <motion.path
+        {/* Mouth — shape swaps per phase via keyed remount + CSS pop (see
+            eye comment for why framer-motion is avoided on these parts). */}
+        <path
+          key={phase}
           d={getMouthPath(phase)}
           stroke={isError ? "#7F1D1D" : "#0A0A0A"}
           strokeWidth="1.8"
           strokeLinecap="round"
           fill={phase === "submitting" || phase === "success" ? "#0A0A0A" : "none"}
-          animate={{ d: getMouthPath(phase) }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          data-ghost-transform
+          className={reduced ? undefined : "ghost-mouth-pop"}
         />
       </svg>
     </motion.div>

@@ -68,7 +68,7 @@ export function CoursePicker({
       <div
         className={[
           title || description ? "mt-4" : "",
-          "grid gap-3 sm:grid-cols-2",
+          "grid grid-cols-1 gap-3 sm:grid-cols-2",
         ]
           .filter(Boolean)
           .join(" ")}

@@ -7,12 +7,9 @@ import {
   CheckCircle2,
   GraduationCap,
   Heart,
-  Instagram,
-  Linkedin,
-  Mail,
 } from "lucide-react";
 import { Suspense } from "react";
-import { GlassNavbar, Logo } from "@/components/glass";
+import { GlassNavbar } from "@/components/glass";
 import {
   Badge,
   Button,
@@ -28,6 +25,7 @@ import { HeroReveal } from "@/components/landing/HeroReveal";
 import { VoidReveal } from "@/components/landing/VoidReveal";
 import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import { StickyCTA } from "@/components/landing/StickyCTA";
+import { SiteFooter } from "@/components/landing/SiteFooter";
 import dynamic from "next/dynamic";
 // Below-fold — lazy-load to keep initial bundle small
 const FAQ = dynamic(() =>
@@ -614,87 +612,7 @@ export default async function LandingPage() {
       </MotionSection>
 
       {/* ─────────── FOOTER ─────────── */}
-      <footer className="border-t border-neutral-200 mt-10 pt-8 pb-8">
-        <div className="mx-auto max-w-content px-4 grid grid-cols-2 md:grid-cols-6 gap-8">
-          <div className="col-span-2">
-            <Logo size="sm" />
-            <p className="text-body-xs text-neutral-900 mt-3 max-w-xs leading-relaxed">
-              India-first hiring platform with anti-ghosting SLAs and embedded
-              skill bootcamps. Built in Pune. DPDP Act compliant.
-            </p>
-            <div className="flex gap-2 mt-4">
-              <a
-                href="https://www.linkedin.com/company/unghost"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="unGhost on LinkedIn"
-                className="social-icon grid place-items-center w-8 h-8 rounded-lg bg-neutral-100 text-brand-500 hover:bg-brand-500 hover:text-white transition"
-              >
-                <Linkedin size={14} />
-              </a>
-              <a
-                href="https://www.instagram.com/unghost.in/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="unGhost on Instagram"
-                className="social-icon grid place-items-center w-8 h-8 rounded-lg bg-neutral-100 text-brand-500 hover:bg-brand-500 hover:text-white transition"
-              >
-                <Instagram size={14} />
-              </a>
-              <a
-                href="mailto:hello@unghost.in"
-                aria-label="Email unGhost"
-                className="social-icon grid place-items-center w-8 h-8 rounded-lg bg-neutral-100 text-brand-500 hover:bg-brand-500 hover:text-white transition"
-              >
-                <Mail size={14} />
-              </a>
-            </div>
-          </div>
-          <FootCol
-            title="For Students"
-            links={[
-              ["Find Jobs", "/signup?next=/student/jobs"],
-              ["Bootcamps", "/bootcamps"],
-              ["AI Coach", "/signup?next=/student/coach"],
-              ["Pricing", "/upgrade"],
-            ]}
-          />
-          <FootCol
-            title="For Recruiters"
-            links={[
-              ["Post Job", "/signup?role=recruiter"],
-              ["Database Search", "/signup?role=recruiter"],
-              ["Sponsorship", "/recruiters"],
-              ["Anti-Ghost SLA", "/how-it-works"],
-            ]}
-          />
-          <FootCol
-            title="Company"
-            links={[
-              ["About", "/about"],
-              ["Contact", "/contact"],
-              ["Careers", "/careers"],
-              ["Press", "/press"],
-            ]}
-          />
-          <FootCol
-            title="Legal"
-            links={[
-              ["Privacy", "/privacy"],
-              ["Terms", "/terms"],
-              ["Refund Policy", "/refund-policy"],
-              ["DPDP", "/dpdp"],
-            ]}
-          />
-        </div>
-        <div className="mx-auto max-w-content px-4 mt-10 pt-6 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-3 text-body-xs text-neutral-900">
-          <p>
-            © {new Date().getFullYear()} unGhost Technologies Pvt Ltd · Pune,
-            India
-          </p>
-          <p>Data residency: ap-south-1 · Made in Pune, India</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }
@@ -767,8 +685,10 @@ function JobsTierCard({
       surface={highlight ? "glass-tinted" : "solid"}
       className={`${highlight ? "!p-7 !rounded-2xl" : "!p-7 !rounded-lg"} h-full flex flex-col ${highlight ? "shadow-[0_12px_32px_rgba(1,145,252,0.18)]" : ""}`}
     >
-      {/* Fixed-height badge slot so titles/prices line up across all 3 cards. */}
-      <div className="h-6 mb-3 flex items-center">
+      {/* Fixed-height badge slot so titles/prices line up across all 3 cards.
+          Alignment only matters when the cards sit side-by-side (md+), so
+          empty slots collapse on mobile instead of reading as dead space. */}
+      <div className={badge ? "h-6 mb-3 flex items-center" : "hidden md:flex h-6 mb-3 items-center"}>
         {badge && (
           <Badge tone="success" className="pop-in">
             {badge}
@@ -784,21 +704,21 @@ function JobsTierCard({
       </div>
       {/* Per-month line makes the annual plan's value legible; reserves a
           fixed-height row so all three cards keep their prices aligned. */}
-      <div className="h-5 mb-1">
+      <div className={perMonth ? "h-5 mb-1" : "hidden md:block h-5 mb-1"}>
         {perMonth && (
           <span className="text-body-sm font-medium text-neutral-900 tnum">
             {perMonth}
           </span>
         )}
       </div>
-      <div className="h-5 mb-4">
+      <div className={note ? "h-5 mb-4" : "hidden md:block h-5 mb-4"}>
         {note && (
           <span className="text-body-xs font-semibold text-brand-600">
             {note}
           </span>
         )}
       </div>
-      <ul className="space-y-2.5 mb-7 text-body-sm text-neutral-700">
+      <ul className="mt-3 md:mt-0 space-y-2.5 mb-7 text-body-sm text-neutral-700">
         {features.map((f) => (
           <li key={f} className="flex items-start gap-2">
             <CheckCircle2 size={15} className="text-brand-500 mt-0.5 shrink-0" />
@@ -816,30 +736,3 @@ function JobsTierCard({
   );
 }
 
-function FootCol({
-  title,
-  links,
-}: {
-  title: string;
-  links: Array<[string, string]>;
-}) {
-  return (
-    <div>
-      <p className="font-display font-semibold text-body-sm text-neutral-900 mb-3">
-        {title}
-      </p>
-      <ul className="space-y-2">
-        {links.map(([label, href]) => (
-          <li key={label}>
-            <Link
-              href={href}
-              className="text-body-xs text-neutral-900 hover:text-brand-500 transition"
-            >
-              {label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}

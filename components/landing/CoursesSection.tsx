@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -216,9 +217,14 @@ function CartBar({ items }: { items: BootcampCategory[] }) {
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 80, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 28 }}
-      className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 px-4"
+      // Centered via a full-width flex wrapper, NOT left-1/2 -translate-x-1/2:
+      // framer-motion owns this element's inline transform for the slide-in,
+      // which overwrites Tailwind translate classes and shoved the pill half
+      // its width off-centre. Mobile rides above the StickyCTA bar (z-30,
+      // ~76px tall); desktop has no sticky bar so it hugs the bottom.
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-40 flex justify-center px-4 lg:bottom-6"
     >
-      <div className="flex items-center gap-4 rounded-full bg-neutral-950/95 py-2.5 pl-5 pr-2.5 text-white shadow-[0_18px_45px_-12px_rgba(0,0,0,0.7)] ring-1 ring-white/10 backdrop-blur">
+      <div className="pointer-events-auto flex items-center gap-4 rounded-full bg-neutral-950/95 py-2.5 pl-5 pr-2.5 text-white shadow-[0_18px_45px_-12px_rgba(0,0,0,0.7)] ring-1 ring-white/10 backdrop-blur">
         <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/10">
           <ShoppingCart size={16} />
           <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-500 text-[10px] font-bold tnum">
@@ -282,9 +288,17 @@ export function CoursesSection() {
         onAddAll={() => setAll(everythingSelection())}
       />
 
-      <AnimatePresence>
-        {mounted && items.length > 0 && <CartBar items={items} />}
-      </AnimatePresence>
+      {/* Portalled to <body>: this section sits inside MotionSection, whose
+          framer transform makes ancestors a containing block for fixed
+          descendants — un-portalled, the "fixed" pill anchors inside the
+          section (thousands of px down the page) instead of the viewport. */}
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {items.length > 0 && <CartBar items={items} />}
+          </AnimatePresence>,
+          document.body,
+        )}
     </>
   );
 }

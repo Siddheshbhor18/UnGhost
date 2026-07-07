@@ -141,7 +141,7 @@ function CartView({
     <div>
       <CheckoutHeader />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px] items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px] items-start">
         {/* Course list */}
         <div className="space-y-3">
           {rows.map((room) => (
@@ -410,7 +410,7 @@ function CartSkeleton() {
   return (
     <div>
       <CheckoutHeader />
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px] items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px] items-start">
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
             <div
