@@ -1,4 +1,5 @@
 import { GlassBadge, GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
   listCompanies,
   listJobs,
@@ -21,15 +22,11 @@ export default async function RecruitersAdmin() {
   ]);
   return (
     <div className="p-8 space-y-6 max-w-7xl">
-      <div>
-        <GlassBadge tone="brand">Recruiters</GlassBadge>
-        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-          Companies &amp; Their Pipelines
-        </h1>
-        <p className="text-sm text-brand-muted mt-1">
-          Every employer on unGhost — SLA compliance, applicant flow, hire rate.
-        </p>
-      </div>
+      <AdminPageHeader
+        badge="Recruiters"
+        title="Companies & pipelines"
+        subtitle="Every employer on unGhost: SLA compliance, applicant flow, hire rate."
+      />
 
       <AssignRecruiterPanel
         recruiters={unlinked.map((r) => ({

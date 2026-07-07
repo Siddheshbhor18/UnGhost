@@ -1,5 +1,6 @@
 import { Briefcase, AlertTriangle, CheckCircle2, Ban } from "lucide-react";
-import { GlassBadge, GlassCard } from "@/components/glass";
+import { GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { listAllJobsWithCompany } from "@/server/store";
 import { JobsClient } from "@/components/admin/JobsClient";
 
@@ -12,19 +13,12 @@ export default async function AdminJobsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
-      <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-        <div>
-          <GlassBadge tone="brand">
-            <Briefcase size={11} /> Jobs
-          </GlassBadge>
-          <h1 className="font-display font-extrabold text-3xl md:text-4xl text-brand-ink mt-2">
-            Job moderation
-          </h1>
-          <p className="text-sm text-brand-muted mt-1">
-            Force-close abusive postings · review zero-application missions for
-            fraud signals.
-          </p>
-        </div>
+      <div className="mb-6">
+        <AdminPageHeader
+          badge="Jobs"
+          title="Job moderation"
+          subtitle="Force-close abusive postings; review zero-application roles for fraud signals."
+        />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

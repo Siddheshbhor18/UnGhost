@@ -1,5 +1,6 @@
-import { LifeBuoy, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
-import { GlassBadge, GlassCard } from "@/components/glass";
+import { AlertTriangle, CheckCircle2, Clock } from "lucide-react"
+import { GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { listSupportTickets } from "@/server/store";
 import { SupportClient } from "@/components/admin/SupportClient";
 
@@ -14,18 +15,12 @@ export default async function AdminSupportPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-        <div>
-          <GlassBadge tone="brand">
-            <LifeBuoy size={11} /> Support
-          </GlassBadge>
-          <h1 className="font-display font-extrabold text-3xl md:text-4xl text-brand-ink mt-2">
-            Support tickets
-          </h1>
-          <p className="text-sm text-brand-muted mt-1">
-            Triage queue · escalate urgent · close resolved. SLA: respond in 24h.
-          </p>
-        </div>
+      <div className="mb-6">
+        <AdminPageHeader
+          badge="Support"
+          title="Support tickets"
+          subtitle="Triage the queue, escalate urgent, close resolved. SLA: respond in 24h."
+        />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

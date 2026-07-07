@@ -1,7 +1,7 @@
-import { Wallet } from "lucide-react";
+
 import { listAllPayouts } from "@/server/creator/payout.service";
 import { getUsersByIds } from "@/server/store";
-import { SectionLabel } from "@/components/ui";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
   PayoutsQueueClient,
   type PayoutRow,
@@ -53,18 +53,11 @@ export default async function PayoutsAdmin({
 
   return (
     <div className="p-8 space-y-6 max-w-6xl">
-      <div>
-        <SectionLabel icon={<Wallet size={13} />} tone="brand">
-          Payouts
-        </SectionLabel>
-        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-          Payout queue
-        </h1>
-        <p className="text-sm text-brand-muted mt-1">
-          Approve requests, then process with a payment reference. Processing
-          writes the ledger debit.
-        </p>
-      </div>
+      <AdminPageHeader
+        badge="Payouts"
+        title="Payout queue"
+        subtitle="Approve requests, then process with a payment reference. Processing writes the ledger debit."
+      />
       <PayoutsQueueClient
         rows={rows}
         active={searchParams.status}

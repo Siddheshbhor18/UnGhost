@@ -11,6 +11,7 @@
  */
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { connectMongo } from "@/server/db/mongo";
 import { LiveSessionModel } from "@/server/db/models";
 
@@ -32,25 +33,21 @@ export default async function AdminLiveSessionsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
-      <header className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <p className="text-[10px] uppercase tracking-widest font-semibold text-brand-muted mb-1">
-            Operations
-          </p>
-          <h1 className="font-display font-extrabold text-3xl text-brand-ink">
-            Live sessions
-          </h1>
-          <p className="text-sm text-brand-muted mt-1">
-            {active.length} active · {past.length} past
-          </p>
-        </div>
-        <Link
-          href="/admin/live-sessions/new"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary text-white px-4 py-2 text-sm font-semibold hover:bg-brand-primary/90 transition shrink-0"
-        >
-          <Plus size={14} /> New session
-        </Link>
-      </header>
+      <div className="mb-6">
+        <AdminPageHeader
+          badge="Live"
+          title="Live sessions"
+          subtitle={`${active.length} active · ${past.length} past`}
+          actions={
+            <Link
+              href="/admin/live-sessions/new"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary text-white px-4 py-2 text-sm font-semibold hover:bg-brand-primary/90 transition shrink-0"
+            >
+              <Plus size={14} /> New session
+            </Link>
+          }
+        />
+      </div>
 
       <Section title="Active + scheduled" empty="Nothing scheduled. Create one to start.">
         {active.map((s) => (

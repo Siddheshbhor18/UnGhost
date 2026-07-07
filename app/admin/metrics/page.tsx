@@ -1,4 +1,5 @@
 import { GlassBadge, GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
   getGlobalMetrics,
   listRecentApplications,
@@ -32,15 +33,12 @@ export default async function AdminMetrics() {
 
   return (
     <div className="p-8 space-y-8 max-w-7xl">
-      <div>
-        <GlassBadge tone="warn">Overview</GlassBadge>
-        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-          Global Metrics
-        </h1>
-        <p className="text-sm text-brand-muted mt-1">
-          Live signal across the entire platform.
-        </p>
-      </div>
+      <AdminPageHeader
+        badge="Overview"
+        badgeTone="warn"
+        title="Platform metrics"
+        subtitle="Live signal across the entire platform."
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Metric

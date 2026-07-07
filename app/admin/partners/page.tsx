@@ -5,10 +5,10 @@
  * and operational until Creator parity is runtime-confirmed; behaviour below
  * is intentionally unchanged.
  */
-import { GlassBadge } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { listPartnersWithStats } from "@/server/store";
 import { PartnersClient } from "@/components/admin/PartnersClient";
-import { Handshake } from "lucide-react";
+
 
 export const dynamic = "force-dynamic";
 
@@ -26,20 +26,11 @@ export default async function PartnersAdmin() {
 
   return (
     <div className="p-8 space-y-6 max-w-7xl">
-      <div className="flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <GlassBadge tone="brand">
-            <Handshake size={11} /> Partners
-          </GlassBadge>
-          <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-            Channel Partners
-          </h1>
-          <p className="text-sm text-brand-muted mt-1">
-            Issue unique referral links. Track conversions + commission per
-            partner. Each link doubles as the partner's dashboard URL.
-          </p>
-        </div>
-      </div>
+      <AdminPageHeader
+        badge="Partners"
+        title="Channel partners"
+        subtitle="Legacy program, superseded by Creators; read-only until cutover. Issue referral links, track conversions and commission per partner."
+      />
 
       <PartnersClient initial={partners} />
     </div>

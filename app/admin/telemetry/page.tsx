@@ -1,4 +1,5 @@
 import { GlassBadge, GlassButton, GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { SkillHeatmap } from "@/components/admin/SkillHeatmap";
 import { getSkillGapHeatmap, getAssessmentTelemetry } from "@/server/store";
 import { AlertTriangle, TrendingDown, Award, Activity } from "lucide-react";
@@ -16,15 +17,11 @@ export default async function TelemetryPage() {
 
   return (
     <div className="p-8 space-y-6 max-w-7xl">
-      <div>
-        <GlassBadge tone="brand">Telemetry · Curriculum Intelligence</GlassBadge>
-        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-          Where Students Break
-        </h1>
-        <p className="text-sm text-brand-muted mt-1">
-          Where the Gauntlet kills people. Drives the next bootcamp we ship.
-        </p>
-      </div>
+      <AdminPageHeader
+        badge="Telemetry"
+        title="Funnel telemetry"
+        subtitle="Where assessments lose students, step by step; drives the next bootcamp we ship."
+      />
 
       <div className="grid lg:grid-cols-3 gap-5">
         <GlassCard className="bg-rose-50/40">

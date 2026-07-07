@@ -1,4 +1,5 @@
 import { GlassBadge, GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { listBootcamps, getUserById } from "@/server/store";
 import { BootcampReviewCard } from "@/components/admin/BootcampReviewCard";
 import { AlertTriangle, Star, Users, Clock, IndianRupee } from "lucide-react";
@@ -17,17 +18,13 @@ export default async function BootcampsAdmin() {
 
   return (
     <div className="p-8 space-y-6 max-w-7xl">
-      <div className="flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <GlassBadge tone="warn">Bootcamps</GlassBadge>
-          <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-            Catalog &amp; Enrollments
-          </h1>
-          <p className="text-sm text-brand-muted mt-1">
-            Live cohort revenue, seat counts, instructor ratings.
-          </p>
-        </div>
-        <div className="flex gap-3">
+      <AdminPageHeader
+        badge="Bootcamps"
+        badgeTone="warn"
+        title="Catalog & enrollments"
+        subtitle="Live cohort revenue, seat counts, instructor ratings."
+        actions={
+          <>
           <GlassCard className="!p-4 text-center">
             <p className="text-[10px] uppercase tracking-wider text-brand-muted">
               Total Enrollments
@@ -44,8 +41,9 @@ export default async function BootcampsAdmin() {
               ₹{(totalRev / 100000).toFixed(1)}L
             </p>
           </GlassCard>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* ── Review queue ──────────────────────────────────────── */}
       {inReview.length > 0 && (

@@ -18,6 +18,7 @@ import {
   UserModel,
 } from "@/server/db/models";
 import { ApprovalQueue, type QueueRow } from "./ApprovalQueue";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -79,17 +80,13 @@ export default async function PaymentApprovalsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
-      <header className="mb-6">
-        <p className="text-[10px] uppercase tracking-widest font-semibold text-brand-muted mb-1">
-          Operations
-        </p>
-        <h1 className="font-display font-extrabold text-3xl text-brand-ink">
-          Payment approvals
-        </h1>
-        <p className="text-sm text-brand-muted mt-1">
-          {pendingCount} pending · {flaggedCount} flagged · oldest first
-        </p>
-      </header>
+      <div className="mb-6">
+        <AdminPageHeader
+          badge="Payments"
+          title="Payment approvals"
+          subtitle={`${pendingCount} pending · ${flaggedCount} flagged · oldest first`}
+        />
+      </div>
 
       <ApprovalQueue rows={rows} />
     </div>

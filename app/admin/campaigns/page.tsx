@@ -12,7 +12,7 @@
  */
 import { listCampaigns } from "@/server/store";
 import { CampaignsClient } from "./CampaignsClient";
-import { GlassBadge } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +25,11 @@ export default async function CampaignsAdminPage() {
 
   return (
     <div className="p-8 space-y-6 max-w-7xl">
-      <div>
-        <GlassBadge tone="brand">Campaigns</GlassBadge>
-        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-          Banner &amp; Campaign Management
-        </h1>
-        <p className="text-sm text-brand-muted mt-1">
-          Push announcements to the landing, dashboard, or bootcamp surfaces.
-          Saves persist immediately — no preview/staging step.
-        </p>
-      </div>
+      <AdminPageHeader
+        badge="Campaigns"
+        title="Banners & campaigns"
+        subtitle="Push announcements to the landing, dashboard, or bootcamp surfaces. Saves persist immediately; there is no preview or staging step."
+      />
       <CampaignsClient initial={campaigns} />
     </div>
   );

@@ -7,6 +7,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { GlassBadge, GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { computeFinancialRollup } from "@/server/store";
 import { paymentsMode } from "@/server/integrations/payments";
 
@@ -18,23 +19,27 @@ export default async function AdminFinancialPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-        <div>
-          <GlassBadge tone="brand">
-            <IndianRupee size={11} /> Financial
-          </GlassBadge>
-          <h1 className="font-display font-extrabold text-3xl md:text-4xl text-brand-ink mt-2">
-            Revenue + refunds
-          </h1>
-          <p className="text-sm text-brand-muted mt-1">
-            Bootcamp + sponsorship + Premium-plan inflow, minus cash refunds.
-            Payments via{" "}
-            <span className={paymentsMode() === "live" ? "text-emerald-700 font-semibold" : "text-amber-700 font-semibold"}>
-              PhonePe ({paymentsMode()})
-            </span>
-            .
-          </p>
-        </div>
+      <div className="mb-6">
+        <AdminPageHeader
+          badge="Financial"
+          title="Revenue & refunds"
+          subtitle={
+            <>
+              Bootcamp, sponsorship, and Premium-plan inflow, minus cash
+              refunds. Payments via{" "}
+              <span
+                className={
+                  paymentsMode() === "live"
+                    ? "text-emerald-700 font-semibold"
+                    : "text-amber-700 font-semibold"
+                }
+              >
+                PhonePe ({paymentsMode()})
+              </span>
+              .
+            </>
+          }
+        />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-3 mb-6">

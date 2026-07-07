@@ -1,5 +1,6 @@
 import { Building2, BadgeCheck, ShieldAlert } from "lucide-react";
 import { GlassBadge, GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { listAllCompaniesWithStats } from "@/server/store";
 import { CompaniesClient } from "@/components/admin/CompaniesClient";
 
@@ -11,19 +12,12 @@ export default async function AdminCompaniesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
-      <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-        <div>
-          <GlassBadge tone="brand">
-            <Building2 size={11} /> Companies
-          </GlassBadge>
-          <h1 className="font-display font-extrabold text-3xl md:text-4xl text-brand-ink mt-2">
-            Company moderation
-          </h1>
-          <p className="text-sm text-brand-muted mt-1">
-            Verify legitimate employers · flag suspicious activity · suspend bad
-            actors.
-          </p>
-        </div>
+      <div className="mb-6">
+        <AdminPageHeader
+          badge="Companies"
+          title="Company moderation"
+          subtitle="Verify legitimate employers, flag suspicious activity, suspend bad actors."
+        />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

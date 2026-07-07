@@ -1,7 +1,7 @@
-import { Coins } from "lucide-react";
+
 import { listRewards } from "@/server/creator/reward.service";
 import { getUsersByIds } from "@/server/store";
-import { SectionLabel } from "@/components/ui";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
   RewardsQueueClient,
   type RewardRow,
@@ -52,18 +52,11 @@ export default async function RewardsAdmin({
 
   return (
     <div className="p-8 space-y-6 max-w-6xl">
-      <div>
-        <SectionLabel icon={<Coins size={13} />} tone="brand">
-          Rewards
-        </SectionLabel>
-        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-          Reward queue
-        </h1>
-        <p className="text-sm text-brand-muted mt-1">
-          Review creator rewards. Approving keeps the credit; rejecting writes an
-          offsetting debit so balances never inflate.
-        </p>
-      </div>
+      <AdminPageHeader
+        badge="Rewards"
+        title="Reward queue"
+        subtitle="Review creator rewards. Approving keeps the credit; rejecting writes an offsetting debit so balances never inflate."
+      />
       <RewardsQueueClient rows={rows} status={status} statuses={STATUSES} />
     </div>
   );

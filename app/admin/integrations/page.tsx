@@ -1,40 +1,24 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import Link from "next/link";
-import { Check, Plug, AlertTriangle, ExternalLink } from "lucide-react";
-import { authOptions } from "@/server/auth";
+import { Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { listIntegrations } from "@/server/integrations/status";
-import {
-  BlobField,
-  GlassBadge,
-  GlassCard,
-  GlassNavbar,
-} from "@/components/glass";
+import { GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
+// The admin layout provides the sidebar shell and the auth gate; this page
+// used to render its own BlobField + GlassNavbar on top of it (double
+// chrome, double session check) — it predates the shared layout.
 export default async function AdminIntegrationsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login?next=/admin/integrations");
-  if (session.user.role !== "admin") redirect("/");
-
   const integrations = listIntegrations();
   const live = integrations.filter((i) => i.mode === "live").length;
   const total = integrations.length;
 
   return (
-    <main className="relative min-h-screen">
-      <BlobField />
-      <GlassNavbar />
-
-      <div className="mx-auto max-w-5xl px-4 pt-6 pb-12">
-        <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-          <div>
-            <GlassBadge tone="brand">
-              <Plug size={11} /> Integrations
-            </GlassBadge>
-            <h1 className="font-display font-extrabold text-3xl md:text-4xl text-brand-ink mt-2">
-              Integration status
-            </h1>
-            <p className="text-sm text-brand-muted mt-1">
+    <div className="mx-auto max-w-5xl px-6 py-8">
+      <div className="mb-6">
+        <AdminPageHeader
+          badge="System"
+          title="Integration status"
+          subtitle={
+            <>
               {live} of {total} services live ·{" "}
               {total - live > 0 && (
                 <>
@@ -44,13 +28,13 @@ export default async function AdminIntegrationsPage() {
                   ·{" "}
                 </>
               )}
-              Add env keys in <code className="text-brand-primary">.env.local</code> + restart to swap.
-            </p>
-          </div>
-          <Link href="/admin/today" className="btn-glass">
-            ← Today
-          </Link>
-        </div>
+              Add env keys in{" "}
+              <code className="text-brand-primary">.env.local</code> and
+              restart to swap.
+            </>
+          }
+        />
+      </div>
 
         {total - live > 0 && (
           <GlassCard className="!p-4 mb-5 border-amber-500/30 bg-amber-500/5">
@@ -155,7 +139,6 @@ export default async function AdminIntegrationsPage() {
             <ExternalLink size={11} /> Full setup guides
           </a>
         </GlassCard>
-      </div>
-    </main>
+    </div>
   );
 }

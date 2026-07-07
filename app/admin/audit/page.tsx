@@ -1,12 +1,9 @@
-import {
-  Activity,
-  Filter,
-  ShieldCheck,
-} from "lucide-react";
+import { Activity, Filter } from "lucide-react"
 import {
   GlassBadge,
   GlassCard,
 } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { listAuditLogs, getUserById } from "@/server/store";
 
 const ACTION_TONE: Record<string, "brand" | "warn" | "danger" | "success" | "neutral"> = {
@@ -51,18 +48,11 @@ export default async function AuditLogPage({
 
   return (
     <div className="p-8 space-y-6 max-w-5xl">
-      <div>
-        <GlassBadge tone="brand">
-          <ShieldCheck size={11} /> Audit log
-        </GlassBadge>
-        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-          Every admin action, immutable
-        </h1>
-        <p className="text-sm text-brand-muted mt-1">
-          7-year retention per Indian financial-record law. Append-only. Used
-          for compliance + DPDP grievance support.
-        </p>
-      </div>
+      <AdminPageHeader
+        badge="Audit"
+        title="Audit log"
+        subtitle="Every admin action, append-only, 7-year retention per Indian financial-record law. Used for compliance and DPDP grievance support."
+      />
 
       {/* Filter strip */}
       <div className="flex items-center gap-2 flex-wrap text-xs">

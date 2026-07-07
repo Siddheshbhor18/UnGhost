@@ -1,11 +1,12 @@
-import { Sparkles, Users, Wallet, Clock, TrendingUp } from "lucide-react";
+import { Users, Wallet, Clock, TrendingUp } from "lucide-react"
 import { listCreators } from "@/server/creator/creator.service";
 import { getActiveAgreement } from "@/server/creator/commission.service";
 import { getBalance } from "@/server/creator/ledger.service";
 import { listRewards } from "@/server/creator/reward.service";
 import { listAllPayouts } from "@/server/creator/payout.service";
 import { getUsersByIds } from "@/server/store";
-import { Stat, SectionLabel } from "@/components/ui";
+import { Stat } from "@/components/ui";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { CreatorsClient, type CreatorRow } from "@/components/admin/CreatorsClient";
 import { formatINR } from "@/components/admin/creatorUi";
 
@@ -75,19 +76,11 @@ export default async function CreatorsAdmin() {
 
   return (
     <div className="p-8 space-y-6 max-w-7xl">
-      <div>
-        <SectionLabel icon={<Sparkles size={12} />} tone="brand">
-          Creators
-        </SectionLabel>
-        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-          Creator CRM
-        </h1>
-        <p className="text-sm text-brand-muted mt-1 max-w-2xl">
-          Onboard creators with an individually negotiated commission, hand them
-          a permanent referral link, and manage their lifecycle, rewards, and
-          payouts from one place.
-        </p>
-      </div>
+      <AdminPageHeader
+        badge="Creators"
+        title="Creator CRM"
+        subtitle="Onboard creators with an individually negotiated commission, hand them a permanent referral link, and manage their lifecycle, rewards, and payouts from one place."
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat

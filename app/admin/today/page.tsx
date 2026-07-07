@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GlassBadge, GlassCard } from "@/components/glass";
 import { ActionFeedItem } from "@/components/recruiter/ActionFeedItem";
 import { SlaSweepButton } from "@/components/admin/SlaSweepButton";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
   getGlobalMetrics,
   listBootcamps,
@@ -198,13 +199,12 @@ export default async function AdminToday() {
 
   return (
     <div className="p-8 space-y-6 max-w-7xl">
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <GlassBadge tone="warn">Admin · Operating cockpit</GlassBadge>
-          <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-            Today
-          </h1>
-          <p className="text-sm text-brand-muted mt-1">
+      <AdminPageHeader
+        badge="Operations"
+        badgeTone="warn"
+        title="Today"
+        subtitle={
+          <>
             {new Date().toLocaleDateString("en-IN", {
               weekday: "long",
               day: "numeric",
@@ -212,18 +212,20 @@ export default async function AdminToday() {
               year: "numeric",
             })}{" "}
             · every action audit-logged
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <SlaSweepButton />
-          <Link href="/admin/metrics" className="btn-glass">
-            <Activity size={14} /> Full metrics
-          </Link>
-          <Link href="/admin/telemetry" className="btn-brand">
-            <Sparkles size={14} /> Telemetry
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            <SlaSweepButton />
+            <Link href="/admin/metrics" className="btn-glass">
+              <Activity size={14} /> Full metrics
+            </Link>
+            <Link href="/admin/telemetry" className="btn-brand">
+              <Sparkles size={14} /> Telemetry
+            </Link>
+          </>
+        }
+      />
 
       {/* Daily Briefing */}
       <div className="rounded-2xl bg-gradient-to-r from-brand-primary/10 via-white/60 to-white/40 backdrop-blur-xl border border-white/60 shadow-glass p-5">

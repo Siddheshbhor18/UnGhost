@@ -1,15 +1,6 @@
-import {
-  AlertTriangle,
-  Briefcase,
-  CheckCircle2,
-  FileText,
-  Flag,
-  MessageCircle,
-  ShieldAlert,
-  Sparkles,
-  User as UserIcon,
-} from "lucide-react";
+import { AlertTriangle, Briefcase, CheckCircle2, FileText, Flag, MessageCircle, Sparkles, User as UserIcon } from "lucide-react"
 import { GlassBadge, GlassCard } from "@/components/glass";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { listModerationFlags } from "@/server/store";
 import { ModerationActionCard } from "@/components/admin/ModerationActionCard";
 
@@ -43,18 +34,12 @@ export default async function ModerationQueue() {
 
   return (
     <div className="p-8 space-y-6 max-w-5xl">
-      <div>
-        <GlassBadge tone="warn">
-          <ShieldAlert size={11} /> Content moderation
-        </GlassBadge>
-        <h1 className="font-display text-4xl font-bold text-brand-ink mt-3">
-          Flagged content queue
-        </h1>
-        <p className="text-sm text-brand-muted mt-1">
-          AI pre-filters obvious violations · admin makes the call. Every
-          decision audit-logged. Misuse triggers an account-action.
-        </p>
-      </div>
+      <AdminPageHeader
+        badge="Moderation"
+        badgeTone="warn"
+        title="Flagged content queue"
+        subtitle="AI pre-filters obvious violations; admin makes the call. Every decision is audit-logged, and misuse triggers an account action."
+      />
 
       {/* Stats strip — only counts what's actually in the DB. The earlier
           "~70% AI pre-filter" tile was a static literal; removed until
