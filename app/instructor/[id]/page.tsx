@@ -234,7 +234,7 @@ export default async function InstructorPublicProfile({
           {metrics.totalReviews > 0 ? (
             <div className="space-y-3">
               <ReviewQuote
-                quote={`${user.name.split(" ")[0]} doesn't dumb things down — they get you to the trade-offs by the second video. Verified Skill paid for itself.`}
+                quote={`${user.name.split(" ")[0]} doesn't dumb things down — they get you to the trade-offs by the second video. The certification paid for itself.`}
                 author="Anonymous student"
                 stars={5}
               />

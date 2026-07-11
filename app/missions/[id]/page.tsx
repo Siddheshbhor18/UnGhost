@@ -722,7 +722,7 @@ export default async function MissionBrief({
                   />
                   <Row
                     icon={<Sparkles size={12} className="text-amber-600" />}
-                    label="Verified badges"
+                    label="Certifications"
                     value={rows.filter((r) => r.verified).length}
                   />
                   <Row

@@ -58,7 +58,7 @@ interface Props {
  *   1. Hero band — title, instructor, stats, primary CTA / "Owned" badge.
  *   2. Player + lesson rail — autoplays the first lesson for owners; a
  *      teaser frame for non-owners.
- *   3. Sidebar — live sessions, past replays, verified-skill promise.
+ *   3. Sidebar — live sessions, past replays, certification promise.
  */
 export function BootcampDetailClient({
   bootcamp: bc,
@@ -522,15 +522,15 @@ function SkillVerifyCard({
     <GlassCard className="border border-brand-primary/20 p-6 text-center">
       <ShieldCheck size={22} className="mx-auto mb-2 text-brand-primary" />
       <p className="font-display font-bold text-brand-ink">
-        Earn your Verified {skill} badge
+        Earn your {skill} certification
       </p>
       <p className="mx-auto mt-1 mb-4 max-w-md text-sm text-brand-muted">
         Watch every lesson, clear each skill-check, and submit the graded
-        assignment. The badge unlocks when the cohort is complete.
+        assignment. The certification unlocks when the cohort is complete.
       </p>
       {!ownsRoom ? (
         <p className="text-[11.5px] text-brand-muted">
-          The badge is course-gated — buy the course to start the gauntlet.
+          The certification is course-gated: buy the course to start the gauntlet.
         </p>
       ) : null}
     </GlassCard>
@@ -545,11 +545,11 @@ function PerksCard({ skill }: { skill: string }) {
       </p>
       <ul className="space-y-1.5 text-sm text-brand-ink/80">
         <li>
-          · Verified{" "}
+          ·{" "}
           <span className="font-semibold text-brand-primary">{skill}</span>{" "}
-          badge on your profile
+          certification on your profile
         </li>
-        <li>· Recruiters can filter on verified-skill</li>
+        <li>· Recruiters can filter on certifications</li>
         <li>· Bridges 2–3 missions you couldn&apos;t apply to before</li>
         <li>· 3-month access to every lesson + live session</li>
       </ul>

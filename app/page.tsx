@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import {
+  ArrowDown,
   ArrowRight,
   CheckCircle2,
   GraduationCap,
@@ -22,8 +23,6 @@ import { HeroCTAs } from "@/components/landing/HeroCTAs";
 import { JobMarquee, type TickerRole } from "@/components/landing/JobMarquee";
 import { FeaturedSpeaker } from "@/components/landing/FeaturedSpeaker";
 import { HeroReveal } from "@/components/landing/HeroReveal";
-import { VoidReveal } from "@/components/landing/VoidReveal";
-import { GhostText } from "@/components/landing/GhostText";
 import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import { StickyCTA } from "@/components/landing/StickyCTA";
 import { SiteFooter } from "@/components/landing/SiteFooter";
@@ -319,92 +318,107 @@ export default async function LandingPage() {
         <LiveSessionsTeaser />
       </MotionSection>
 
-      {/* ─────────── THE VOID — dark beat: black + single brand-blue key light (honest restraint), weight contrast ─────────── */}
+      {/* ─────────── THE VOID — dark beat: the ghosted half against the lit half.
+          Art direction carries the story: the problem side is unlit (the silence),
+          the turn side gets the single brand-blue key light and the CTA. ─────────── */}
       <section
         id="void-section"
         className="relative rounded-t-[32px] text-white shadow-[0_0_120px_rgba(0,0,0,0.6)] md:rounded-t-[40px]"
         style={{
           background:
-            "radial-gradient(ellipse 110% 75% at 50% -15%, rgba(1,145,252,0.16) 0%, rgba(1,145,252,0.04) 32%, transparent 55%), #000000",
+            "radial-gradient(ellipse 90% 70% at 72% -12%, rgba(1,145,252,0.18) 0%, rgba(1,145,252,0.05) 34%, transparent 58%), #000000",
           zIndex: 10,
         }}
       >
 
-        {/* The turn, scroll-scrubbed: the void holds on screen, the payoff
-            (thesuccess.png) crossfades over it, then the beat releases to the
-            role ticker and the sections that follow. */}
-        <VoidReveal
-          problem={
-            <>
+        {/* Problem → turn. Stage-height on desktop so the beat lands as its own moment. */}
+        <div className="mx-auto flex max-w-6xl items-center px-4 pt-32 pb-14 md:pt-44 lg:min-h-[76vh] lg:pt-24 lg:pb-24">
+          <div className="relative grid w-full gap-y-10 lg:grid-cols-2">
+            {/* Beat 1 — the problem, deliberately unlit: the accent is ghosted,
+                not glowing. The silence looks like silence. */}
+            <div className="text-center lg:border-r lg:border-white/10 lg:pr-16 lg:text-left">
               <h2
-                className="font-display font-black text-balance text-5xl md:text-6xl lg:text-7xl text-white leading-[0.98]"
+                className="font-display font-black text-balance text-5xl lg:text-6xl text-white leading-[0.98]"
                 style={{ letterSpacing: "-0.03em" }}
               >
-                <span className="block">
-                  <RevealText
-                    segments={["You apply."]}
-                    stagger={0.06}
-                    motionStyle="tween"
-                    trigger="view"
-                    amount={0.4}
-                  />
-                </span>
-                {/* Backlit blue, then gone: GhostText reveals the line and
-                    lets it dissolve letter by letter — the sentence itself
-                    gets ghosted. Floor keeps the tail faintly legible. */}
-                <span
-                  className="block pb-1 font-display font-black not-italic leading-[0.98]"
-                  style={{
-                    color: "#4db5ff",
-                    textShadow:
-                      "0 0 28px rgba(1,145,252,0.55), 0 0 10px rgba(1,145,252,0.45)",
-                  }}
-                >
-                  <GhostText text="Then nothing." delay={0.45} floor={0.22} />
+                You apply.{" "}
+                <span className="not-italic whitespace-nowrap text-white/40">
+                  Then nothing.
                 </span>
               </h2>
-            </>
-          }
-          payoff={
-            <>
-              {/* The turn — mirrors beat 1: a big display headline with the
-                  blue backlit accent on the word that changed. */}
+              <p className="mx-auto mt-5 max-w-md text-lg text-white/55 md:text-xl lg:mx-0">
+                Sent, seen, then silence. On most job boards, no one owes you an
+                answer.
+              </p>
+            </div>
+
+            {/* Causal connector — stacked flow (mobile) */}
+            <div className="flex justify-center lg:hidden" aria-hidden>
+              <span className="rounded-full bg-white/[0.04] p-3 ring-1 ring-white/15">
+                <ArrowDown
+                  size={20}
+                  style={{
+                    color: "#4db5ff",
+                    filter: "drop-shadow(0 0 10px rgba(1,145,252,0.6))",
+                  }}
+                />
+              </span>
+            </div>
+
+            {/* Causal connector — node on the rule (desktop) */}
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 lg:flex"
+              aria-hidden
+            >
+              <span className="rounded-full bg-black p-3.5 ring-1 ring-white/15">
+                <ArrowRight
+                  size={22}
+                  style={{
+                    color: "#4db5ff",
+                    filter: "drop-shadow(0 0 10px rgba(1,145,252,0.6))",
+                  }}
+                />
+              </span>
+            </div>
+
+            {/* Beat 2 — the turn, lit: the glow arrives with the answer, and the
+                action lives where the resolution is. */}
+            <div className="text-center lg:pl-16 lg:text-left">
               <h2
-                className="font-display font-black text-balance text-5xl md:text-6xl lg:text-7xl text-white leading-[0.98]"
+                className="font-display font-black text-balance text-5xl lg:text-6xl text-white leading-[0.98]"
                 style={{ letterSpacing: "-0.03em" }}
               >
                 So we changed{" "}
                 <span
-                  className="not-italic"
+                  className="not-italic whitespace-nowrap"
                   style={{
                     color: "#4db5ff",
                     textShadow:
                       "0 0 28px rgba(1,145,252,0.55), 0 0 10px rgba(1,145,252,0.45)",
                   }}
                 >
-                  who pays
-                </span>{" "}
-                for the silence.
+                  who pays.
+                </span>
               </h2>
-            </>
-          }
-        />
-
-        {/* Persistent CTA — centered between the turn and the role ticker.
-            Deliberately outside VoidReveal's scroll crossfade, so it is always
-            visible rather than fading in with the payoff beat. */}
-        <div className="relative z-[1] flex justify-center px-4 -mt-24 md:-mt-32">
-          <Link
-            href="/jobs"
-            className="group inline-flex items-center gap-2 rounded-xl bg-brand-700 px-7 py-3.5 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_30px_-8px_rgba(1,145,252,0.55)] transition-all duration-200 hover:bg-brand-800 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_14px_36px_-10px_rgba(1,145,252,0.7)] active:scale-[0.98]"
-          >
-            Browse live jobs
-            <ArrowRight size={16} />
-          </Link>
+              <p className="mx-auto mt-5 max-w-md text-lg text-white/80 md:text-xl lg:mx-0">
+                Now recruiters do. Every application opens a reply window. No
+                answer in time, and your credit comes back.
+              </p>
+              <div className="mt-8 flex justify-center lg:justify-start">
+                <Link
+                  href="/jobs"
+                  className="group inline-flex items-center gap-2 rounded-xl bg-brand-500 px-7 py-3.5 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_30px_-8px_rgba(1,145,252,0.55)] transition-all duration-200 hover:bg-brand-600 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_14px_36px_-10px_rgba(1,145,252,0.7)] active:scale-[0.98]"
+                >
+                  Browse live jobs
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Slim full-bleed ticker of live roles with reply windows. */}
-        <div className="relative mt-10 pb-12 md:mt-12 md:pb-14">
+        <div className="relative pb-12 md:pb-14">
           <JobMarquee roles={tickerRoles} />
         </div>
       </section>
@@ -427,8 +441,8 @@ export default async function LandingPage() {
             </h2>
             <p className="text-body-lg text-neutral-900 mt-4 leading-relaxed max-w-md">
               Apply with guaranteed response windows. Or build the skills
-              first. Most students do both. Bootcamp badges strengthen every
-              application you send.
+              first. Most students do both. Bootcamp certifications strengthen
+              every application you send.
             </p>
           </div>
 
@@ -442,13 +456,13 @@ export default async function LandingPage() {
                 Bootcamps
               </Badge>
               <h3 className="font-display font-bold text-display-md text-neutral-900 tracking-tight mb-4">
-                Hands-on bootcamps with verified badges.
+                Hands-on bootcamps with certifications.
               </h3>
               <ul className="space-y-3 text-body-sm text-neutral-700 mb-10 flex-grow">
                 {[
                   "Real projects designed by operators, not academics",
                   "Code, ship and review from day one",
-                  "Earn Verified Skill badges recruiters see on your profile",
+                  "Earn certifications recruiters see on your profile",
                 ].map((p) => (
                   <li key={p} className="flex items-start gap-2.5">
                     <CheckCircle2
@@ -632,7 +646,7 @@ export default async function LandingPage() {
               <Link href="/signup?next=/student/jobs">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-xl bg-brand-700 text-white font-semibold text-base px-7 h-12 shadow-[0_8px_24px_rgba(1,145,252,0.32),inset_0_1px_0_rgba(255,255,255,0.18)] hover:bg-brand-800 transition-colors active:scale-[0.99]"
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white font-semibold text-base px-7 h-12 shadow-[0_8px_24px_rgba(1,145,252,0.32),inset_0_1px_0_rgba(255,255,255,0.18)] hover:bg-brand-600 transition-colors active:scale-[0.99]"
                 >
                   Start applying for free
                   <ArrowRight size={16} />

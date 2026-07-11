@@ -9,7 +9,7 @@
  *
  * Each card carries a gradient thumbnail matching the course accent, the
  * course icon, title, tagline, and honest course facts (weeks, modules,
- * verified badge). No invented instructors or fabricated bios — the
+ * certification). No invented instructors or fabricated bios — the
  * product bans fake social proof, so the cards sell only what the course
  * actually contains.
  */
@@ -153,7 +153,7 @@ export function BootcampCardStack() {
         </h2>
         <p className="mt-4 max-w-prose text-body-md leading-relaxed text-neutral-900">
           Six focused bootcamps, built with operators, not academics. Each
-          course ends with a Verified Skill badge that recruiters on unGhost
+          course ends with a certification that recruiters on unGhost
           actually see. No theory dumps. No passive video. Hands-on from day
           one.
         </p>
@@ -163,7 +163,7 @@ export function BootcampCardStack() {
           {[
             { value: "6", label: "Courses" },
             { value: "36", label: "Weeks of content" },
-            { value: "1", label: "Verified badge / course" },
+            { value: "1", label: "Certification / course" },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -393,7 +393,7 @@ export function BootcampCardStack() {
                       }}
                     >
                       <BadgeCheck size={11} strokeWidth={2.4} />
-                      Verified badge
+                      Certification
                     </span>
                   </div>
                 </div>

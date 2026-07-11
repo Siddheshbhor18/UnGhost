@@ -654,7 +654,7 @@ function ActionDrawer({
                             (v) => v.toLowerCase() === s,
                           ) && (
                             <span className="ml-2 text-[10px] text-emerald-600 font-semibold uppercase tracking-wider">
-                              · Verified
+                              · Certified
                             </span>
                           )}
                         </span>

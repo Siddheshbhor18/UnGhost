@@ -287,7 +287,7 @@ export function ProfileEditor({ user }: Props) {
           Skills
         </p>
         <p className="text-xs text-brand-muted mb-3">
-          {(draft.skills ?? []).length} listed · verified badges issue
+          {(draft.skills ?? []).length} listed · certifications issue
           automatically from bootcamp completion
         </p>
         <div className="flex flex-wrap gap-1.5 mb-3">
@@ -412,11 +412,11 @@ export function ProfileEditor({ user }: Props) {
         )}
       </GlassCard>
 
-      {/* Verified skills (read-only) */}
+      {/* Certifications (read-only) */}
       {initial.verifiedSkills && initial.verifiedSkills.length > 0 && (
         <GlassCard className="bg-emerald-500/5 border-emerald-500/20">
           <p className="text-[10px] uppercase tracking-wider text-emerald-700 font-semibold mb-2">
-            Verified by bootcamp completion · cannot be edited
+            Certified by bootcamp completion · cannot be edited
           </p>
           <div className="flex flex-wrap gap-1.5">
             {initial.verifiedSkills.map((s) => (

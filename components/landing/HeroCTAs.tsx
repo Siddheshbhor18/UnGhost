@@ -26,7 +26,7 @@ export function HeroCTAs() {
           3.3:1); the brand-500 glow shadow keeps the lit-from-within feel. */}
       <Link
         href="/jobs"
-        className="group inline-flex items-center gap-2 rounded-xl bg-brand-700 text-white font-semibold text-base px-7 h-12 shadow-[0_10px_28px_rgba(1,145,252,0.36),inset_0_1px_0_rgba(255,255,255,0.22)] hover:bg-brand-800 hover:shadow-[0_12px_32px_rgba(1,145,252,0.42),inset_0_1px_0_rgba(255,255,255,0.22)] transition-shadow duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99]"
+        className="group inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white font-semibold text-base px-7 h-12 shadow-[0_10px_28px_rgba(1,145,252,0.36),inset_0_1px_0_rgba(255,255,255,0.22)] hover:bg-brand-600 hover:shadow-[0_12px_32px_rgba(1,145,252,0.42),inset_0_1px_0_rgba(255,255,255,0.22)] transition-shadow duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99]"
       >
         Browse live jobs
         <motion.span

@@ -171,7 +171,7 @@ export async function POST(
   await upsertBootcampProgress(studentId, nextProgress);
 
   // NOTE: passing a single lesson's skill-check does NOT verify the skill on
-  // the student's profile. The recruiter-visible verified-skill badge is
+  // the student's profile. The recruiter-visible certification is
   // issued only on full completion (all lesson skill-checks + a passing graded
   // assignment) in the assignment route — so the signal recruiters filter on
   // can't be earned from one lesson's quiz.

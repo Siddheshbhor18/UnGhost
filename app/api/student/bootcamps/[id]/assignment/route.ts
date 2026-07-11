@@ -25,7 +25,7 @@ export const runtime = "nodejs";
 // reply isn't killed mid-request. Phase 1 (Inngest) moves these off-request.
 export const maxDuration = 60;
 
-// Minimum total score to earn the Verified Skill badge. Matches the 70%
+// Minimum total score to earn the certification. Matches the 70%
 // gate the student-facing UI already advertises.
 const PASS_SCORE = 70;
 
@@ -116,7 +116,7 @@ export async function POST(
 
   // Gate: the assignment is the final step — every lesson's skill-check must be
   // passed first. The learn UI hides the link until then, but enforce it here
-  // too so a direct POST can't skip the lessons and still earn the badge.
+  // too so a direct POST can't skip the lessons and still earn the certification.
   const allChecksPassed =
     bootcamp.videos.length > 0 &&
     bootcamp.videos.every((v) => existing.skillChecksPassed.includes(v.id));
@@ -127,7 +127,7 @@ export async function POST(
     );
   }
 
-  // Lock only once the badge is actually earned. A failing submission can be
+  // Lock only once the certification is actually earned. A failing submission can be
   // resubmitted — otherwise a low score would permanently bar the student.
   if (existing.verifiedBadgeIssued) {
     return NextResponse.json(
@@ -142,7 +142,7 @@ export async function POST(
   const now = new Date().toISOString();
   const nextProgress: BootcampProgress = {
     ...existing,
-    // Only issue the Verified Skill badge on a passing score.
+    // Only issue the certification on a passing score.
     verifiedBadgeIssued: passed,
     assignment: {
       releasedAt: existing.assignment?.releasedAt ?? now,
@@ -179,8 +179,8 @@ export async function POST(
       ? `Bootcamp complete · ${grade.totalScore}/100`
       : `Assignment graded · ${grade.totalScore}/100 (need ${PASS_SCORE})`,
     body: passed
-      ? `Verified Skill badge issued for ${bootcamp.skill}. Recruiters can now see it on your profile.`
-      : `Not a pass yet — review the feedback and resubmit to earn the ${bootcamp.skill} badge.`,
+      ? `Certification issued for ${bootcamp.skill}. Recruiters can now see it on your profile.`
+      : `Not a pass yet. Review the feedback and resubmit to earn the ${bootcamp.skill} certification.`,
     link: `/student/my-bootcamps/${bootcamp.id}/assignment`,
   });
 

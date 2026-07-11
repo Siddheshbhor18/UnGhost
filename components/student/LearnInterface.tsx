@@ -49,7 +49,7 @@ export function LearnInterface({
   const nextLive = upcomingLive[0];
   const liveNow = upcomingLive.find((s) => s.status === "live");
   // Free navigation: students can watch any lesson in any order. Skill-checks
-  // still track progress, and the live session + assignment + Verified badge
+  // still track progress, and the live session + assignment + certification
   // unlock only once every lesson's skill-check passes.
   const [progress, setProgress] = useState<BootcampProgress>(initialProgress);
   const [activeVideoId, setActiveVideoId] = useState<string>(
@@ -382,7 +382,7 @@ export function LearnInterface({
               All skill checks cleared.
             </p>
             <p className="text-sm text-brand-muted mt-1 mb-4">
-              The post-session assignment unlocks your Verified Skill badge.
+              The post-session assignment unlocks your certification.
             </p>
             <Link
               href={`/student/my-bootcamps/${bootcamp.id}/assignment`}
@@ -399,14 +399,14 @@ export function LearnInterface({
               className="mx-auto text-emerald-600 mb-2"
             />
             <p className="font-display font-bold text-emerald-700">
-              Bootcamp complete · Verified Skill badge issued
+              Bootcamp complete · Certification issued
             </p>
             <p className="text-sm text-brand-muted mt-1">
               Your{" "}
               <span className="font-semibold text-brand-ink">
                 {bootcamp.skill}
               </span>{" "}
-              badge is now visible to recruiters.
+              certification is now visible to recruiters.
             </p>
             <Link
               href={`/student/my-bootcamps/${bootcamp.id}/assignment`}

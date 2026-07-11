@@ -59,7 +59,7 @@ export function buildSkillCheckQuestions(
         "70% pass · 3 attempts · 30-min cooldown.",
         "100% pass · single attempt · no retries.",
         "50% pass · unlimited attempts.",
-        "No verification — videos alone earn the badge.",
+        "No verification — videos alone earn the certification.",
       ],
       correctIdx: 0,
     },

@@ -106,7 +106,8 @@ export default function AboutPage() {
             </li>
             <li>
               <strong>Recruiter sponsorship.</strong> See a borderline candidate?
-              Fund their bootcamp. Watch them earn the badge in real-time.
+              Fund their bootcamp. Watch them earn the certification in
+              real-time.
             </li>
           </ul>
         </GlassCard>

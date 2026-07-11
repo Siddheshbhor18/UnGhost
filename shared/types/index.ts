@@ -73,7 +73,7 @@ export interface BootcampProgress {
      *  Surfaced to instructors during grading review. */
     aiGeneratedLikelihood?: number;
   };
-  /** verified-skill badge issued only after assignment.submittedAt */
+  /** certification issued only after assignment.submittedAt */
   verifiedBadgeIssued: boolean;
 }
 

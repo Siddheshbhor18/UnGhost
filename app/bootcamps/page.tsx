@@ -89,8 +89,8 @@ export default async function BootcampRooms() {
           </h1>
           <p className="text-body-md text-neutral-500 mt-3 leading-relaxed">
             Six focused courses. Each bundles recorded modules, a live session
-            with the instructor, and a skill-verify gate that earns a badge
-            recruiters can filter on.
+            with the instructor, and a final skill gate that earns a
+            certification recruiters can filter on.
           </p>
           <div className="mt-5 inline-flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50/60 px-4 py-3">
             <span className="grid place-items-center w-9 h-9 rounded-xl bg-brand-500 text-white text-lg">

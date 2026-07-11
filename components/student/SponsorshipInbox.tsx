@@ -77,7 +77,7 @@ export function SponsorshipInbox({ initial, bootcamps }: Props) {
               <span className="font-semibold text-brand-primary">
                 {bc?.title}
               </span>
-              . Complete it to earn your Verified Skill badge.
+              . Complete it to earn your certification.
             </p>
           </div>
           <Link

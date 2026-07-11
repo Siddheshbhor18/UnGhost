@@ -552,8 +552,8 @@ function EnrollBand({ reduce }: { reduce: boolean }): React.ReactElement {
             variants={COPY_ITEM}
             className="mx-auto mt-4 max-w-prose text-body-lg leading-relaxed text-neutral-300 text-pretty"
           >
-            Create your account, pick a bootcamp, and start with a Verified
-            Skill badge waiting at the finish.
+            Create your account, pick a bootcamp, and start with a
+            certification waiting at the finish.
           </motion.p>
           <motion.div
             variants={COPY_ITEM}

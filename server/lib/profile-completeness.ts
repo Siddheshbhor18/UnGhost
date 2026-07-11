@@ -57,7 +57,7 @@ const FIELDS: Array<{
   },
   {
     key: "verifiedSkills",
-    label: "Earn at least one Verified Skill (bootcamp)",
+    label: "Earn at least one certification (bootcamp)",
     weight: 15,
     href: "/bootcamps",
     test: (p) => (p.verifiedSkills?.length ?? 0) > 0,

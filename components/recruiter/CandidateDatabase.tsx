@@ -249,7 +249,7 @@ export function CandidateDatabase({ initialCredits }: Props) {
             <Toggle
               checked={!!filters.verifiedOnly}
               onChange={(v) => setFilter("verifiedOnly", v ? true : undefined)}
-              label="Verified-skill only"
+              label="Certified only"
             />
             <Toggle
               checked={!!filters.topPerformersOnly}

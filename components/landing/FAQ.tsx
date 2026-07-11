@@ -32,7 +32,7 @@ const FAQS = [
   },
   {
     q: "What happens if I fail an assessment?",
-    a: "You don't burn an application slot. AI Coach surfaces 2–3 Bootcamps that close the specific gap. Once you complete the Bootcamp (Verified Skill badge issued), the assessment is eligible for retry.",
+    a: "You don't burn an application slot. AI Coach surfaces 2–3 Bootcamps that close the specific gap. Once you complete the Bootcamp (certification issued), the assessment is eligible for retry.",
   },
   {
     q: "Where is my data stored?",

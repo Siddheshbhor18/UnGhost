@@ -58,7 +58,7 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
     [reflection],
   );
 
-  // The assignment is self-paced — no deadline countdown. The badge is earned
+  // The assignment is self-paced — no deadline countdown. The certification is earned
   // by passing the graded submission whenever the student is ready.
 
   // ── Submit ──────────────────────────────────────────────────
@@ -125,7 +125,7 @@ export function AssignmentView({ bootcamp, initialProgress, rubric }: Props) {
             <p className="text-sm text-brand-muted mt-1 max-w-xl">
               Self-paced — submit whenever you&apos;re ready. A focused write-up
               plus a short reflection; AI grades 5 rubric criteria. Score 70+ to
-              earn the Verified Skill badge, and you can resubmit if you fall
+              earn the certification, and you can resubmit if you fall
               short.
             </p>
           </div>
@@ -387,7 +387,7 @@ function ResultsView({
           {isTop10
             ? "Top 10 percentile — your submission features publicly."
             : grade.totalScore >= 70
-            ? "Solid pass. Verified Skill badge issued."
+            ? "Solid pass. Certification issued."
             : "Submitted. Read feedback below."}
         </p>
         {isTop10 && (
@@ -480,7 +480,7 @@ function ResultsView({
       <GlassCard className="bg-emerald-500/5 border-emerald-500/20 text-center">
         <Award size={24} className="mx-auto text-emerald-600 mb-2" />
         <p className="font-display font-bold text-emerald-700">
-          Verified Skill badge: {bootcamp.skill}
+          Certification: {bootcamp.skill}
         </p>
         <p className="text-sm text-brand-muted mt-1">
           Now visible on your public profile and to recruiters in candidate

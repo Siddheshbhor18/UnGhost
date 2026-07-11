@@ -12,7 +12,7 @@ Two audiences on one marketplace:
 
 ## Product Purpose
 
-India-first hiring platform built around accountability. Every recruiter commits to a public response SLA (24/48/72h); miss it and the student's application credit is refunded. AI grades application fit + integrity. Bootcamps award Verified Skill badges recruiters can filter on. Success = a student trusts that applying here actually gets a reply, and signs up.
+India-first hiring platform built around accountability. Every recruiter commits to a public response SLA (24/48/72h); miss it and the student's application credit is refunded. AI grades application fit + integrity. Bootcamps award certifications recruiters can filter on. Success = a student trusts that applying here actually gets a reply, and signs up.
 
 ## Brand Personality
 

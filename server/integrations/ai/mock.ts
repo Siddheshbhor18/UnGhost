@@ -154,7 +154,7 @@ export const mockAdapter: AIAdapter = {
     if (missing.length > 0)
       risks.push(`Missing: ${missing.slice(0, 3).join(", ")}`);
     if (verifiedOverlap.length === 0)
-      risks.push(`No verified-skill badges yet — bootcamp can fix this`);
+      risks.push(`No certifications yet — a bootcamp can fix this`);
     if ((profile.history?.length ?? 0) === 0)
       risks.push(`No prior roles on profile`);
 
@@ -209,7 +209,7 @@ export const mockAdapter: AIAdapter = {
     if (last.includes("upskill") || last.includes("bootcamp")) {
       const skills = profile?.skills.length ?? 0;
       return {
-        message: `You have ${skills} skills on your profile. Most candidates who get advanced have at least one *verified* skill. The fastest path is the LLM Grounding bootcamp — 3 weeks, one live session.`,
+        message: `You have ${skills} skills on your profile. Most candidates who get advanced have at least one certification. The fastest path is the LLM Grounding bootcamp — 3 weeks, one live session.`,
         suggestions: ["Show me bootcamps", "How much does it cost?", "Take me to a mission"],
       };
     }

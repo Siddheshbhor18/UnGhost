@@ -225,7 +225,7 @@ export default async function StudentDeepView({ params }: { params: { id: string
                     </div>
                     {u.profile?.verifiedSkills.includes(b.skill) && (
                       <GlassBadge tone="success">
-                        <Sparkles size={10} /> Verified
+                        <Sparkles size={10} /> Certified
                       </GlassBadge>
                     )}
                   </li>

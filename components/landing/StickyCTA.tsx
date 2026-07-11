@@ -44,7 +44,7 @@ export function StickyCTA() {
     >
       <Link
         href="/jobs"
-        className="flex h-13 items-center justify-center gap-2 rounded-xl bg-brand-700 px-6 text-base font-semibold text-white shadow-[0_10px_28px_rgba(1,145,252,0.36),inset_0_1px_0_rgba(255,255,255,0.22)] transition-colors hover:bg-brand-800 active:scale-[0.99]"
+        className="flex h-13 items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 text-base font-semibold text-white shadow-[0_10px_28px_rgba(1,145,252,0.36),inset_0_1px_0_rgba(255,255,255,0.22)] transition-colors hover:bg-brand-600 active:scale-[0.99]"
         style={{ height: 52 }}
       >
         Browse live jobs

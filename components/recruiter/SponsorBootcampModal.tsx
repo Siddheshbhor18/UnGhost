@@ -159,7 +159,7 @@ export function SponsorBootcampModal({ student, job, onClose, onComplete }: Prop
             <div className="mt-5 space-y-3">
               <p className="text-xs text-brand-muted">
                 Pick one bootcamp to sponsor. The student gets a free unlock +
-                30 days to accept. On completion, their Verified Skill badge
+                30 days to accept. On completion, their certification
                 lands on their profile (visible to your kanban).
               </p>
               {bcs.length === 0 ? (

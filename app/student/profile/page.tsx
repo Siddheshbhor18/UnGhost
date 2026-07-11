@@ -239,7 +239,7 @@ export default async function StudentProfilePage() {
               </div>
               {p.verifiedSkills && p.verifiedSkills.length > 0 && (
                 <p className="text-[11px] text-emerald-700 mt-3 font-semibold inline-flex items-center gap-1">
-                  <Award size={11} /> {p.verifiedSkills.length} verified by
+                  <Award size={11} /> {p.verifiedSkills.length} certified by
                   bootcamp completion
                 </p>
               )}
