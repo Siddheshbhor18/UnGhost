@@ -54,6 +54,7 @@ function LoginInner() {
   const reduced = useReducedMotion();
   const shake = useAnimationControls();
   const nextParam = safeNext(params.get("next"));
+  const roleParam = params.get("role");
   const { data: sessionData, status: sessionStatus } = useSession();
   useEffect(() => {
     if (sessionStatus !== "authenticated") return;
@@ -65,7 +66,7 @@ function LoginInner() {
   // Seed the role from `?role=`. The dedicated /instructor and /admin doors
   // redirect here with that param so the card can lock to their provisioned
   // role; a bare /login (or any garbage param) falls back to "student".
-  const [role, setRole] = useState<Role>(() => resolveLoginRole(params.get("role")));
+  const [role, setRole] = useState<Role>(() => resolveLoginRole(roleParam));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -74,6 +75,18 @@ function LoginInner() {
   const [playDoor, setPlayDoor] = useState(false);
   const [dest, setDest] = useState<string>("/");
   const [doorName, setDoorName] = useState<string | undefined>();
+
+  // Re-sync the role when `?role=` changes via SOFT navigation — e.g. the
+  // "Student / Recruiter login" link out of a locked instructor/admin door.
+  // The useState seed only runs on mount, but App Router keeps this component
+  // mounted across search-param changes, so without this the card would stay
+  // locked to the initial role. Keyed on the raw param only, so choosing a
+  // pill (which never touches the URL) can't be clobbered.
+  useEffect(() => {
+    setRole(resolveLoginRole(roleParam));
+    setErr(null);
+    setEmail("");
+  }, [roleParam]);
 
   // Instructor + admin arrive via their own entry points and can't be
   // self-selected, so the card hides the picker and locks to that single role.
