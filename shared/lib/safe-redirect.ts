@@ -52,3 +52,30 @@ export function resolveSignupRole(raw: string | null | undefined): SignupRoleId 
   if (typeof raw !== "string") return "student";
   return (SIGNUP_ROLES as Record<string, true>)[raw] ? (raw as SignupRoleId) : "student";
 }
+
+/**
+ * Roles a visitor may arrive with via `?role=` on the /login door.
+ *
+ * Unlike signup (student + recruiter self-serve only), login must accept all
+ * four roles: the dedicated `/instructor` and `/admin` entry points redirect
+ * here with `?role=instructor` / `?role=admin` so the card can lock itself to
+ * that single provisioned role instead of exposing it as a public tab.
+ */
+export type LoginRoleId = "student" | "recruiter" | "instructor" | "admin";
+
+const LOGIN_ROLES: Record<LoginRoleId, true> = {
+  student: true,
+  recruiter: true,
+  instructor: true,
+  admin: true,
+};
+
+/**
+ * Resolve a raw `?role=` URL param into a valid login role, falling back to
+ * `student` for anything outside the allowlist (including `null`, the empty
+ * string, or arbitrary garbage).
+ */
+export function resolveLoginRole(raw: string | null | undefined): LoginRoleId {
+  if (typeof raw !== "string") return "student";
+  return (LOGIN_ROLES as Record<string, true>)[raw] ? (raw as LoginRoleId) : "student";
+}

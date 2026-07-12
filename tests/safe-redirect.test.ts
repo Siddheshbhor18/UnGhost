@@ -9,7 +9,11 @@
  * loosen the contract.
  */
 import { describe, expect, it } from "vitest";
-import { safeNext, resolveSignupRole } from "@/shared/lib/safe-redirect";
+import {
+  safeNext,
+  resolveSignupRole,
+  resolveLoginRole,
+} from "@/shared/lib/safe-redirect";
 
 describe("safeNext — open-redirect filter", () => {
   it("returns null for empty / nullish / non-string input", () => {
@@ -89,5 +93,29 @@ describe("resolveSignupRole — URL allowlist for ?role=", () => {
     expect(resolveSignupRole("recruiter; DROP TABLE users;")).toBe("student");
     expect(resolveSignupRole("../admin")).toBe("student");
     expect(resolveSignupRole("<script>")).toBe("student");
+  });
+});
+
+describe("resolveLoginRole — URL allowlist for ?role=", () => {
+  it("returns student when nothing usable is supplied", () => {
+    expect(resolveLoginRole(null)).toBe("student");
+    expect(resolveLoginRole(undefined)).toBe("student");
+    expect(resolveLoginRole("")).toBe("student");
+    expect(resolveLoginRole(42 as unknown as string)).toBe("student");
+  });
+
+  it("accepts all four roles unchanged (login, unlike signup, is not self-serve-only)", () => {
+    expect(resolveLoginRole("student")).toBe("student");
+    expect(resolveLoginRole("recruiter")).toBe("recruiter");
+    expect(resolveLoginRole("instructor")).toBe("instructor");
+    expect(resolveLoginRole("admin")).toBe("admin");
+  });
+
+  it("rejects arbitrary / hostile role values", () => {
+    expect(resolveLoginRole("Admin")).toBe("student"); // case-sensitive
+    expect(resolveLoginRole("admin; DROP TABLE users;")).toBe("student");
+    expect(resolveLoginRole("../admin")).toBe("student");
+    expect(resolveLoginRole("<script>")).toBe("student");
+    expect(resolveLoginRole("creator")).toBe("student"); // real role, not a login door
   });
 });

@@ -5,12 +5,13 @@ import { BookOpen, Briefcase, GraduationCap, ShieldCheck, User2 } from "lucide-r
 import clsx from "clsx";
 
 /**
- * RolePicker — animated role selector shared by /login (4 roles) and the
- * signup wizard step 1 (2 roles).
+ * RolePicker — animated role selector shared by /login and the signup wizard.
  *
- * Variant "pills" → all four roles as a tight pill row (login default).
- * Variant "cards" → only student + recruiter as larger tappable cards
- *                   (signup, where instructors / admins don't self-register).
+ * Variant "pills" → the two public roles (student + recruiter) as a tight pill
+ *                   row. Instructor + admin are provisioned accounts that sign
+ *                   in via their dedicated /instructor and /admin entry points,
+ *                   so they never appear as a self-select tab.
+ * Variant "cards" → student + recruiter as larger tappable cards (signup).
  *
  * The active indicator slides between options using framer's layoutId so the
  * motion reads as a single continuous element instead of cross-fading two
@@ -36,12 +37,20 @@ export interface RoleOption {
 // public login from advertising the admin account email (and demo passwords).
 const DEMO_LOGINS = process.env.NODE_ENV !== "production";
 
-const DEFAULT_FOUR: RoleOption[] = [
-  { id: "student", label: "Student", icon: <User2 size={14} />, demoEmail: DEMO_LOGINS ? "alice@demo.test" : undefined },
-  { id: "recruiter", label: "Recruiter", icon: <ShieldCheck size={14} />, demoEmail: DEMO_LOGINS ? "hr@stark.test" : undefined },
-  { id: "instructor", label: "Instructor", icon: <BookOpen size={14} />, demoEmail: DEMO_LOGINS ? "cristian@instructor.test" : undefined },
-  { id: "admin", label: "Admin", icon: <GraduationCap size={14} />, demoEmail: DEMO_LOGINS ? "root@noghost.test" : undefined },
-];
+/**
+ * Full role metadata (all four). Consumers (e.g. /login's dev "Try as…" button
+ * and the role-locked instructor/admin cards) look roles up here by id even
+ * though only `LOGIN_PILLS` is rendered as a public selector.
+ */
+const ROLE_META: Record<Role, RoleOption> = {
+  student: { id: "student", label: "Student", icon: <User2 size={14} />, demoEmail: DEMO_LOGINS ? "alice@demo.test" : undefined },
+  recruiter: { id: "recruiter", label: "Recruiter", icon: <ShieldCheck size={14} />, demoEmail: DEMO_LOGINS ? "hr@stark.test" : undefined },
+  instructor: { id: "instructor", label: "Instructor", icon: <BookOpen size={14} />, demoEmail: DEMO_LOGINS ? "cristian@instructor.test" : undefined },
+  admin: { id: "admin", label: "Admin", icon: <GraduationCap size={14} />, demoEmail: DEMO_LOGINS ? "root@noghost.test" : undefined },
+};
+
+// The login card only lets a visitor self-select the two public roles.
+const LOGIN_PILLS: RoleOption[] = [ROLE_META.student, ROLE_META.recruiter];
 
 const SIGNUP_TWO: RoleOption[] = [
   {
@@ -70,7 +79,7 @@ interface Props {
 
 export function RolePicker({ value, onChange, variant = "pills", roles }: Props) {
   const reduced = useReducedMotion();
-  const items = roles ?? (variant === "pills" ? DEFAULT_FOUR : SIGNUP_TWO);
+  const items = roles ?? (variant === "pills" ? LOGIN_PILLS : SIGNUP_TWO);
 
   if (variant === "cards") {
     return (
@@ -129,7 +138,7 @@ export function RolePicker({ value, onChange, variant = "pills", roles }: Props)
   // pills
   return (
     <LayoutGroup>
-      <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-brand-ink/[0.04] border border-brand-ink/5">
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-brand-ink/[0.04] border border-brand-ink/5">
         {items.map((r) => {
           const active = value === r.id;
           return (
@@ -155,7 +164,7 @@ export function RolePicker({ value, onChange, variant = "pills", roles }: Props)
               ) : null}
               <span className="relative inline-flex items-center gap-1.5">
                 {r.icon}
-                <span className="hidden sm:inline">{r.label}</span>
+                <span>{r.label}</span>
               </span>
             </button>
           );
@@ -165,5 +174,7 @@ export function RolePicker({ value, onChange, variant = "pills", roles }: Props)
   );
 }
 
-/** Re-export the defaults so consumers can adapt them without duplicating. */
-export { DEFAULT_FOUR as ROLE_PILLS, SIGNUP_TWO as ROLE_CARDS };
+/** Re-export the defaults so consumers can adapt them without duplicating.
+ *  `ROLE_META` carries all four roles for id-keyed lookups (labels, demo
+ *  emails, icons) even though only the two public pills are rendered. */
+export { LOGIN_PILLS as ROLE_PILLS, SIGNUP_TWO as ROLE_CARDS, ROLE_META };

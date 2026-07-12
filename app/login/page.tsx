@@ -22,9 +22,9 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
-import { RolePicker, ROLE_PILLS, type Role } from "@/components/auth/RolePicker";
+import { RolePicker, ROLE_META, type Role } from "@/components/auth/RolePicker";
 import type { AuthHeroPhase } from "@/components/auth/AuthHero";
-import { safeNext } from "@/shared/lib/safe-redirect";
+import { safeNext, resolveLoginRole } from "@/shared/lib/safe-redirect";
 
 const HREF_BY_ROLE: Record<Role, string> = {
   student: "/dashboard",
@@ -62,7 +62,10 @@ function LoginInner() {
     router.replace(dest);
   }, [sessionStatus, sessionData, nextParam, router]);
 
-  const [role, setRole] = useState<Role>("student");
+  // Seed the role from `?role=`. The dedicated /instructor and /admin doors
+  // redirect here with that param so the card can lock to their provisioned
+  // role; a bare /login (or any garbage param) falls back to "student".
+  const [role, setRole] = useState<Role>(() => resolveLoginRole(params.get("role")));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -72,7 +75,10 @@ function LoginInner() {
   const [dest, setDest] = useState<string>("/");
   const [doorName, setDoorName] = useState<string | undefined>();
 
-  const demoForActiveRole = ROLE_PILLS.find((r) => r.id === role)?.demoEmail;
+  // Instructor + admin arrive via their own entry points and can't be
+  // self-selected, so the card hides the picker and locks to that single role.
+  const lockedRole = role === "instructor" || role === "admin";
+  const demoForActiveRole = ROLE_META[role]?.demoEmail;
   const formRef = useRef<HTMLFormElement | null>(null);
 
   function switchRole(r: Role) {
@@ -185,15 +191,26 @@ function LoginInner() {
         <GlassCard variant="strong" className="!p-6">
           <div className="mb-4">
             <h1 className="font-display font-extrabold text-2xl text-brand-ink tracking-tight">
-              Welcome back
+              {lockedRole ? `${ROLE_LABEL[role]} sign-in` : "Welcome back"}
             </h1>
             <p className="text-sm text-brand-muted mt-0.5">
-              Sign in to pick up where you left off.
+              {lockedRole
+                ? "Restricted access for provisioned accounts."
+                : "Sign in to pick up where you left off."}
             </p>
           </div>
 
           <div className="mb-4">
-            <RolePicker value={role} onChange={switchRole} variant="pills" />
+            {lockedRole ? (
+              <div className="flex items-center gap-2.5 rounded-xl border border-brand-primary/20 bg-brand-primary/5 px-3.5 py-2.5">
+                <span className="text-brand-primary">{ROLE_META[role].icon}</span>
+                <p className="text-xs font-semibold text-brand-ink">
+                  Signing in as {ROLE_LABEL[role]}
+                </p>
+              </div>
+            ) : (
+              <RolePicker value={role} onChange={switchRole} variant="pills" />
+            )}
             {process.env.NODE_ENV !== "production" && demoForActiveRole ? (
               <button
                 type="button"
@@ -275,28 +292,42 @@ function LoginInner() {
             </motion.button>
           </motion.form>
 
-          <div className="my-4 flex items-center gap-3">
-            <span className="h-px bg-brand-ink/10 flex-1" />
-            <span className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
-              or
-            </span>
-            <span className="h-px bg-brand-ink/10 flex-1" />
-          </div>
+          {lockedRole ? (
+            <p className="mt-5 text-center text-[11px] text-brand-muted">
+              Not {role === "admin" ? "an admin" : "an instructor"}?{" "}
+              <Link
+                href="/login"
+                className="text-brand-primary font-semibold hover:underline"
+              >
+                Student / Recruiter login
+              </Link>
+            </p>
+          ) : (
+            <>
+              <div className="my-4 flex items-center gap-3">
+                <span className="h-px bg-brand-ink/10 flex-1" />
+                <span className="text-[10px] uppercase tracking-wider text-brand-muted font-semibold">
+                  or
+                </span>
+                <span className="h-px bg-brand-ink/10 flex-1" />
+              </div>
 
-          <OAuthButtons
-            callbackUrl={nextParam ?? HREF_BY_ROLE[role]}
-            onError={setErr}
-          />
+              <OAuthButtons
+                callbackUrl={nextParam ?? HREF_BY_ROLE[role]}
+                onError={setErr}
+              />
 
-          <p className="mt-5 text-center text-[11px] text-brand-muted">
-            New here?{" "}
-            <Link
-              href="/signup"
-              className="text-brand-primary font-semibold hover:underline"
-            >
-              Create an account
-            </Link>
-          </p>
+              <p className="mt-5 text-center text-[11px] text-brand-muted">
+                New here?{" "}
+                <Link
+                  href="/signup"
+                  className="text-brand-primary font-semibold hover:underline"
+                >
+                  Create an account
+                </Link>
+              </p>
+            </>
+          )}
         </GlassCard>
       </BreatheCard>
     </AuthShell>
