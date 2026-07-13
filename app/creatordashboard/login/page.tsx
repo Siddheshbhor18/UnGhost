@@ -8,9 +8,10 @@ import { Card, Button, Field, Input, SectionLabel } from "@/components/ui";
 
 /**
  * Hidden creator sign-in. Not linked from the main platform UI (ground rule
- * §0.15) — creators reach it directly. Submits credentials WITHOUT a role tab,
- * so `authorize()` skips role-tab enforcement and authenticates the creator by
- * their account role. On success the dashboard layout takes over.
+ * §0.15) — creators reach it directly. Submits `role: "creator"` so the server
+ * `authorize()` (which now requires the submitted role to match the account's
+ * real role) authenticates the creator and rejects any other account type. On
+ * success the dashboard layout takes over.
  */
 export default function CreatorLoginPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function CreatorLoginPage() {
       const res = await signIn("credentials", {
         email: email.trim(),
         password,
+        role: "creator",
         redirect: false,
       });
       if (!res || res.error) {

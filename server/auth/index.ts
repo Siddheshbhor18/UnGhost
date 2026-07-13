@@ -178,19 +178,26 @@ export const authOptions: AuthOptions = {
           );
         }
 
-        // Role-tab enforcement (server-side). The sign-in form sends the
-        // role tab the visitor picked. If it doesn't match the account's
-        // real role, reject HERE — before any session/JWT is issued. The
-        // old client-side getSession() check was racy (the cookie is already
-        // set by the time it runs) and could be skipped entirely, letting an
-        // admin account sign in under the Student tab. This check only ever
-        // restricts (it can't grant a role the account doesn't have), so a
-        // forged `role` param can't escalate — worst case it matches and is
-        // a no-op. We keep the message role-agnostic to avoid revealing that
-        // an email belongs to a privileged account.
+        // Role enforcement (server-side, MANDATORY). Every credentials sign-in
+        // must declare which door it came through, and it must equal the
+        // account's real role — checked HERE, before any session/JWT is issued.
+        //
+        //   • Public /login sends the picked tab: "student" | "recruiter".
+        //   • The dedicated /admin and /instructor doors send "admin" /
+        //     "instructor", so those privileged accounts can ONLY authenticate
+        //     from their own door — never from the public student/recruiter card.
+        //   • The hidden creator door sends "creator".
+        //
+        // The previous form skipped the check whenever `role` was absent
+        // (`if (expectedRole && …)`), so a request that simply OMITTED the field
+        // authenticated as ANY role — including admin — from anywhere. Requiring
+        // an exact match closes that hole: a missing OR mismatched role is
+        // rejected. The check only ever restricts (it can't grant a role the
+        // account lacks), and the message stays role-agnostic so it never
+        // reveals that an email belongs to a privileged account.
         const expectedRole =
           typeof creds.role === "string" ? creds.role.trim() : "";
-        if (expectedRole && expectedRole !== user.role) {
+        if (expectedRole !== user.role) {
           logger.warn(
             { ipPrefix: ip.slice(0, 7) },
             "auth.role-tab-mismatch",
