@@ -23,6 +23,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { PharmEasyLogo, CoinDCXLogo } from "./FeaturedSpeaker";
 
@@ -113,6 +114,16 @@ export function SpeakerSpotlight() {
           gatekeeping. Every session is announced in the community, so you&apos;re
           in the room when the next one runs.
         </p>
+
+        {/* CTA — enroll now */}
+        <div className="mt-8 flex justify-center">
+          <Link
+            href="/signup?next=/bootcamps"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-7 py-3.5 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_30px_-8px_rgba(1,145,252,0.55)] transition-all duration-200 hover:bg-brand-600 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_14px_36px_-10px_rgba(1,145,252,0.7)] active:scale-[0.98]"
+          >
+            Enroll now
+          </Link>
+        </div>
       </div>
 
       {/* ── The recorded session — cinematic ultrawide frame ── */}
@@ -166,7 +177,6 @@ export function SpeakerSpotlight() {
         </figcaption>
       </motion.figure>
 
-      {/* CTA — join the community to be in the room for the next name. */}
     </div>
   );
 }
