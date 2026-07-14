@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   ClipboardCopy,
+  Link2,
   Loader2,
+  MonitorPlay,
   PlayCircle,
   Save,
   StopCircle,
@@ -37,6 +39,9 @@ interface Initial {
   cfLiveInputUid: string;
   cfRtmpUrl: string;
   cfStreamKey: string;
+  sessionType: string;
+  thumbnailUrl: string;
+  previewVideoUrl: string;
 }
 
 interface Stats {
@@ -84,7 +89,10 @@ export function ManageSessionClient({ id, roomCode, initial, stats }: Props) {
   const isLive = initial.status === "live";
   const isEnded =
     initial.status === "ended" || initial.status === "cancelled";
-  const canGoLive = Boolean(initial.youtubeVideoId);
+  const isExternal = initial.sessionType === "external";
+  // External sessions run on the external tool — no video ID needed to flip
+  // the card to "live"; on-platform sessions still require one.
+  const canGoLive = isExternal || Boolean(initial.youtubeVideoId);
 
   return (
     <div className="space-y-6">
@@ -97,9 +105,15 @@ export function ManageSessionClient({ id, roomCode, initial, stats }: Props) {
 
       {/* Provider badge */}
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">
-          YouTube Live
-        </span>
+        {isExternal ? (
+          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-200">
+            <MonitorPlay size={10} /> External platform · link hidden from students
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">
+            YouTube Live
+          </span>
+        )}
       </div>
 
       {/* Go Live / End controls */}
@@ -109,39 +123,75 @@ export function ManageSessionClient({ id, roomCode, initial, stats }: Props) {
             Broadcast controls
           </h2>
 
-          <p className="text-xs text-brand-muted mb-4">
-            Step 1 — start an <strong>Unlisted</strong> live stream on YouTube
-            Studio and paste the video ID below. Step 2 — click{" "}
-            <strong>Go Live</strong> to flip the public page to streaming mode.
-            Step 3 — click <strong>End session</strong> when done.
-          </p>
-          <label className="block mb-3">
-            <span className="text-[12px] font-semibold text-brand-ink mb-1.5 block">
-              YouTube video ID or share URL
-            </span>
-            <div className="flex gap-2">
-              <input
-                value={videoIdInput}
-                onChange={(e) => setVideoIdInput(e.target.value)}
-                placeholder="e.g. dQw4w9WgXcQ or https://youtu.be/dQw4w9WgXcQ"
-                className="flex-1 rounded-xl border border-brand-ink/15 bg-white px-4 py-2.5 text-sm font-mono text-brand-ink focus:outline-none focus:border-brand-primary focus:shadow-[0_0_0_3px_rgba(1,145,252,0.12)] transition"
+          {isExternal ? (
+            <>
+              <p className="text-xs text-brand-muted mb-4">
+                This session runs on an external tool (Zoho Meet, Google
+                Meet…). Students join through the masked{" "}
+                <span className="font-mono">/api/live/…/join</span> redirect —
+                the stored link never reaches them. Paste a new link below only
+                to <strong>replace</strong> it (e.g. the instructor is locked
+                out or the link leaked).
+              </p>
+              <ExternalUrlField
+                label="Replace meeting link"
+                placeholder="https://meet.zoho.com/… (blank = keep current)"
+                mono
+                onSave={(url) => patch({ externalJoinUrl: url }, "ext-link")}
+                saving={busy === "ext-link"}
               />
-              <button
-                onClick={() =>
-                  patch({ youtubeVideoId: videoIdInput.trim() }, "save-id")
-                }
-                disabled={!videoIdInput.trim() || busy !== null}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-ink/15 bg-white text-brand-ink px-4 py-2.5 text-sm font-semibold hover:border-brand-primary hover:text-brand-primary disabled:opacity-50 transition"
-              >
-                {busy === "save-id" ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Save size={14} />
-                )}
-                Save
-              </button>
-            </div>
-          </label>
+              <ExternalUrlField
+                label="Thumbnail URL"
+                placeholder="https://…"
+                defaultValue={initial.thumbnailUrl}
+                onSave={(url) => patch({ thumbnailUrl: url }, "ext-thumb")}
+                saving={busy === "ext-thumb"}
+              />
+              <ExternalUrlField
+                label="Preview video URL"
+                placeholder="https://…"
+                defaultValue={initial.previewVideoUrl}
+                onSave={(url) => patch({ previewVideoUrl: url }, "ext-preview")}
+                saving={busy === "ext-preview"}
+              />
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-brand-muted mb-4">
+                Step 1 — start an <strong>Unlisted</strong> live stream on YouTube
+                Studio and paste the video ID below. Step 2 — click{" "}
+                <strong>Go Live</strong> to flip the public page to streaming mode.
+                Step 3 — click <strong>End session</strong> when done.
+              </p>
+              <label className="block mb-3">
+                <span className="text-[12px] font-semibold text-brand-ink mb-1.5 block">
+                  YouTube video ID or share URL
+                </span>
+                <div className="flex gap-2">
+                  <input
+                    value={videoIdInput}
+                    onChange={(e) => setVideoIdInput(e.target.value)}
+                    placeholder="e.g. dQw4w9WgXcQ or https://youtu.be/dQw4w9WgXcQ"
+                    className="flex-1 rounded-xl border border-brand-ink/15 bg-white px-4 py-2.5 text-sm font-mono text-brand-ink focus:outline-none focus:border-brand-primary focus:shadow-[0_0_0_3px_rgba(1,145,252,0.12)] transition"
+                  />
+                  <button
+                    onClick={() =>
+                      patch({ youtubeVideoId: videoIdInput.trim() }, "save-id")
+                    }
+                    disabled={!videoIdInput.trim() || busy !== null}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-brand-ink/15 bg-white text-brand-ink px-4 py-2.5 text-sm font-semibold hover:border-brand-primary hover:text-brand-primary disabled:opacity-50 transition"
+                  >
+                    {busy === "save-id" ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}
+                    Save
+                  </button>
+                </div>
+              </label>
+            </>
+          )}
 
           <div className="flex flex-wrap gap-2 pt-3 border-t border-brand-ink/5">
             {!isLive ? (
@@ -207,12 +257,12 @@ export function ManageSessionClient({ id, roomCode, initial, stats }: Props) {
 
       {/* Quick-link to public page */}
       <a
-        href={`/live/${roomCode}`}
+        href={isExternal ? `/api/live/${id}/join` : `/live/${roomCode}`}
         target="_blank"
         rel="noopener noreferrer"
         className="block text-center text-sm font-semibold text-brand-primary hover:underline"
       >
-        Preview the public page →
+        {isExternal ? "Open the external session →" : "Preview the public page →"}
       </a>
     </div>
   );
@@ -362,5 +412,61 @@ function RecordingUrlInput({
         Save
       </button>
     </div>
+  );
+}
+
+/**
+ * Labelled https-URL input with its own Save button, used for the external-
+ * session fields (link replacement, thumbnail, preview). The meeting link is
+ * write-only: the server never sends it back, so the field starts blank and
+ * saving an empty value is a no-op rather than a clear.
+ */
+function ExternalUrlField({
+  label,
+  placeholder,
+  defaultValue = "",
+  mono = false,
+  onSave,
+  saving,
+}: {
+  label: string;
+  placeholder: string;
+  defaultValue?: string;
+  mono?: boolean;
+  onSave: (url: string) => void;
+  saving: boolean;
+}) {
+  const [url, setUrl] = useState(defaultValue);
+  const trimmed = url.trim();
+  const valid = /^https:\/\//i.test(trimmed);
+  return (
+    <label className="block mb-3">
+      <span className="text-[12px] font-semibold text-brand-ink mb-1.5 block">
+        <Link2 size={11} className="inline mr-1 -mt-0.5" />
+        {label}
+      </span>
+      <div className="flex gap-2">
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          type="url"
+          placeholder={placeholder}
+          className={`flex-1 rounded-xl border border-brand-ink/15 bg-white px-4 py-2.5 text-sm text-brand-ink focus:outline-none focus:border-brand-primary focus:shadow-[0_0_0_3px_rgba(1,145,252,0.12)] transition ${mono ? "font-mono" : ""}`}
+        />
+        <button
+          onClick={() => onSave(trimmed)}
+          disabled={!valid || saving}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-brand-ink/15 bg-white text-brand-ink px-4 py-2.5 text-sm font-semibold hover:border-brand-primary hover:text-brand-primary disabled:opacity-50 transition"
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          Save
+        </button>
+      </div>
+      {trimmed.length > 0 && !valid ? (
+        <span className="text-[11px] text-rose-600 mt-1 block">
+          Must be an https:// link.
+        </span>
+      ) : null}
+    </label>
   );
 }

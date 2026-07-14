@@ -886,6 +886,16 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
   animation: pro-float 4s ease-in-out infinite;
 }
 
+/* ── Ghost mascot idle — EmptyState + 404. A gentle bob with a soft
+   counter-tilt so the character reads lighter-than-air, never bouncy.
+   The global reduced-motion rule above disables it automatically. */
+@keyframes ghost-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30%      { transform: translateY(-5px) rotate(-2deg); }
+  70%      { transform: translateY(-2px) rotate(1.5deg); }
+}
+.ghost-idle { animation: ghost-idle 4.5s ease-in-out infinite; }
+
 @keyframes pop-in {
   0% { transform: scale(0); opacity: 0; }
   60% { transform: scale(1.1); }

@@ -933,6 +933,13 @@ export type LiveSessionStatus =
  *  "paid" sessions are gated by enrollment in the linked bootcamp. */
 export type LiveSessionTier = "free" | "paid";
 
+/** Where the session is hosted.
+ *  "unghost"  — streamed on-platform (/live/[code], YouTube/Cloudflare).
+ *  "external" — conducted on an external tool (Zoho Meet, Google Meet…);
+ *               students join through the masked /api/live/[id]/join
+ *               redirect and the raw URL never reaches the client. */
+export type LiveSessionType = "unghost" | "external";
+
 export interface LiveSession {
   id: string;
   /** Optional now — free lead-gen sessions have no bootcamp parent. */
@@ -959,6 +966,16 @@ export interface LiveSession {
   cfRtmpUrl?: string | null;
   /** Stream key for RTMP auth. Admin-only — never sent to students. */
   cfStreamKey?: string | null;
+  /** Hosting mode. Absent on legacy documents — treat as "unghost". */
+  sessionType?: LiveSessionType;
+  /** External meeting link (Zoho/Meet/…). SERVER-ONLY secret — the schema
+   *  marks it `select: false`; the ONLY read path is getExternalJoinUrl()
+   *  behind the enrolment-gated join route. Never serialize to clients. */
+  externalJoinUrl?: string | null;
+  /** Card thumbnail for external sessions (https or same-origin path). */
+  thumbnailUrl?: string | null;
+  /** Optional promo/preview video URL shown on the student card. */
+  previewVideoUrl?: string | null;
   registeredStudentIds: string[];
   attendedStudentIds: string[];
   createdAt: string;

@@ -8,7 +8,7 @@ export default function NotFound() {
       <BlobField />
 
       <GlassCard variant="strong" className="!p-10 text-center max-w-lg w-full">
-        <div className="mx-auto grid place-items-center w-20 h-20 rounded-3xl bg-brand-gradient shadow-brand-glow mb-5 animate-bounce">
+        <div className="mx-auto grid place-items-center w-20 h-20 rounded-3xl bg-brand-gradient shadow-brand-glow mb-5 ghost-idle">
           <img
             src="/symbol.svg"
             alt="unGhost"
@@ -28,7 +28,7 @@ export default function NotFound() {
 
         <p className="text-sm text-brand-muted mt-3 leading-relaxed">
           The page you&apos;re looking for either moved, was deleted, or never
-          existed. Don&apos;t worry — we don&apos;t ghost you when this
+          existed. Don&apos;t worry: we don&apos;t ghost you when this
           happens.
         </p>
 

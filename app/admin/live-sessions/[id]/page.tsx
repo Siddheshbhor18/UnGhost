@@ -22,7 +22,11 @@ export default async function ManageLiveSessionPage({
   params: { id: string };
 }) {
   await connectMongo();
-  const live = await LiveSessionModel.findById(params.id).lean();
+  // Broadcast credentials are `select: false` — this admin-only surface is
+  // the one place students' queries never reach, so opt in explicitly.
+  const live = await LiveSessionModel.findById(params.id)
+    .select("+cfLiveInputUid +cfRtmpUrl +cfStreamKey")
+    .lean();
   if (!live) notFound();
 
   const [attendeeCount, messageCount] = await Promise.all([
@@ -76,6 +80,9 @@ export default async function ManageLiveSessionPage({
           cfLiveInputUid: live.cfLiveInputUid ?? "",
           cfRtmpUrl: live.cfRtmpUrl ?? "",
           cfStreamKey: live.cfStreamKey ?? "",
+          sessionType: live.sessionType ?? "unghost",
+          thumbnailUrl: live.thumbnailUrl ?? "",
+          previewVideoUrl: live.previewVideoUrl ?? "",
         }}
         stats={{ attendeeCount, messageCount }}
       />

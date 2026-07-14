@@ -9,6 +9,7 @@ import {
   Users as UsersIcon,
   Check,
   ExternalLink,
+  MonitorPlay,
   Bell,
   BellOff,
 } from "lucide-react";
@@ -113,6 +114,7 @@ function Card({
   onToggle: () => void;
 }) {
   const isReg = s.registeredStudentIds.includes(studentId);
+  const isExternal = (s.sessionType ?? "unghost") === "external";
   return (
     <GlassCard
       className={clsx(
@@ -130,6 +132,11 @@ function Card({
             ) : (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 text-[10px] font-semibold uppercase tracking-wider">
                 Scheduled
+              </span>
+            )}
+            {isExternal && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-700 border border-violet-500/20 text-[10px] font-semibold uppercase tracking-wider">
+                <MonitorPlay size={10} /> External
               </span>
             )}
             <span className="text-[10px] uppercase tracking-wider text-brand-muted">
@@ -156,9 +163,20 @@ function Card({
 
         <div className="flex items-center gap-2">
           {s.status === "live" ? (
-            <Link href={`/live/${s.roomCode}`} className="btn-brand text-xs">
-              <ExternalLink size={12} /> Join room
-            </Link>
+            isExternal ? (
+              <a
+                href={`/api/live/${s.id}/join`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-brand text-xs"
+              >
+                <ExternalLink size={12} /> Enter live session
+              </a>
+            ) : (
+              <Link href={`/live/${s.roomCode}`} className="btn-brand text-xs">
+                <ExternalLink size={12} /> Join room
+              </Link>
+            )
           ) : (
             <GlassButton
               variant={isReg ? "glass" : "brand"}

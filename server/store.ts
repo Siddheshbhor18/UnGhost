@@ -20,6 +20,7 @@ const reactCache: <T extends (...args: any[]) => any>(fn: T) => T =
 import {
   AICoachConversationModel,
   LiveSessionModel,
+  LiveSessionAttendeeModel,
   ApplicationModel,
   BootcampModel,
   CampaignModel,
@@ -50,6 +51,7 @@ import type {
   EmailTemplate,
   LiveSession,
   LiveSessionStatus,
+  LiveSessionType,
   SupportTicket,
   SupportTicketStatus,
   AppNotification,
@@ -4020,6 +4022,12 @@ export async function createLiveSession(input: {
    *  belong to a bootcamp and gating goes through the cohort's enrolment
    *  set. Stand-alone webinars (no bootcampId) stay "free" by default. */
   tier?: "free" | "paid";
+  /** Hosting mode — defaults to on-platform ("unghost"). */
+  sessionType?: LiveSessionType;
+  /** Required when sessionType === "external". Stored select:false. */
+  externalJoinUrl?: string;
+  thumbnailUrl?: string;
+  previewVideoUrl?: string;
 }): Promise<LiveSession> {
   await db();
   const now = new Date().toISOString();
@@ -4036,12 +4044,109 @@ export async function createLiveSession(input: {
     status: "scheduled",
     tier,
     roomCode: genRoomCode(),
+    sessionType: input.sessionType ?? "unghost",
+    thumbnailUrl: input.thumbnailUrl ?? null,
+    previewVideoUrl: input.previewVideoUrl ?? null,
     registeredStudentIds: [],
     attendedStudentIds: [],
     createdAt: now,
   };
-  await LiveSessionModel.create({ _id: session.id, ...session });
+  await LiveSessionModel.create({
+    _id: session.id,
+    ...session,
+    // Kept OUT of the returned domain object on purpose: the secret is
+    // written here and only ever read back by getExternalJoinTarget().
+    externalJoinUrl: input.externalJoinUrl ?? null,
+  });
   return session;
+}
+
+/** Gating fields + the join secret for the masked-redirect route. The ONLY
+ *  reader of `externalJoinUrl` — every other query inherits `select: false`. */
+export async function getExternalJoinTarget(sessionId: string): Promise<
+  | {
+      externalJoinUrl: string | null;
+      sessionType: string;
+      status: LiveSessionStatus;
+      tier: "free" | "paid";
+      bootcampId: string | null;
+      instructorId: string;
+    }
+  | undefined
+> {
+  await db();
+  const doc = await LiveSessionModel.findById(sessionId)
+    .select("+externalJoinUrl sessionType status tier bootcampId instructorId")
+    .lean();
+  if (!doc) return undefined;
+  const d = doc as unknown as LiveSession;
+  return {
+    externalJoinUrl: d.externalJoinUrl ?? null,
+    sessionType: d.sessionType ?? "unghost",
+    status: d.status,
+    tier: d.tier ?? "free",
+    bootcampId: d.bootcampId ?? null,
+    instructorId: d.instructorId,
+  };
+}
+
+/** Attendance capture for external joins — mirrors what the chat join does
+ *  for on-platform rooms. Composite _id makes the upsert idempotent, so a
+ *  student clicking "Enter live session" five times still counts once. */
+export async function recordExternalSessionJoin(
+  sessionId: string,
+  userId: string,
+): Promise<void> {
+  await db();
+  await Promise.all([
+    LiveSessionAttendeeModel.updateOne(
+      { _id: `${sessionId}:${userId}` },
+      { $setOnInsert: { sessionId, userId, joinedAt: new Date() } },
+      { upsert: true },
+    ),
+    LiveSessionModel.updateOne(
+      { _id: sessionId },
+      { $addToSet: { attendedStudentIds: userId } },
+    ),
+  ]);
+}
+
+/** Owner-gated edit for external sessions — fixes a typo'd meeting link or
+ *  card media without delete + recreate. The filter pins `sessionType` so
+ *  this can never graft an external link onto an on-platform session.
+ *  Returns false when nothing matched (not owner / not external / gone). */
+export async function updateExternalLiveSession(
+  sessionId: string,
+  instructorId: string,
+  fields: {
+    title?: string;
+    description?: string;
+    startsAt?: string;
+    durationMin?: number;
+    externalJoinUrl?: string;
+    thumbnailUrl?: string | null;
+    previewVideoUrl?: string | null;
+  },
+): Promise<boolean> {
+  await db();
+  const set: Record<string, unknown> = {};
+  for (const key of [
+    "title",
+    "description",
+    "startsAt",
+    "durationMin",
+    "externalJoinUrl",
+    "thumbnailUrl",
+    "previewVideoUrl",
+  ] as const) {
+    if (fields[key] !== undefined) set[key] = fields[key];
+  }
+  if (Object.keys(set).length === 0) return true;
+  const res = await LiveSessionModel.updateOne(
+    { _id: sessionId, instructorId, sessionType: "external" },
+    { $set: set },
+  );
+  return res.matchedCount > 0;
 }
 
 export async function getLiveSessionById(
@@ -4421,7 +4526,9 @@ export async function deprovisionCloudflareStream(
   sessionId: string,
 ): Promise<void> {
   await db();
-  const session = await LiveSessionModel.findById(sessionId).lean();
+  const session = await LiveSessionModel.findById(sessionId)
+    .select("+cfLiveInputUid")
+    .lean();
   if (!session) return;
   const uid = (session as any).cfLiveInputUid;
   if (uid) {
@@ -4438,7 +4545,9 @@ export async function generateStreamPlaybackToken(
   sessionId: string,
 ): Promise<{ token: string; playbackUrl: string; expiresIn: number } | null> {
   await db();
-  const session = await LiveSessionModel.findById(sessionId).lean();
+  const session = await LiveSessionModel.findById(sessionId)
+    .select("+cfLiveInputUid")
+    .lean();
   if (!session) return null;
   const provider = (session as any).streamProvider;
   const uid = (session as any).cfLiveInputUid;

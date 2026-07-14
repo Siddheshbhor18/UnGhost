@@ -9,8 +9,25 @@ import {
   listPublishedRecordingsByBootcamp,
 } from "@/server/store";
 import { ownsCourse } from "@/server/lib/quota";
+import { safeImageUrl } from "@/shared/lib/safe-image-url";
 import { BlobField, GlassNavbar } from "@/components/glass";
 import { BootcampDetailClient } from "./BootcampDetailClient";
+
+/** Uploaded thumbnails live on the R2 public host — allow it alongside the
+ *  first-party defaults. Server-only: env isn't available in the client, so
+ *  sanitization happens here and the island receives a vetted URL or null. */
+function sanitizeThumbnail(raw: string | null | undefined): string | null {
+  const r2Host = (() => {
+    try {
+      return process.env.R2_PUBLIC_BASE_URL
+        ? new URL(process.env.R2_PUBLIC_BASE_URL).hostname
+        : null;
+    } catch {
+      return null;
+    }
+  })();
+  return safeImageUrl(raw, { extraHosts: r2Host ? [r2Host] : [] });
+}
 
 interface Props {
   params: { id: string };
@@ -57,16 +74,23 @@ export default async function BootcampPage({ params }: Props) {
   if (!isPublished && !canViewUnpublished) notFound();
 
   // Only surface scheduled + live sessions — ended/cancelled clutter UI.
+  // Projection is the leak boundary for RSC props: externalJoinUrl never
+  // appears here (and the schema's `select: false` keeps it out of the
+  // query result anyway).
   const visibleSessions = liveSessions
     .filter((s) => s.status === "scheduled" || s.status === "live")
     .map((s) => ({
       id: s.id,
       title: s.title ?? "Live session",
+      description: s.description ?? null,
       startsAt: s.startsAt,
       durationMin: s.durationMin,
       status: s.status,
       roomCode: s.roomCode,
       registeredCount: s.registeredStudentIds?.length ?? 0,
+      sessionType: s.sessionType ?? "unghost",
+      thumbnailUrl: sanitizeThumbnail(s.thumbnailUrl),
+      previewVideoUrl: s.previewVideoUrl ?? null,
     }));
 
   return (

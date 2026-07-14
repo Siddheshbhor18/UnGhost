@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import clsx from "clsx";
+import { LiquidGlass } from "@/components/ui/LiquidGlass";
 import { GlassButton } from "./GlassButton";
 import { NotificationBell } from "./NotificationBell";
 import { AccountMenu } from "./AccountMenu";
@@ -137,7 +138,24 @@ export function GlassNavbar() {
     <>
     <header className="sticky top-0 z-40">
       <div className="mx-auto max-w-7xl px-4 pt-4">
-        <nav className="glass-panel flex items-center justify-between gap-2 px-4 sm:px-5 py-3">
+        <div className="relative">
+          <div className="absolute inset-0 overflow-hidden rounded-2xl">
+            <motion.div
+              aria-hidden
+              className="absolute rounded-full blur-3xl will-change-transform"
+              style={{ width: 400, height: 400, background: "rgba(1,145,252,0.15)", left: "-10%", top: "-60%" }}
+              animate={{ x: [0, 30, -20, 0], y: [0, -20, 15, 0] }}
+              transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div
+              aria-hidden
+              className="absolute rounded-full blur-3xl will-change-transform"
+              style={{ width: 300, height: 300, background: "rgba(99,102,241,0.10)", right: "0%", bottom: "-80%" }}
+              animate={{ x: [0, -25, 15, 0], y: [0, 20, -10, 0] }}
+              transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: -4 }}
+            />
+          </div>
+          <nav className="relative rounded-2xl border border-white/60 bg-white/75 backdrop-blur-2xl shadow-elev-3 flex items-center justify-between gap-2 px-4 sm:px-5 py-3">
           <Link href={homeHref} className="flex items-center gap-2 group">
             <span className="grid place-items-center w-9 h-9 rounded-xl bg-brand-gradient shadow-brand-glow transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-0.5 group-hover:rotate-[-4deg] motion-reduce:transition-none motion-reduce:transform-none">
               <img
@@ -244,6 +262,7 @@ export function GlassNavbar() {
             )}
           </div>
         </nav>
+        </div>
       </div>
     </header>
     {session && items.length > 0 && (

@@ -96,6 +96,24 @@ const COURSE_THEME: Record<BootcampCategory, CourseTheme> = {
   },
 };
 
+/** Instructor portrait paths mapped to the rooms they teach. */
+const INSTRUCTOR_PORTRAIT: Record<string, string> = {
+  gtm: "/ritu.png",
+  marketing: "/atharvainst.png",
+  sales: "/atharvainst.png",
+  entrepreneurship: "/atharvainst.png",
+  freelancing: "/anshikareal.png",
+};
+
+/** Instructor names mapped to rooms. */
+const INSTRUCTOR_NAME: Record<string, string> = {
+  gtm: "Ritu Maurya",
+  marketing: "Atharva Pache",
+  sales: "Atharva Pache",
+  entrepreneurship: "Atharva Pache",
+  freelancing: "Anshika Reja",
+};
+
 /** Short punchy taglines — different from the room blurbs to avoid repetition. */
 const COURSE_TAGLINES: Record<BootcampCategory, string> = {
   ai: "Build agents, ship models, think in prompts.",
@@ -245,7 +263,7 @@ export function BootcampCardStack() {
                   boxShadow: `0 15px 35px rgba(0,0,0,0.1), 0 3px 10px rgba(0,0,0,0.05)`,
                 }}
               >
-                {/* 1. Gradient thumbnail */}
+                {/* 1. Thumbnail — instructor portrait or gradient fallback */}
                 <div
                   style={{
                     height: "180px",
@@ -258,7 +276,49 @@ export function BootcampCardStack() {
                     overflow: "hidden",
                   }}
                 >
-                  {thumb ? (
+                  {INSTRUCTOR_PORTRAIT[room.id] ? (
+                    <>
+                      <Image
+                        src={INSTRUCTOR_PORTRAIT[room.id]}
+                        alt={`${INSTRUCTOR_NAME[room.id]} — ${room.label} instructor`}
+                        fill
+                        sizes="400px"
+                        style={{ objectFit: "cover", objectPosition: "50% 20%" }}
+                      />
+                      <div
+                        aria-hidden
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(to top, rgba(0,0,0,0.45), transparent 40%)",
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: "12px",
+                          left: "12px",
+                          zIndex: 2,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            color: "#fff",
+                            textShadow: "0 1px 6px rgba(0,0,0,0.5)",
+                            background: "rgba(0,0,0,0.3)",
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            backdropFilter: "blur(4px)",
+                          }}
+                        >
+                          {INSTRUCTOR_NAME[room.id]}
+                        </span>
+                      </div>
+                    </>
+                  ) : thumb ? (
                     <>
                       <Image
                         src={thumb}
@@ -267,7 +327,6 @@ export function BootcampCardStack() {
                         sizes="400px"
                         style={{ objectFit: "cover" }}
                       />
-                      {/* Scrim keeps the duration pill legible over any photo */}
                       <div
                         aria-hidden
                         style={{
@@ -280,7 +339,6 @@ export function BootcampCardStack() {
                     </>
                   ) : (
                     <>
-                      {/* Decorative background shapes */}
                       <div
                         aria-hidden
                         style={{
@@ -293,7 +351,6 @@ export function BootcampCardStack() {
                           background: "rgba(255,255,255,0.06)",
                         }}
                       />
-                      {/* Large course icon in the center of the thumbnail */}
                       <div
                         style={{
                           width: "56px",
@@ -325,7 +382,7 @@ export function BootcampCardStack() {
                       fontWeight: 700,
                       letterSpacing: "0.04em",
                       textTransform: "uppercase",
-                      zIndex: 1,
+                      zIndex: 2,
                     }}
                   >
                     {weeks} weeks

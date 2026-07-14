@@ -1,6 +1,6 @@
 # Architecture and Code Structure
 
-`Last reviewed: 2026-07-07`
+`Last reviewed: 2026-07-14`
 
 The engineering reference for the unGhost codebase. Read this first when onboarding; pair it with the [runbooks](./09-runbooks) for on-call and [PRODUCT.md](../PRODUCT.md) for brand and copy rules.
 
@@ -168,6 +168,32 @@ All vendors sit behind `server/integrations/<concern>/`. The house rule: **empty
 | Storage | `storage/` — Cloudflare R2, presigned upload/download (`app/api/upload/presign`) | R2 keys |
 | Live video | `stream/` — Cloudflare Stream signed playback | Stream keys |
 | Background jobs | `queue/` — Inngest event send | `INNGEST_EVENT_KEY` |
+
+### 9.1 Live sessions — two hosting modes
+
+`LiveSession.sessionType` selects where a session runs; both modes share the
+model, scheduling UI (`components/instructor/LiveScheduleClient.tsx`), status
+lifecycle, and student cards.
+
+- **`"unghost"`** (default) — streamed on-platform at `/live/[code]` via
+  YouTube Live or Cloudflare Stream (the table row above).
+- **`"external"`** — conducted on an external tool (Zoho Meet, Google Meet).
+  The meeting link (`externalJoinUrl`) is a **server-only secret**: the schema
+  marks it `select: false` (same class as `cfStreamKey`), the only reader is
+  `getExternalJoinTarget()`, and the only egress is the 302 in
+  `app/api/live/[id]/join/route.ts`. It never appears in RSC props, API
+  bodies, the DOM, or logs — audit summaries record the meeting *host* only
+  (`live_session.external_create` / `external_update` in `AuditLog`).
+  Recordings are NOT auto-captured; the instructor posts the recording as a
+  regular lesson through the bootcamp editor afterwards.
+
+**Paid-content gate (one policy, three enforcement points):** `join`,
+`playback-token`, and `video-token` all admit only the owning instructor, an
+admin, or a student enrolled in the parent bootcamp (via
+`profile.enrolledBootcamps`, never `registeredStudentIds`). Regression suite:
+`tests/live-external-sessions.test.ts` +
+`tests/live-playback-token-enrolment.test.ts` (includes a leak test that
+greps every student-reachable payload for the secret).
 
 ## 10. Observability and security
 

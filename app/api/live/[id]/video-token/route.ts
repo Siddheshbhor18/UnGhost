@@ -63,22 +63,33 @@ export async function GET(req: Request, { params }: Ctx) {
   }
 
   // ── Enrollment gate for paid sessions ─────────────────────────────
+  // Deny-by-default: ONLY the owning instructor, an admin, or an enrolled
+  // student may fetch the video ID. A blanket "any instructor" bypass let
+  // every provisioned teacher watch every other cohort's paid streams.
   if (live.tier === "paid" && live.bootcampId) {
-    // Admin + instructor bypass enrollment check
-    const isPrivileged =
-      session.user.role === "admin" ||
-      session.user.role === "instructor";
+    const isOwner = session.user.id === live.instructorId;
+    const isAdmin = session.user.role === "admin";
 
-    if (!isPrivileged) {
+    if (!isOwner && !isAdmin) {
+      if (session.user.role !== "student") {
+        return NextResponse.json(
+          {
+            error: "forbidden",
+            reason:
+              "You must be enrolled in this bootcamp to watch paid sessions",
+          },
+          { status: 403 },
+        );
+      }
       const user = await UserModel.findById(session.user.id)
         .select("profile.enrolledBootcamps")
         .lean();
 
       const enrolled =
-        (user as any)?.profile?.enrolledBootcamps ?? [];
-      const isEnrolled = enrolled.includes(live.bootcampId);
+        (user as { profile?: { enrolledBootcamps?: string[] } } | null)
+          ?.profile?.enrolledBootcamps ?? [];
 
-      if (!isEnrolled) {
+      if (!enrolled.includes(live.bootcampId)) {
         return NextResponse.json(
           {
             error: "forbidden",

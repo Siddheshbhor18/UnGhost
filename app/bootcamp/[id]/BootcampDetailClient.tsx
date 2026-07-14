@@ -7,8 +7,10 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  ExternalLink,
   Film,
   Lock,
+  MonitorPlay,
   PlayCircle,
   ShieldCheck,
   Sparkles,
@@ -30,11 +32,17 @@ import { formatPaiseAsINR } from "@/shared/lib/pricing";
 interface LiveSessionLite {
   id: string;
   title: string;
+  description: string | null;
   startsAt: string;
   durationMin: number;
   status: "scheduled" | "live" | "ended" | "cancelled";
   roomCode: string;
   registeredCount: number;
+  /** "unghost" = on-platform room; "external" = Zoho/Meet behind the
+   *  masked join route. The join URL itself never reaches this component. */
+  sessionType: "unghost" | "external";
+  thumbnailUrl: string | null;
+  previewVideoUrl: string | null;
 }
 
 interface Props {
@@ -387,6 +395,17 @@ function LiveSessionsCard({
             const isLive = s.status === "live";
             const startsIn = new Date(s.startsAt).getTime() - Date.now();
             const joinable = isLive || (startsIn > 0 && startsIn < 15 * 60_000);
+            if (s.sessionType === "external") {
+              return (
+                <ExternalSessionItem
+                  key={s.id}
+                  session={s}
+                  isLive={isLive}
+                  joinable={joinable}
+                  ownsRoom={ownsRoom}
+                />
+              );
+            }
             return (
               <li
                 key={s.id}
@@ -435,6 +454,112 @@ function LiveSessionsCard({
         </ul>
       )}
     </GlassCard>
+  );
+}
+
+/**
+ * Card for a session hosted on an external tool (Zoho Meet etc.). The CTA is
+ * a plain top-level navigation to the masked join route — the meeting URL is
+ * never in this component's props, the DOM, or any fetchable payload.
+ */
+function ExternalSessionItem({
+  session: s,
+  isLive,
+  joinable,
+  ownsRoom,
+}: {
+  session: LiveSessionLite;
+  isLive: boolean;
+  joinable: boolean;
+  ownsRoom: boolean;
+}) {
+  // Server projection already vetted this through safeImageUrl (with the
+  // R2 public host allowed) — null means "render the gradient fallback".
+  const thumb = s.thumbnailUrl;
+  return (
+    <li
+      className={clsx(
+        "overflow-hidden rounded-xl border",
+        isLive ? "border-rose-500/30 bg-rose-500/5" : "border-brand-ink/10",
+      )}
+    >
+      {thumb ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thumb}
+          alt=""
+          className="aspect-video w-full object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <div className="grid aspect-video w-full place-items-center bg-gradient-to-br from-violet-500/15 via-brand-primary/10 to-brand-ink/5">
+          <MonitorPlay size={28} className="text-brand-muted" />
+        </div>
+      )}
+      <div className="px-3 py-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-violet-700">
+              <MonitorPlay size={10} /> Live session
+            </span>
+            <p className="mt-0.5 line-clamp-1 text-sm font-semibold text-brand-ink">
+              {s.title}
+            </p>
+            {s.description ? (
+              <p className="mt-0.5 line-clamp-2 text-[11px] text-brand-muted">
+                {s.description}
+              </p>
+            ) : null}
+            <p className="mt-1 text-[11px] text-brand-muted">
+              {new Date(s.startsAt).toLocaleString("en-IN", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}{" "}
+              · {s.durationMin}m
+            </p>
+          </div>
+          {isLive ? (
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold uppercase text-rose-600">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
+              Live
+            </span>
+          ) : null}
+        </div>
+        {s.previewVideoUrl ? (
+          <a
+            href={s.previewVideoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-primary hover:underline"
+          >
+            <PlayCircle size={11} /> Watch preview
+          </a>
+        ) : null}
+        {ownsRoom && joinable ? (
+          <>
+            <a
+              href={`/api/live/${s.id}/join`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-primary/90"
+            >
+              <ExternalLink size={12} /> Enter live session
+            </a>
+            <p className="mt-1.5 text-[10px] leading-relaxed text-brand-muted">
+              Opens the live session in a new tab — keep unGhost open.
+            </p>
+          </>
+        ) : ownsRoom ? (
+          <p className="mt-2 inline-flex items-center gap-1 text-[10px] text-brand-muted">
+            <Clock size={10} /> Join unlocks 15 minutes before start.
+          </p>
+        ) : (
+          <p className="mt-2 text-[10px] text-brand-muted">
+            Course-gated. Buy to attend.
+          </p>
+        )}
+      </div>
+    </li>
   );
 }
 

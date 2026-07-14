@@ -12,8 +12,10 @@ import {
   getUserById,
   registerForLiveSession,
   setLiveSessionStatus,
+  updateExternalLiveSession,
   setLiveSessionStream,
   unregisterFromLiveSession,
+  writeAuditLog,
 } from "@/server/store";
 import type { LiveSessionStatus } from "@/shared/types";
 
@@ -27,6 +29,16 @@ interface Ctx {
 // recordings page. `z.string().url()` accepts `javascript:` (WHATWG parses
 // it) so a hostile instructor could plant a click-XSS payload against any
 // admin/instructor viewing the recording. Lock the scheme to http(s).
+// External-session fields are stricter still: the join link must be https
+// (it lands in a server-side 302), images may be https or a same-origin path.
+const httpsUrl = z
+  .string()
+  .trim()
+  .max(2048)
+  .refine((v) => /^https:\/\//i.test(v), {
+    message: "must be an https:// URL",
+  });
+
 const PatchInput = z.object({
   action: z.enum([
     "register",
@@ -35,6 +47,7 @@ const PatchInput = z.object({
     "end",
     "cancel",
     "setStream",
+    "updateExternal",
   ]),
   youtubeVideoId: z.string().trim().min(1).max(200).optional(),
   recordingUrl: z
@@ -45,6 +58,22 @@ const PatchInput = z.object({
       message: "recordingUrl must be http(s)",
     })
     .optional(),
+  // updateExternal payload — owner-only edit of an external session.
+  title: z.string().trim().min(3).max(200).optional(),
+  description: z.string().trim().max(2000).optional(),
+  startsAt: z.string().datetime().optional(),
+  durationMin: z.number().int().min(15).max(240).optional(),
+  externalJoinUrl: httpsUrl.optional(),
+  thumbnailUrl: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine(
+      (v) => /^https:\/\//i.test(v) || (v.startsWith("/") && !v.startsWith("//")),
+      { message: "must be https:// or a same-origin /path" },
+    )
+    .optional(),
+  previewVideoUrl: httpsUrl.optional(),
 });
 
 /** GET — fetch one session. */
@@ -134,6 +163,53 @@ export async function PATCH(req: Request, { params }: Ctx) {
     return NextResponse.json({ ok: true, youtubeVideoId: resolved });
   }
 
+  if (action === "updateExternal") {
+    if ((live.sessionType ?? "unghost") !== "external") {
+      return NextResponse.json(
+        { error: "not_external_session" },
+        { status: 400 },
+      );
+    }
+    const { title, description, startsAt, durationMin } = parsed.data;
+    const ok = await updateExternalLiveSession(params.id, session.user.id, {
+      title,
+      description,
+      startsAt,
+      durationMin,
+      externalJoinUrl: parsed.data.externalJoinUrl,
+      thumbnailUrl: parsed.data.thumbnailUrl,
+      previewVideoUrl: parsed.data.previewVideoUrl,
+    });
+    if (!ok) {
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+    // Attribution trail — link rotation is a security-relevant event.
+    // Only the meeting HOST goes in the summary, never the secret URL.
+    const changed = Object.entries({
+      title,
+      description,
+      startsAt,
+      durationMin,
+      externalJoinUrl: parsed.data.externalJoinUrl,
+      thumbnailUrl: parsed.data.thumbnailUrl,
+      previewVideoUrl: parsed.data.previewVideoUrl,
+    })
+      .filter(([, v]) => v !== undefined)
+      .map(([k]) => k);
+    void writeAuditLog({
+      actorId: session.user.id,
+      actorRole: "instructor",
+      action: "live_session.external_update",
+      targetType: "live_session",
+      targetId: params.id,
+      summary: parsed.data.externalJoinUrl
+        ? `External session updated (${changed.join(", ")}); link rotated to ${hostOf(parsed.data.externalJoinUrl) ?? "unknown host"}`
+        : `External session updated (${changed.join(", ")})`,
+    });
+    // Never echo externalJoinUrl back — the response stays link-free.
+    return NextResponse.json({ ok: true });
+  }
+
   const statusMap: Record<string, LiveSessionStatus> = {
     start: "live",
     end: "ended",
@@ -186,4 +262,13 @@ export async function DELETE(req: Request, { params }: Ctx) {
   }
   await deleteLiveSession(params.id, session.user.id);
   return NextResponse.json({ ok: true });
+}
+
+/** Meeting host for audit summaries — never the full (secret) URL. */
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
 }

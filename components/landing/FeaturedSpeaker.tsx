@@ -423,7 +423,7 @@ function FeaturedSpeakerCompact() {
  * fills swapped to `currentColor` so the parent's text colour drives the
  * logo. The source artwork already preserves the brand's "P" mark glyph.
  */
-function PharmEasyLogo({ className }: { className?: string }) {
+export function PharmEasyLogo({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 148 41"
@@ -449,7 +449,7 @@ function PharmEasyLogo({ className }: { className?: string }) {
  * swapped to `currentColor`. The brand uses a two-tone palette (navy + red);
  * we render mono-white here to fit the gold-on-dark theme.
  */
-function CoinDCXLogo({ className }: { className?: string }) {
+export function CoinDCXLogo({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 100 20"

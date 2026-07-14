@@ -30,7 +30,7 @@ export async function PUT(req: Request) {
   if (!key || key.includes("..")) {
     return NextResponse.json({ error: "bad_key" }, { status: 400 });
   }
-  if (!key.startsWith("bootcamp-video/")) {
+  if (!key.startsWith("bootcamp-video/") && !key.startsWith("session-thumb/")) {
     return NextResponse.json({ error: "wrong_prefix" }, { status: 400 });
   }
   const buf = new Uint8Array(await req.arrayBuffer());

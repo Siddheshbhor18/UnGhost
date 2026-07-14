@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import {
-  ArrowDown,
   ArrowRight,
   CheckCircle2,
   GraduationCap,
@@ -18,14 +17,16 @@ import {
   SectionLabel,
 } from "@/components/ui";
 import { HeroDemoLoop } from "@/components/landing/HeroDemoLoop";
+import { LiquidGlass } from "@/components/ui/LiquidGlass";
 import { BootcampCardStack } from "@/components/landing/BootcampCardStack";
 import { HeroCTAs } from "@/components/landing/HeroCTAs";
-import { JobMarquee, type TickerRole } from "@/components/landing/JobMarquee";
-import { FeaturedSpeaker } from "@/components/landing/FeaturedSpeaker";
+import { VoidSection } from "@/components/landing/VoidSection";
+import { SpeakerSpotlight } from "@/components/landing/SpeakerSpotlight";
 import { HeroReveal } from "@/components/landing/HeroReveal";
 import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import { StickyCTA } from "@/components/landing/StickyCTA";
 import { SiteFooter } from "@/components/landing/SiteFooter";
+import { LaneShowcase } from "@/components/landing/LaneShowcase";
 import dynamic from "next/dynamic";
 // Below-fold — lazy-load to keep initial bundle small
 const FAQ = dynamic(() =>
@@ -42,6 +43,7 @@ import {
   RevealText,
   StaggerGrid,
   StaggerItem,
+  MagneticCard,
   ParallaxBackdrop,
   ScrollProgress,
 } from "@/components/landing/motion";
@@ -54,33 +56,6 @@ import {
 } from "@/shared/lib/courses";
 import { PLAN_PRICING, type CompanyProfile, type Job } from "@/shared/types";
 import { listCompanies, listJobs } from "@/server/store";
-
-/** Roles shown in the void-section ticker. */
-const TICKER_ROLE_COUNT = 8;
-
-const TICKER_REMOTE_LABEL: Record<Job["remote"], TickerRole["type"]> = {
-  remote: "Remote",
-  hybrid: "Hybrid",
-  onsite: "On-site",
-};
-
-/** Real board rows → ticker cards. Falls back to "" experience when the
- *  recruiter left the band unspecified (0/0) so the card drops that row. */
-function toTickerRole(job: Job, companyName: string): TickerRole {
-  return {
-    co: companyName,
-    role: job.title,
-    location: job.location,
-    salary: `${job.salaryMin}-${job.salaryMax} LPA`,
-    window: `${job.slaHours}h`,
-    type: TICKER_REMOTE_LABEL[job.remote],
-    experience:
-      job.experienceMax > 0
-        ? `${job.experienceMin}-${job.experienceMax} yrs`
-        : "",
-    skills: job.skills.slice(0, 3),
-  };
-}
 
 // Jobs pricing tiers shown on the landing. Prices flow from PLAN_PRICING and
 // features mirror PLAN_LIMITS (applications · AI Coach · Q&A). Premium is
@@ -169,20 +144,19 @@ export default async function LandingPage() {
   if (session?.user?.role === "admin") redirect("/admin/today");
   if (session?.user?.role === "instructor") redirect("/instructor/today");
 
-  // Real roles for the void-section ticker (both reads Redis-cached 60s).
-  // On any failure the ticker falls back to its labeled sample list.
-  const [tickerJobs, tickerCompanies] = await Promise.all([
+  // Real board signal for the void section (both reads Redis-cached 60s): the
+  // companies with roles live on the clock. A failed read degrades to no
+  // marquee — never invented data.
+  const [liveJobs, liveCompanies] = await Promise.all([
     listJobs().catch((): Job[] => []),
     listCompanies().catch((): CompanyProfile[] => []),
   ]);
-  const companyNameById = new Map(tickerCompanies.map((c) => [c.id, c.name]));
-  const tickerRoles = tickerJobs
-    .filter((j) => j.active)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, TICKER_ROLE_COUNT)
-    .map((j) =>
-      toTickerRole(j, companyNameById.get(j.companyId) ?? "Confidential"),
-    );
+  const activeJobs = liveJobs.filter((j) => j.active);
+  const companyNameById = new Map(liveCompanies.map((c) => [c.id, c.name]));
+  const hiringCompanies = [...new Set(activeJobs.map((j) => j.companyId))]
+    .map((id) => companyNameById.get(id))
+    .filter((name): name is string => Boolean(name))
+    .slice(0, 14);
 
   return (
     <main className="relative min-h-[100dvh]" style={{ overflowX: "clip" }}>
@@ -264,7 +238,7 @@ export default async function LandingPage() {
                 CTAs so the promise carries evidence the moment it's read. */}
             <MotionSection
               as="div"
-              className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-5 text-body-sm text-neutral-600"
+              className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-2.5 pt-5 text-body-sm text-neutral-600 sm:grid-cols-2"
               delay={0.82}
               y={12}
               amount={0}
@@ -294,7 +268,9 @@ export default async function LandingPage() {
               y={0}
               amount={0}
             >
-              <HeroDemoLoop />
+              <LiquidGlass>
+                <HeroDemoLoop />
+              </LiquidGlass>
             </MotionSection>
           </div>
 
@@ -306,7 +282,9 @@ export default async function LandingPage() {
             y={0}
             amount={0}
           >
-            <HeroDemoLoop />
+            <LiquidGlass>
+              <HeroDemoLoop />
+            </LiquidGlass>
           </MotionSection>
         </div>
         
@@ -314,221 +292,30 @@ export default async function LandingPage() {
       </HeroReveal>
 
       {/* ─────────── LIVE SESSIONS TEASER ─────────── */}
-      <MotionSection amount={0.3} className="relative z-[1]">
+      <MotionSection amount={0.3} className="relative z-[1] py-16 md:py-24">
         <LiveSessionsTeaser />
       </MotionSection>
 
-      {/* ─────────── THE VOID — dark beat: the ghosted half against the lit half.
-          Art direction carries the story: the problem side is unlit (the silence),
-          the turn side gets the single brand-blue key light and the CTA. ─────────── */}
-      <section
-        id="void-section"
-        className="relative rounded-t-[32px] text-white shadow-[0_0_120px_rgba(0,0,0,0.6)] md:rounded-t-[40px]"
-        style={{
-          background:
-            "radial-gradient(ellipse 90% 70% at 72% -12%, rgba(1,145,252,0.18) 0%, rgba(1,145,252,0.05) 34%, transparent 58%), #000000",
-          zIndex: 10,
-        }}
-      >
-
-        {/* Problem → turn. Stage-height on desktop so the beat lands as its own moment. */}
-        <div className="mx-auto flex max-w-6xl items-center px-4 pt-32 pb-14 md:pt-44 lg:min-h-[76vh] lg:pt-24 lg:pb-24">
-          <div className="relative grid w-full gap-y-10 lg:grid-cols-2">
-            {/* Beat 1 — the problem, deliberately unlit: the accent is ghosted,
-                not glowing. The silence looks like silence. */}
-            <div className="text-center lg:border-r lg:border-white/10 lg:pr-16 lg:text-left">
-              <h2
-                className="font-display font-black text-balance text-5xl lg:text-6xl text-white leading-[0.98]"
-                style={{ letterSpacing: "-0.03em" }}
-              >
-                You apply.{" "}
-                <span className="not-italic whitespace-nowrap text-white/40">
-                  Then nothing.
-                </span>
-              </h2>
-              <p className="mx-auto mt-5 max-w-md text-lg text-white/55 md:text-xl lg:mx-0">
-                Sent, seen, then silence. On most job boards, no one owes you an
-                answer.
-              </p>
-            </div>
-
-            {/* Causal connector — stacked flow (mobile) */}
-            <div className="flex justify-center lg:hidden" aria-hidden>
-              <span className="rounded-full bg-white/[0.04] p-3 ring-1 ring-white/15">
-                <ArrowDown
-                  size={20}
-                  style={{
-                    color: "#4db5ff",
-                    filter: "drop-shadow(0 0 10px rgba(1,145,252,0.6))",
-                  }}
-                />
-              </span>
-            </div>
-
-            {/* Causal connector — node on the rule (desktop) */}
-            <div
-              className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 lg:flex"
-              aria-hidden
-            >
-              <span className="rounded-full bg-black p-3.5 ring-1 ring-white/15">
-                <ArrowRight
-                  size={22}
-                  style={{
-                    color: "#4db5ff",
-                    filter: "drop-shadow(0 0 10px rgba(1,145,252,0.6))",
-                  }}
-                />
-              </span>
-            </div>
-
-            {/* Beat 2 — the turn, lit: the glow arrives with the answer, and the
-                action lives where the resolution is. */}
-            <div className="text-center lg:pl-16 lg:text-left">
-              <h2
-                className="font-display font-black text-balance text-5xl lg:text-6xl text-white leading-[0.98]"
-                style={{ letterSpacing: "-0.03em" }}
-              >
-                So we changed{" "}
-                <span
-                  className="not-italic whitespace-nowrap"
-                  style={{
-                    color: "#4db5ff",
-                    textShadow:
-                      "0 0 28px rgba(1,145,252,0.55), 0 0 10px rgba(1,145,252,0.45)",
-                  }}
-                >
-                  who pays.
-                </span>
-              </h2>
-              <p className="mx-auto mt-5 max-w-md text-lg text-white/80 md:text-xl lg:mx-0">
-                Now recruiters do. Every application opens a reply window. No
-                answer in time, and your credit comes back.
-              </p>
-              <div className="mt-8 flex justify-center lg:justify-start">
-                <Link
-                  href="/jobs"
-                  className="group inline-flex items-center gap-2 rounded-xl bg-brand-500 px-7 py-3.5 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_30px_-8px_rgba(1,145,252,0.55)] transition-all duration-200 hover:bg-brand-600 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_14px_36px_-10px_rgba(1,145,252,0.7)] active:scale-[0.98]"
-                >
-                  Browse live jobs
-                  <ArrowRight size={16} />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Slim full-bleed ticker of live roles with reply windows. */}
-        <div className="relative pb-12 md:pb-14">
-          <JobMarquee roles={tickerRoles} />
-        </div>
-      </section>
+      {/* ─────────── THE VOID — dark beat, staged: the withheld silence, the
+          key light that blooms with the turn, the ghost looming in the dark
+          half, and a marquee of companies hiring on the clock. ─────────── */}
+      <VoidSection hiringCompanies={hiringCompanies} />
       </div>
 
-      {/* ─────────── TWO WAYS — asymmetric: header in left rail, unified cards on right ─────────── */}
-      <MotionSection
-        className="mx-auto max-w-content px-4 py-16 md:py-28"
-        amount={0.15}
-      >
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
-          {/* Eyebrow header — sits in the left rail, breaking the centered-
-              header monotony three sections in a row. */}
-          <div className="lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
-            <p className="text-body-sm uppercase tracking-wider font-semibold text-brand-700 mb-3">
-              Two lanes, one platform
-            </p>
-            <h2 className="font-display font-extrabold text-display-lg text-neutral-950 tracking-tight leading-[1.05]">
-              Pick the lane that fits today.
-            </h2>
-            <p className="text-body-lg text-neutral-900 mt-4 leading-relaxed max-w-md">
-              Apply with guaranteed response windows. Or build the skills
-              first. Most students do both. Bootcamp certifications strengthen
-              every application you send.
-            </p>
-          </div>
+      {/* ─────────── TWO LANES — alternating editorial rows: copy and visual
+          enter from opposite sides; media slots are designed placeholders
+          awaiting final imagery (see LaneShowcase doc comment). ─────────── */}
+      <LaneShowcase />
 
-          {/* Unified panel — single ring, single shadow, single bg. The two
-              sub-panels read as complements (Step 1 → Step 2), not as
-              alternatives. An inline arrow chip between them signals flow. */}
-          <div className="lg:col-span-8 grid md:grid-cols-2 overflow-hidden rounded-3xl bg-white/70 backdrop-blur-xl ring-1 ring-white/60 shadow-[0_8px_32px_rgba(10,10,10,0.06)]">
-            {/* Bootcamps first — they feed into jobs */}
-            <div className="p-8 md:p-9 flex flex-col border-b md:border-b-0 md:border-r border-white/50">
-              <Badge tone="neutral" className="mb-5 self-start">
-                Bootcamps
-              </Badge>
-              <h3 className="font-display font-bold text-display-md text-neutral-900 tracking-tight mb-4">
-                Hands-on bootcamps with certifications.
-              </h3>
-              <ul className="space-y-3 text-body-sm text-neutral-700 mb-10 flex-grow">
-                {[
-                  "Real projects designed by operators, not academics",
-                  "Code, ship and review from day one",
-                  "Earn certifications recruiters see on your profile",
-                ].map((p) => (
-                  <li key={p} className="flex items-start gap-2.5">
-                    <CheckCircle2
-                      size={16}
-                      className="text-neutral-700 mt-0.5 shrink-0"
-                    />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-              <Link href="#bootcamps" className="self-start">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  trailingIcon={<ArrowRight size={14} />}
-                >
-                  Explore bootcamps
-                </Button>
-              </Link>
-            </div>
-
-            {/* Jobs — what the bootcamps prepare you for. The brand tint on
-                this side signals the destination (the primary product). */}
-            <div className="p-8 md:p-10 flex flex-col bg-gradient-to-br from-brand-100/85 to-brand-200/70 backdrop-blur-xl ring-1 ring-inset ring-brand-300/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-              <Badge tone="info" className="mb-5 self-start">
-                Jobs
-              </Badge>
-              <h3 className="font-display font-bold text-display-md text-neutral-900 tracking-tight mb-4">
-                Apply with confidence. Replies on the clock.
-              </h3>
-              <ul className="space-y-3 text-body-sm text-neutral-700 mb-10 flex-grow">
-                {[
-                  "Open roles matched to your skills",
-                  "Guaranteed response countdowns on every application",
-                  "Slot returned the instant a recruiter ghosts the window",
-                ].map((p) => (
-                  <li key={p} className="flex items-start gap-2.5">
-                    <CheckCircle2
-                      size={16}
-                      className="text-brand-600 mt-0.5 shrink-0"
-                    />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/jobs" className="self-start">
-                <Button
-                  variant="primary"
-                  size="md"
-                  trailingIcon={<ArrowRight size={14} />}
-                >
-                  Browse live jobs
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </MotionSection>
-
-      {/* ─────────── FEATURED SPEAKER — Abhinav Jain Ranka workshop ─────────── */}
+      {/* ─────────── GUEST SESSIONS — "talk to the biggest names": recorded
+          Abhinav Ranka session as proof. Keeps id=featured-speaker so the
+          WhatsApp share deep-link still lands here. ─────────── */}
       <MotionSection
         id="featured-speaker"
         className="mx-auto max-w-content px-4 py-16 md:py-24 scroll-mt-24"
         amount={0.15}
       >
-        <FeaturedSpeaker variant="compact" />
+        <SpeakerSpotlight />
       </MotionSection>
 
       {/* ─────────── BOOTCAMP CARD STACK — animated showcase of the 6 courses, leads into storefront ─────────── */}
@@ -542,7 +329,7 @@ export default async function LandingPage() {
       {/* ─────────── BOOTCAMPS STOREFRONT — anchor for #bootcamps deep links ─────────── */}
       <MotionSection
         id="bootcamps"
-        className="mx-auto max-w-content px-4 py-16 md:py-24"
+        className="mx-auto max-w-content px-4 pt-24 md:pt-32 pb-16 md:pb-24"
         amount={0.15}
       >
         <SectionHeader
@@ -615,20 +402,47 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ─────────── FINAL CTA — BLACK ─────────── */}
+      {/* ─────────── FINAL CTA — THE BLUE DRENCH ───────────
+          The one Committed-color moment on the page: the closing promise sits
+          on brand blue itself (gradient biased dark for AA body contrast),
+          with the house dot-grid texture and a ghosted symbol watermark.
+          Buttons carry the magnetic hover the hero deliberately refuses. */}
       <MotionSection
         className="mx-auto max-w-5xl px-4 py-16 md:py-28"
         amount={0.2}
         y={32}
       >
-        <div className="relative bg-neutral-950 text-white rounded-[32px] md:rounded-[40px] shadow-[0_0_80px_rgba(0,0,0,0.18)] overflow-hidden">
+        <div
+          className="relative rounded-[32px] md:rounded-[40px] text-white shadow-[0_32px_90px_-24px_rgba(1,86,158,0.55)] overflow-hidden"
+          style={{
+            backgroundImage:
+              "linear-gradient(135deg,#014E99 0%,#0166C8 50%,#0186EC 100%)",
+          }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-[0.14]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)",
+              backgroundSize: "22px 22px",
+            }}
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/symbol.svg"
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute -bottom-16 -right-8 w-56 rotate-[-8deg] opacity-[0.09] select-none"
+            style={{ filter: "brightness(0) invert(1)" }}
+          />
           <div className="relative px-8 md:px-12 py-16 md:py-20 text-center">
-            <h3 className="font-display font-extrabold text-display-xl text-white mb-5 leading-tight tracking-tight headline-twotone">
+            <h3 className="font-display font-extrabold text-display-xl text-white/70 mb-5 leading-tight tracking-tight">
               <RevealText
                 segments={[
                   "Apply once.",
                   " ",
-                  <span className="accent" key="acc">
+                  <span className="text-white" key="acc">
                     Hear back in 48 hours.
                   </span>,
                 ]}
@@ -637,30 +451,34 @@ export default async function LandingPage() {
                 amount={0.4}
               />
             </h3>
-            <p className="text-body-md text-white/60 max-w-xl mx-auto mb-10 leading-relaxed">
+            <p className="text-body-md text-white/90 max-w-xl mx-auto mb-10 leading-relaxed">
               Free to start. No card. Every application runs on a public
               clock, and if the recruiter misses it, your slot comes back
               automatically.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
-              <Link href="/signup?next=/student/jobs">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white font-semibold text-base px-7 h-12 shadow-[0_8px_24px_rgba(1,145,252,0.32),inset_0_1px_0_rgba(255,255,255,0.18)] hover:bg-brand-600 transition-colors active:scale-[0.99]"
-                >
-                  Start applying for free
-                  <ArrowRight size={16} />
-                </button>
-              </Link>
-              <Link href="/signup?role=recruiter">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white/10 backdrop-blur-xl text-white font-semibold text-base px-7 h-12 border border-white/20 hover:bg-white/20 transition-colors active:scale-[0.99]"
-                >
-                  I&apos;m hiring
-                  <ArrowRight size={16} />
-                </button>
-              </Link>
+              <MagneticCard className="inline-block" strength={8} scale={1.02}>
+                <Link href="/signup?next=/student/jobs">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white text-brand-700 font-semibold text-base px-7 h-12 shadow-[0_10px_30px_rgba(1,40,80,0.35)] hover:bg-brand-50 transition-colors active:scale-[0.99]"
+                  >
+                    Start applying for free
+                    <ArrowRight size={16} />
+                  </button>
+                </Link>
+              </MagneticCard>
+              <MagneticCard className="inline-block" strength={8} scale={1.02}>
+                <Link href="/signup?role=recruiter">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white/10 backdrop-blur-xl text-white font-semibold text-base px-7 h-12 border border-white/25 hover:bg-white/20 transition-colors active:scale-[0.99]"
+                  >
+                    I&apos;m hiring
+                    <ArrowRight size={16} />
+                  </button>
+                </Link>
+              </MagneticCard>
             </div>
           </div>
         </div>

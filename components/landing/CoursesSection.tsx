@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
+  ArrowUpRight,
   Brain,
   Briefcase,
-  Check,
   Handshake,
   Layers,
   Megaphone,
@@ -32,6 +32,32 @@ import { formatPaiseAsINR } from "@/shared/lib/pricing";
 import { useCourseCart } from "@/components/courses/cartStore";
 import { Button } from "@/components/ui";
 import { StaggerGrid, StaggerItem } from "@/components/landing/motion";
+
+/** Check that draws itself in when a course lands in the cart — the one
+ *  playful beat in the buy flow. Renders complete under reduced motion. */
+function DrawnCheck({ size = 15 }: { size?: number }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <motion.path
+        d="M4 12.5l5.5 5.5L20 6.5"
+        initial={reduce ? false : { pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      />
+    </motion.svg>
+  );
+}
 
 /** Per-course accent — the single splash of colour on each white card, matching
  *  the JobMarquee avatar treatment. `glow` is the RGB triple for the halo. */
@@ -109,15 +135,26 @@ function CourseCard({
       </div>
 
       <h3 className="mt-5 font-display text-lg font-bold text-neutral-900">
-        {room.label}
+        <Link
+          href={`/bootcamps/${room.id}`}
+          className="inline-flex items-center gap-1 transition-colors hover:text-brand-600 focus-visible:text-brand-600"
+        >
+          {room.label}
+          <ArrowUpRight
+            size={15}
+            className="translate-y-px text-neutral-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            aria-hidden
+          />
+          <span className="sr-only">, view curriculum</span>
+        </Link>
       </h3>
       <p className="mt-1.5 flex-1 text-base leading-relaxed text-neutral-900">
         {room.blurb}
       </p>
 
-      <div className="mt-4 inline-flex items-center gap-1.5 self-start rounded-full bg-neutral-50 px-2.5 py-1 ring-1 ring-black/[0.04]">
-        <Sparkles size={12} style={{ color: theme.to }} className="shrink-0" />
-        <span className="text-[11.5px] font-medium text-neutral-600">
+      <div className="mt-4 inline-flex items-center gap-1.5 self-start rounded-full bg-neutral-50 px-3 py-1.5 ring-1 ring-black/[0.04]">
+        <Sparkles size={13} style={{ color: theme.to }} className="shrink-0" />
+        <span className="text-[13px] font-medium text-neutral-800">
           {bundleHint(room.id)}
         </span>
       </div>
@@ -129,7 +166,7 @@ function CourseCard({
         className="mt-5"
         onClick={() => onToggle(room.id)}
         aria-pressed={inCart}
-        leadingIcon={inCart ? <Check size={15} /> : <Plus size={15} />}
+        leadingIcon={inCart ? <DrawnCheck /> : <Plus size={15} />}
       >
         {inCart ? "Added" : "Add to cart"}
       </Button>
@@ -156,7 +193,7 @@ function EverythingBanner({
           </h3>
           <p className="mt-2 text-base leading-relaxed text-neutral-900">
             Every room (AI, GTM, Marketing, Sales, Entrepreneurship &amp;
-            Freelancing) unlocked for life.
+            Freelancing) unlocked together, 3 months of access on each.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-2">
             {ROOMS.map((r) => {
@@ -184,11 +221,14 @@ function EverythingBanner({
             <span className="font-display text-4xl font-extrabold tracking-tight text-neutral-950 tnum">
               {EVERYTHING_PRICE}
             </span>
-            <span className="text-base text-neutral-700 line-through tnum">
-              {EVERYTHING_LIST_PRICE}
+            <span className="text-base text-neutral-700 tnum">
+              <span className="sr-only">down from </span>
+              <span aria-hidden className="line-through">
+                {EVERYTHING_LIST_PRICE}
+              </span>
             </span>
           </div>
-          <p className="mt-1 text-xs font-semibold text-success">
+          <p className="mt-1 text-sm font-semibold text-success">
             Save {EVERYTHING_SAVINGS}
           </p>
           <Button
@@ -198,7 +238,7 @@ function EverythingBanner({
             onClick={onAddAll}
             disabled={allAdded}
             leadingIcon={
-              allAdded ? <Check size={16} /> : <Sparkles size={16} />
+              allAdded ? <DrawnCheck size={16} /> : <Sparkles size={16} />
             }
           >
             {allAdded ? "All six in cart" : "Add all six"}

@@ -162,8 +162,19 @@ function presignR2(
  * The extension is derived from the SERVER-TRUSTED content-type — never from
  * the client filename — so `filename:"x.html"` cannot dictate the stored key.
  */
+/** Storage key namespaces. Every upload path names one — the mock PUT/GET
+ *  handlers and R2 lifecycle rules key off these prefixes. */
+export type UploadPrefix =
+  | "resumes"
+  | "logos"
+  | "avatars"
+  | "bootcamp-cover"
+  | "bootcamp-video"
+  | "lecture-video"
+  | "session-thumb";
+
 export async function presignUpload(input: {
-  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover" | "bootcamp-video" | "lecture-video";
+  prefix: UploadPrefix;
   contentType: string;
   filename?: string;
 }): Promise<PresignedUpload> {
@@ -235,7 +246,7 @@ export async function mockRead(key: string): Promise<Uint8Array | null> {
  * caller never needs to know which mode is live.
  */
 export async function uploadObject(input: {
-  prefix: "resumes" | "logos" | "avatars" | "bootcamp-cover" | "bootcamp-video" | "lecture-video";
+  prefix: UploadPrefix;
   contentType: string;
   filename: string;
   body: Uint8Array;

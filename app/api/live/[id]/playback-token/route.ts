@@ -32,6 +32,7 @@ interface LiveSessionForPlayback {
   streamProvider?: string;
   tier?: string;
   bootcampId?: string;
+  instructorId?: string;
 }
 
 interface UserProfileEnrolments {
@@ -46,7 +47,7 @@ async function handler(req: Request, { params }: Ctx): Promise<Response> {
 
   await connectMongo();
   const live = (await LiveSessionModel.findById(params.id)
-    .select("streamProvider tier bootcampId")
+    .select("streamProvider tier bootcampId instructorId")
     .lean()) as LiveSessionForPlayback | null;
 
   if (!live) {
@@ -60,16 +61,17 @@ async function handler(req: Request, { params }: Ctx): Promise<Response> {
     );
   }
 
-  // Paid sessions: check *bootcamp enrollment*, not the live session's
-  // `registeredStudentIds`. `registerForLiveSession` is open to any
-  // logged-in user (no enrollment gate) — using it here let any student
-  // register for a paid session, receive a Cloudflare Stream token, and
-  // watch content they never paid for. Mirror `video-token/route.ts`.
-  if (
-    live.tier === "paid" &&
-    session.user.role === "student" &&
-    live.bootcampId
-  ) {
+  // Paid sessions are deny-by-default: ONLY the owning instructor, an admin,
+  // or an enrolled student gets a token — recruiters, creators, and OTHER
+  // instructors are refused. Enrolment reads *bootcamp enrolment*, never
+  // `registeredStudentIds`: `registerForLiveSession` is open to any
+  // logged-in user (no enrolment gate) and must not unlock paid content.
+  const isOwner = session.user.id === live.instructorId;
+  const isAdmin = session.user.role === "admin";
+  if (live.tier === "paid" && live.bootcampId && !isOwner && !isAdmin) {
+    if (session.user.role !== "student") {
+      return NextResponse.json({ error: "not_enrolled" }, { status: 403 });
+    }
     const user = (await UserModel.findById(session.user.id)
       .select("profile.enrolledBootcamps")
       .lean()) as UserProfileEnrolments | null;

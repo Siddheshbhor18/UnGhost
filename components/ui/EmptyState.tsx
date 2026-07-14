@@ -37,7 +37,9 @@ export function EmptyState({
       )}
     >
       <div className="mx-auto mb-5 grid place-items-center w-20 h-20 rounded-3xl bg-brand-50 text-brand-500">
-        {illustration ?? <Ghost size={36} strokeWidth={1.6} />}
+        {illustration ?? (
+          <Ghost size={36} strokeWidth={1.6} className="ghost-idle" />
+        )}
       </div>
       <h2 className="font-display font-bold text-2xl text-neutral-900 tracking-tight">
         {title}

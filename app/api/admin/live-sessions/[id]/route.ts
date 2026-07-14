@@ -43,6 +43,34 @@ const patchSchema = z.object({
       message: "recordingUrl must be http(s)",
     })
     .optional(),
+  // External-session fields (sessionType "external"). The join link is a
+  // server-only secret — it lands in the /api/live/[id]/join 302 and must
+  // be https; card media may be https or a same-origin path.
+  externalJoinUrl: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine((u) => /^https:\/\//i.test(u), {
+      message: "externalJoinUrl must be https",
+    })
+    .optional(),
+  thumbnailUrl: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine(
+      (u) => /^https:\/\//i.test(u) || (u.startsWith("/") && !u.startsWith("//")),
+      { message: "thumbnailUrl must be https or a same-origin /path" },
+    )
+    .optional(),
+  previewVideoUrl: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine((u) => /^https:\/\//i.test(u), {
+      message: "previewVideoUrl must be https",
+    })
+    .optional(),
 });
 
 /** Extract a YouTube video ID from any of the common URL shapes the admin
@@ -105,6 +133,9 @@ export async function PATCH(
     "startsAt",
     "durationMin",
     "recordingUrl",
+    "externalJoinUrl",
+    "thumbnailUrl",
+    "previewVideoUrl",
   ] as const) {
     if (parsed.data[k] !== undefined) updates[k] = parsed.data[k];
   }
@@ -138,6 +169,24 @@ export async function PATCH(
   }
 
   await connectMongo();
+
+  // A meeting link belongs only to external sessions — grafting one onto an
+  // on-platform room would be dead data at best and confusing at worst.
+  // Same invariant the instructor route enforces.
+  if (parsed.data.externalJoinUrl !== undefined) {
+    const target = await LiveSessionModel.findById(params.id)
+      .select("sessionType")
+      .lean();
+    if (!target) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+    if (((target as { sessionType?: string }).sessionType ?? "unghost") !== "external") {
+      return NextResponse.json(
+        { error: "externalJoinUrl only applies to external sessions" },
+        { status: 400 },
+      );
+    }
+  }
 
   // If switching to cloudflare and not yet provisioned, auto-provision
   if (parsed.data.streamProvider === "cloudflare") {

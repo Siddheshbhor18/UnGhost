@@ -868,9 +868,20 @@ const LiveSessionSchema = withJsonTransform(
       // Until set, the /live/[code] page shows "starting soon" instead of the iframe.
       youtubeVideoId: { type: String, default: null },
       streamProvider: { type: String, default: "youtube" },
-      cfLiveInputUid: { type: String, default: null },
-      cfRtmpUrl: { type: String, default: null },
-      cfStreamKey: { type: String, default: null },
+      // Broadcast credentials — admin/system-only. `select: false` keeps them
+      // out of every default query so student-facing list endpoints can never
+      // serialize them; privileged readers opt in with `.select("+field")`.
+      cfLiveInputUid: { type: String, default: null, select: false },
+      cfRtmpUrl: { type: String, default: null, select: false },
+      cfStreamKey: { type: String, default: null, select: false },
+      // Hosting mode: "unghost" (on-platform stream) | "external" (Zoho
+      // Meet etc.). Default keeps every legacy document valid — no backfill.
+      sessionType: { type: String, default: "unghost" },
+      // External meeting link — a secret with the same handling class as
+      // cfStreamKey. The ONLY egress is the 302 in /api/live/[id]/join.
+      externalJoinUrl: { type: String, default: null, select: false },
+      thumbnailUrl: { type: String, default: null },
+      previewVideoUrl: { type: String, default: null },
       registeredStudentIds: [String],
       attendedStudentIds: [String],
       createdAt: { type: String, index: true },

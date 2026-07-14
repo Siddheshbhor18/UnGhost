@@ -16,7 +16,11 @@ export async function GET(req: Request) {
   }
   const url = new URL(req.url);
   const key = url.searchParams.get("key");
-  if (!key || key.includes("..") || !key.startsWith("bootcamp-video/")) {
+  if (
+    !key ||
+    key.includes("..") ||
+    (!key.startsWith("bootcamp-video/") && !key.startsWith("session-thumb/"))
+  ) {
     return NextResponse.json({ error: "bad_key" }, { status: 400 });
   }
   const buf = await mockRead(key);
@@ -25,13 +29,19 @@ export async function GET(req: Request) {
   }
   // Infer content-type cheaply from extension.
   const lower = key.toLowerCase();
-  const ct = lower.endsWith(".webm")
-    ? "video/webm"
-    : lower.endsWith(".mov")
-      ? "video/quicktime"
-      : lower.endsWith(".m3u8")
-        ? "application/vnd.apple.mpegurl"
-        : "video/mp4";
+  const ct = lower.endsWith(".png")
+    ? "image/png"
+    : lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+      ? "image/jpeg"
+      : lower.endsWith(".webp")
+        ? "image/webp"
+        : lower.endsWith(".webm")
+          ? "video/webm"
+          : lower.endsWith(".mov")
+            ? "video/quicktime"
+            : lower.endsWith(".m3u8")
+              ? "application/vnd.apple.mpegurl"
+              : "video/mp4";
   return new NextResponse(buf as unknown as BodyInit, {
     status: 200,
     headers: {
