@@ -242,14 +242,7 @@ html.lenis body {
 /* ── TYPOGRAPHY UTILITIES ───────────────────────────────────────── */
 
 .font-display {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-feature-settings: "ss01" 1, "ss03" 1;
-}
-
-/* Editorial serif — reserved for rare display moments (the landing page's
-   "Then nothing." line). High-contrast light italic against the grotesque. */
-.font-editorial {
-  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  font-family: var(--font-display-brand), var(--font-geist-sans), system-ui, sans-serif;
 }
 
 /* Tabular numerals — apply on any dashboard stat, price, timer, count */

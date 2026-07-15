@@ -20,7 +20,11 @@ import { Video } from "lucide-react";
 import { listFreeLiveTeaserSessions, type TeaserLiveSession } from "@/server/store";
 
 export async function LiveSessionsTeaser() {
-  const sessions = await listFreeLiveTeaserSessions();
+  // Degrade to hidden (state 5) on a failed read — a transient DB blip on
+  // this public landing section should never crash the whole page render.
+  const sessions = await listFreeLiveTeaserSessions().catch(
+    (): TeaserLiveSession[] => [],
+  );
 
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;

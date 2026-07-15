@@ -17,7 +17,6 @@ import {
   SectionLabel,
 } from "@/components/ui";
 import { HeroDemoLoop } from "@/components/landing/HeroDemoLoop";
-import { LiquidGlass } from "@/components/ui/LiquidGlass";
 import { BootcampCardStack } from "@/components/landing/BootcampCardStack";
 import { HeroCTAs } from "@/components/landing/HeroCTAs";
 import { VoidSection } from "@/components/landing/VoidSection";
@@ -27,6 +26,8 @@ import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import { StickyCTA } from "@/components/landing/StickyCTA";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { LaneShowcase } from "@/components/landing/LaneShowcase";
+import { AiGrading } from "@/components/landing/AiGrading";
+import type { TickerRole } from "@/components/landing/JobMarquee";
 import dynamic from "next/dynamic";
 // Below-fold — lazy-load to keep initial bundle small
 const FAQ = dynamic(() =>
@@ -56,6 +57,13 @@ import {
 } from "@/shared/lib/courses";
 import { PLAN_PRICING, type CompanyProfile, type Job } from "@/shared/types";
 import { listCompanies, listJobs } from "@/server/store";
+
+// Maps the Job board's work-mode enum to JobMarquee's display labels.
+const REMOTE_LABEL: Record<Job["remote"], TickerRole["type"]> = {
+  remote: "Remote",
+  hybrid: "Hybrid",
+  onsite: "On-site",
+};
 
 // Jobs pricing tiers shown on the landing. Prices flow from PLAN_PRICING and
 // features mirror PLAN_LIMITS (applications · AI Coach · Q&A). Premium is
@@ -112,7 +120,7 @@ const JOBS_TIERS = [
       "Q&A with recruiters",
     ],
     cta: "Get 3 months",
-    href: "/upgrade",
+    href: "/signup?next=/upgrade",
     highlight: false,
   },
   {
@@ -128,7 +136,7 @@ const JOBS_TIERS = [
       "Q&A with recruiters",
     ],
     cta: "Get 1 year",
-    href: "/upgrade",
+    href: "/signup?next=/upgrade",
     highlight: true,
   },
 ] as const;
@@ -144,19 +152,36 @@ export default async function LandingPage() {
   if (session?.user?.role === "admin") redirect("/admin/today");
   if (session?.user?.role === "instructor") redirect("/instructor/today");
 
-  // Real board signal for the void section (both reads Redis-cached 60s): the
-  // companies with roles live on the clock. A failed read degrades to no
-  // marquee — never invented data.
+  // Real board signal for the void's live-roles ticker (Redis-cached 60s):
+  // actual open roles with their committed reply windows. A failed read
+  // degrades to the labeled sample list in JobMarquee — never invented data.
   const [liveJobs, liveCompanies] = await Promise.all([
     listJobs().catch((): Job[] => []),
     listCompanies().catch((): CompanyProfile[] => []),
   ]);
   const activeJobs = liveJobs.filter((j) => j.active);
   const companyNameById = new Map(liveCompanies.map((c) => [c.id, c.name]));
-  const hiringCompanies = [...new Set(activeJobs.map((j) => j.companyId))]
-    .map((id) => companyNameById.get(id))
-    .filter((name): name is string => Boolean(name))
-    .slice(0, 14);
+  const roles: TickerRole[] = activeJobs
+    .map((j): TickerRole | null => {
+      const co = companyNameById.get(j.companyId);
+      if (!co) return null;
+      const exp =
+        j.experienceMin || j.experienceMax
+          ? `${j.experienceMin}-${j.experienceMax} yrs`
+          : "";
+      return {
+        co,
+        role: j.title,
+        location: j.location,
+        salary: `${j.salaryMin}-${j.salaryMax} LPA`,
+        window: `${j.slaHours}h`,
+        type: REMOTE_LABEL[j.remote],
+        experience: exp,
+        skills: j.skills.slice(0, 3),
+      };
+    })
+    .filter((r): r is TickerRole => r !== null)
+    .slice(0, 12);
 
   return (
     <main className="relative min-h-[100dvh]" style={{ overflowX: "clip" }}>
@@ -268,9 +293,7 @@ export default async function LandingPage() {
               y={0}
               amount={0}
             >
-              <LiquidGlass>
-                <HeroDemoLoop />
-              </LiquidGlass>
+              <HeroDemoLoop />
             </MotionSection>
           </div>
 
@@ -282,9 +305,7 @@ export default async function LandingPage() {
             y={0}
             amount={0}
           >
-            <LiquidGlass>
               <HeroDemoLoop />
-            </LiquidGlass>
           </MotionSection>
         </div>
         
@@ -292,20 +313,77 @@ export default async function LandingPage() {
       </HeroReveal>
 
       {/* ─────────── LIVE SESSIONS TEASER ─────────── */}
-      <MotionSection amount={0.3} className="relative z-[1] py-16 md:py-24">
+      <MotionSection amount={0.3} className="relative z-[1]">
         <LiveSessionsTeaser />
       </MotionSection>
 
       {/* ─────────── THE VOID — dark beat, staged: the withheld silence, the
           key light that blooms with the turn, the ghost looming in the dark
           half, and a marquee of companies hiring on the clock. ─────────── */}
-      <VoidSection hiringCompanies={hiringCompanies} />
+      <VoidSection roles={roles} />
       </div>
 
       {/* ─────────── TWO LANES — alternating editorial rows: copy and visual
           enter from opposite sides; media slots are designed placeholders
           awaiting final imagery (see LaneShowcase doc comment). ─────────── */}
       <LaneShowcase />
+
+      {/* ─────────── AI GRADING — how applications are judged, shown honestly ─────────── */}
+      <MotionSection className="mx-auto max-w-content px-4 py-16 md:py-24" amount={0.15}>
+        <AiGrading />
+      </MotionSection>
+
+      {/* ─────────── JOBS PRICING — sits right after the two-lane overview so
+          the jobs-conversion spine (hero → void → lanes → pricing) stays
+          uninterrupted; the learning block follows below. ─────────── */}
+      <section className="mx-auto max-w-content px-4 py-16 md:py-28">
+        <SectionHeader
+          title="Apply free. Upgrade once it's working."
+          subtitle="Recruiters post and hire free. Students start with 2 applications, then pick the plan that fits."
+          action={
+            <Link
+              href="/upgrade"
+              className="text-body-sm font-semibold text-brand-500 hover:text-brand-600 inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
+              Compare every plan
+              <ArrowRight size={14} />
+            </Link>
+          }
+        />
+
+        <StaggerGrid
+          className="grid md:grid-cols-3 gap-5 mt-10 max-w-5xl mx-auto"
+          stagger={0.08}
+        >
+          {JOBS_TIERS.map((tier) => (
+            <StaggerItem key={tier.name} className="h-full">
+              <JobsTierCard {...tier} />
+            </StaggerItem>
+          ))}
+        </StaggerGrid>
+        <p className="text-center text-body-xs text-neutral-900 mt-6">
+          Prices exclude 18% GST, added at checkout · Pay by UPI · Cancel anytime
+        </p>
+
+        {/* Bootcamps cross-sell — bridges into the learning block directly below. */}
+        <p className="mt-12 max-w-5xl mx-auto text-center text-body-md text-neutral-900">
+          Bootcamps sold separately:{" "}
+          <span className="text-neutral-900 font-medium">
+            {formatPaiseAsINR(COURSE_PRICE_PAISE)}
+          </span>{" "}
+          per course, or{" "}
+          <span className="text-neutral-900 font-medium">
+            {formatPaiseAsINR(EVERYTHING_BUNDLE_PAISE)}
+          </span>{" "}
+          for the full six with bundle unlocks.{" "}
+          <Link
+            href="#bootcamps"
+            className="text-brand-500 hover:text-brand-600 font-medium inline-flex items-center gap-1"
+          >
+            Browse courses <ArrowRight size={12} />
+          </Link>
+        </p>
+      </section>
 
       {/* ─────────── GUEST SESSIONS — "talk to the biggest names": recorded
           Abhinav Ranka session as proof. Keeps id=featured-speaker so the
@@ -341,57 +419,6 @@ export default async function LandingPage() {
         </div>
       </MotionSection>
 
-      {/* ─────────── PRICING — asymmetric: action sidebar breaks the symmetric-header chain ─────────── */}
-      <section className="mx-auto max-w-content px-4 py-16 md:py-28">
-        <SectionHeader
-          title="Apply free. Upgrade once it's working."
-          subtitle="Recruiters post and hire free. Students start with 2 applications, then pick the plan that fits."
-          action={
-            <Link
-              href="/upgrade"
-              className="text-body-sm font-semibold text-brand-500 hover:text-brand-600 inline-flex items-center gap-1.5 whitespace-nowrap"
-            >
-              Compare every plan
-              <ArrowRight size={14} />
-            </Link>
-          }
-        />
-
-        <StaggerGrid
-          className="grid md:grid-cols-3 gap-5 mt-10 max-w-5xl mx-auto"
-          stagger={0.08}
-        >
-          {JOBS_TIERS.map((tier) => (
-            <StaggerItem key={tier.name} className="h-full">
-              <JobsTierCard {...tier} />
-            </StaggerItem>
-          ))}
-        </StaggerGrid>
-        <p className="text-center text-body-xs text-neutral-900 mt-6">
-          Prices exclude 18% GST, added at checkout · Pay by UPI · Cancel anytime
-        </p>
-
-        {/* Courses callout — bootcamp pricing lives in the cart */}
-        {/* Bootcamps cross-sell — pared down to a single line in the premium pass */}
-        <p className="mt-12 max-w-5xl mx-auto text-center text-body-md text-neutral-900">
-          Bootcamps sold separately:{" "}
-          <span className="text-neutral-900 font-medium">
-            {formatPaiseAsINR(COURSE_PRICE_PAISE)}
-          </span>{" "}
-          per course, or{" "}
-          <span className="text-neutral-900 font-medium">
-            {formatPaiseAsINR(EVERYTHING_BUNDLE_PAISE)}
-          </span>{" "}
-          for the full six with bundle unlocks.{" "}
-          <Link
-            href="#bootcamps"
-            className="text-brand-500 hover:text-brand-600 font-medium inline-flex items-center gap-1"
-          >
-            Browse courses <ArrowRight size={12} />
-          </Link>
-        </p>
-      </section>
-
       {/* ─────────── FAQ ─────────── */}
       <section className="mx-auto max-w-content px-4 py-16 md:py-28">
         <SectionHeader title="The honest questions." />
@@ -413,7 +440,7 @@ export default async function LandingPage() {
         y={32}
       >
         <div
-          className="relative rounded-[32px] md:rounded-[40px] text-white shadow-[0_32px_90px_-24px_rgba(1,86,158,0.55)] overflow-hidden"
+          className="relative rounded-3xl text-white shadow-[0_32px_90px_-24px_rgba(1,86,158,0.55)] overflow-hidden"
           style={{
             backgroundImage:
               "linear-gradient(135deg,#014E99 0%,#0166C8 50%,#0186EC 100%)",
@@ -456,30 +483,30 @@ export default async function LandingPage() {
               clock, and if the recruiter misses it, your slot comes back
               automatically.
             </p>
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex justify-center">
               <MagneticCard className="inline-block" strength={8} scale={1.02}>
                 <Link href="/signup?next=/student/jobs">
                   <button
                     type="button"
                     className="inline-flex items-center gap-2 rounded-xl bg-white text-brand-700 font-semibold text-base px-7 h-12 shadow-[0_10px_30px_rgba(1,40,80,0.35)] hover:bg-brand-50 transition-colors active:scale-[0.99]"
                   >
-                    Start applying for free
-                    <ArrowRight size={16} />
-                  </button>
-                </Link>
-              </MagneticCard>
-              <MagneticCard className="inline-block" strength={8} scale={1.02}>
-                <Link href="/signup?role=recruiter">
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded-xl bg-white/10 backdrop-blur-xl text-white font-semibold text-base px-7 h-12 border border-white/25 hover:bg-white/20 transition-colors active:scale-[0.99]"
-                  >
-                    I&apos;m hiring
+                    Start applying free
                     <ArrowRight size={16} />
                   </button>
                 </Link>
               </MagneticCard>
             </div>
+            {/* Recruiter path kept as a quiet secondary line so the student
+                money-moment stays single-intent. */}
+            <p className="mt-6 text-body-sm text-white/80">
+              Hiring instead?{" "}
+              <Link
+                href="/signup?role=recruiter"
+                className="font-semibold text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-colors"
+              >
+                Post a role free
+              </Link>
+            </p>
           </div>
         </div>
       </MotionSection>

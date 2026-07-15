@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
-import { Cormorant_Garamond, Press_Start_2P } from "next/font/google";
+import { Bricolage_Grotesque, Press_Start_2P } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/shared/Providers";
 import { RefCapture } from "@/components/attribution/RefCapture";
@@ -17,13 +17,12 @@ const pixel = Press_Start_2P({
   display: "swap",
 });
 
-// Editorial serif reserved for the landing page's "Then nothing." beat —
-// light italic only, so the payload stays small.
-const editorial = Cormorant_Garamond({
+// Display face for headlines (Bricolage Grotesque). Body / UI stays Geist;
+// this carries the brand voice on the hero, section headers, and the Void.
+const display = Bricolage_Grotesque({
   subsets: ["latin"],
-  weight: ["300", "400"],
-  style: ["italic"],
-  variable: "--font-editorial",
+  weight: ["600", "700", "800"],
+  variable: "--font-display-brand",
   display: "swap",
 });
 
@@ -52,7 +51,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${GeistSans.variable} ${mono.variable} ${pixel.variable} ${editorial.variable}`}
+      className={`${GeistSans.variable} ${mono.variable} ${pixel.variable} ${display.variable}`}
     >
       <body>
         <Providers>{children}</Providers>

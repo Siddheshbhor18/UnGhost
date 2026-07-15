@@ -54,7 +54,7 @@ function JobCard({ job, index }: { job: TickerRole; index: number }): React.Reac
     <Link
       href="/jobs"
       tabIndex={-1}
-      className="group mr-5 inline-flex w-[380px] items-start gap-4 rounded-2xl bg-white px-6 py-5 ring-1 ring-black/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.05),0_20px_45px_-18px_rgba(0,0,0,0.55)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.05),0_28px_60px_-20px_rgba(0,0,0,0.7)]"
+      className="group mr-5 inline-flex w-[380px] items-start gap-4 rounded-2xl bg-white px-6 py-5 ring-1 ring-black/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.05),0_20px_45px_-18px_rgba(0,0,0,0.55)] transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.05),0_28px_60px_-20px_rgba(0,0,0,0.7)]"
     >
       <div className="relative shrink-0">
         <div

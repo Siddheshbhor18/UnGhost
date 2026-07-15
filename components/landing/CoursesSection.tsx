@@ -113,7 +113,7 @@ function CourseCard({
   const theme = COURSE_THEME[room.id];
   const { Icon } = theme;
   return (
-    <div className="group relative flex h-full flex-col rounded-2xl bg-white p-6 ring-1 ring-black/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.05),0_22px_50px_-26px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_1px_2px_rgba(0,0,0,0.05),0_34px_70px_-28px_rgba(0,0,0,0.65)]">
+    <div className="group relative flex h-full flex-col rounded-2xl bg-white p-6 ring-1 ring-black/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.05),0_22px_50px_-26px_rgba(0,0,0,0.5)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_1px_2px_rgba(0,0,0,0.05),0_34px_70px_-28px_rgba(0,0,0,0.65)]">
       <div className="flex items-start justify-between gap-3">
         <div
           className="flex h-12 w-12 items-center justify-center rounded-xl text-white"

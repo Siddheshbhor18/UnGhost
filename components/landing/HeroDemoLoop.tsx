@@ -114,7 +114,7 @@ export function HeroDemoLoop() {
           {Array.from({ length: TOTAL_FRAMES }).map((_, i) => (
             <span
               key={i}
-              className={`block h-1 rounded-full transition-all duration-500 ${
+              className={`block h-1 rounded-full transition-[width,background-color] duration-500 ${
                 i === frame ? "w-6 bg-brand-500" : "w-1 bg-brand-500/25"
               }`}
             />

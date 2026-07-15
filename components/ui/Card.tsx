@@ -63,7 +63,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
         selected && "border-2 border-brand-500 bg-brand-50",
         // Interactive — hover lift
         interactive &&
-          "transition-all duration-fast ease-out-soft hover:-translate-y-0.5 " +
+          "transition-[transform,box-shadow] duration-fast ease-out-soft hover:-translate-y-0.5 " +
             (isGlass ? "hover:shadow-elev-5" : "hover:shadow-elev-3"),
         // Padding
         padded && "p-5",

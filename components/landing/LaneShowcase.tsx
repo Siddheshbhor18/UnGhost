@@ -24,7 +24,6 @@ import { Badge, Button } from "@/components/ui";
  */
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const SLIDE = 56;
 
 interface Lane {
   id: string;
@@ -90,11 +89,9 @@ const LANES: Lane[] = [
 
 export function LaneShowcase() {
   const reduce = useReducedMotion();
-  // Reveal animations must enhance an already-visible default: the SSR
-  // markup carries NO hidden state, so crawlers, no-JS visitors, and hidden
-  // tabs (where framer's rAF loop is paused) always see the section. After
-  // mount on a VISIBLE tab we arm the entrance by remounting the rows with
-  // their hidden initial pose — below the fold, so the swap is unseen.
+  // SSR ships the fully-visible final state; the hidden entrance pose is armed
+  // only after mount on a visible tab, so crawlers and no-JS visitors always
+  // see the tiles.
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!reduce && document.visibilityState === "visible") setArmed(true);
@@ -105,13 +102,17 @@ export function LaneShowcase() {
       aria-label="Two ways to use unGhost: bootcamps and jobs"
       className="overflow-hidden"
     >
-      <div className="mx-auto max-w-content px-4 py-20 md:py-32">
-        <div className="space-y-32 md:space-y-64">
-          {LANES.map((lane) => (
-            <LaneRow
+      <div className="mx-auto max-w-content px-4 py-16 md:py-24">
+        {/* Two large image-forward tiles side by side. A distinct layout family
+            from the hero split and the small pricing/storefront card grids: the
+            two lanes read as one comparison, not two repeated zigzag rows. */}
+        <div className="grid gap-6 md:grid-cols-2 md:gap-8">
+          {LANES.map((lane, i) => (
+            <LaneTile
               key={`${lane.id}-${armed ? "armed" : "static"}`}
               lane={lane}
               animate={armed}
+              index={i}
             />
           ))}
         </div>
@@ -120,41 +121,53 @@ export function LaneShowcase() {
   );
 }
 
-function LaneRow({ lane, animate }: { lane: Lane; animate: boolean }) {
-  const mediaLeft = lane.mediaSide === "left";
-  const textFrom = mediaLeft ? SLIDE : -SLIDE;
-  const mediaFrom = mediaLeft ? -SLIDE : SLIDE;
-
+function LaneTile({
+  lane,
+  animate,
+  index,
+}: {
+  lane: Lane;
+  animate: boolean;
+  index: number;
+}) {
   return (
-    <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-32">
-      {/* ── Copy column ── */}
-      <motion.div
-        initial={animate ? { opacity: 0, x: textFrom } : false}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true, amount: 0.35 }}
-        transition={{ duration: 0.8, ease: EASE }}
-        className={mediaLeft ? "lg:order-last lg:pl-16" : "lg:pr-16"}
-      >
-        <Badge tone={lane.badgeTone} className="mb-6">
+    <motion.article
+      initial={animate ? { opacity: 0, y: 28 } : false}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.7, ease: EASE, delay: index * 0.1 }}
+      className="flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200/70 bg-white shadow-[0_32px_80px_-40px_rgba(1,86,158,0.28)]"
+    >
+      {/* Image-forward header — the large photo is what separates this tile
+          family from the icon/text cards elsewhere on the page. */}
+      <div className={`relative aspect-[16/10] overflow-hidden ${lane.frameClass}`}>
+        <Image
+          src={lane.src}
+          alt={lane.mediaLabel}
+          fill
+          className="object-cover"
+          sizes="(min-width: 768px) 50vw, 100vw"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 ring-1 ring-inset ring-neutral-950/[0.06]"
+        />
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-1 flex-col p-7 md:p-8">
+        <Badge tone={lane.badgeTone} className="mb-4 self-start">
           {lane.badgeLabel}
         </Badge>
-        <h2 className="font-display font-extrabold text-display-lg text-neutral-950 tracking-tight leading-[1.05] [text-wrap:balance]">
+        <h2 className="font-display font-extrabold text-display-md text-neutral-950 tracking-tight leading-[1.08] [text-wrap:balance]">
           {lane.title}
         </h2>
 
-        <ul className="mt-8">
-          {lane.points.map((point, i) => (
-            <motion.li
+        <ul className="mt-6 space-y-3.5">
+          {lane.points.map((point) => (
+            <li
               key={point}
-              initial={animate ? { opacity: 0, x: textFrom / 2 } : false}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.6 }}
-              transition={{
-                duration: 0.6,
-                ease: EASE,
-                delay: 0.25 + i * 0.09,
-              }}
-              className="flex items-center gap-3.5 py-4 text-body-md text-neutral-800"
+              className="flex items-center gap-3 text-body-md text-neutral-800"
             >
               <span
                 className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${
@@ -166,11 +179,12 @@ function LaneRow({ lane, animate }: { lane: Lane; animate: boolean }) {
                 <Check size={13} strokeWidth={2.5} />
               </span>
               {point}
-            </motion.li>
+            </li>
           ))}
         </ul>
 
-        <div className="mt-9">
+        {/* mt-auto pins the CTA to the tile bottom across uneven point lists. */}
+        <div className="mt-auto pt-8">
           <Link href={lane.ctaHref}>
             <Button
               variant={lane.ctaVariant}
@@ -181,33 +195,7 @@ function LaneRow({ lane, animate }: { lane: Lane; animate: boolean }) {
             </Button>
           </Link>
         </div>
-      </motion.div>
-
-      {/* ── Media column ── */}
-      <motion.div
-        initial={animate ? { opacity: 0, x: mediaFrom, scale: 0.97 } : false}
-        whileInView={{ opacity: 1, x: 0, scale: 1 }}
-        viewport={{ once: true, amount: 0.35 }}
-        transition={{ duration: 0.9, ease: EASE, delay: 0.1 }}
-        className={mediaLeft ? "lg:order-first" : undefined}
-      >
-        <div
-          data-media-slot={lane.id}
-          className={`relative aspect-[4/3] overflow-hidden rounded-2xl shadow-[0_32px_80px_-32px_rgba(1,86,158,0.28)] ${lane.frameClass}`}
-        >
-          <Image
-            src={lane.src}
-            alt={lane.mediaLabel}
-            fill
-            className="object-cover"
-            sizes="(min-width: 1024px) 50vw, 100vw"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-neutral-950/[0.06]"
-          />
-        </div>
-      </motion.div>
-    </div>
+      </div>
+    </motion.article>
   );
 }

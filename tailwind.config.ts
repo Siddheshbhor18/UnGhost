@@ -93,8 +93,8 @@ const config: Config = {
 
       // ── TYPOGRAPHY ──────────────────────────────────────────────
       fontFamily: {
-        // Display: Geist Sans
-        display: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
+        // Display: Bricolage Grotesque (Geist fallback)
+        display: ["var(--font-display-brand)", "var(--font-geist-sans)", "system-ui", "sans-serif"],
         // Body / UI
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         // Code / data
